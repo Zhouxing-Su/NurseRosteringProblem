@@ -11,9 +11,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{81DBC9CD-88CA-4531-96D9-E346A177EEB8}</ProjectGuid>
+    <ProjectGuid>{D4004FC3-2EF3-43BD-B1A7-DC29DB2BBFFB}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>INRC2</RootNamespace>
+    <RootNamespace>INRC2_Debug</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -41,17 +41,17 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(ProjectDir)\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(ProjectDir)\lib;$(LibraryPath)</LibraryPath>
-    <SourcePath>$(ProjectDir)\src;$(SourcePath)</SourcePath>
-    <ReferencePath>$(ProjectDir)\instance;$(ReferencePath)</ReferencePath>
+    <IncludePath>$(SolutionDir)\INRC2\include;$(IncludePath)</IncludePath>
+    <ReferencePath>$(SolutionDir)\INRC2\instance;$(ReferencePath)</ReferencePath>
+    <LibraryPath>$(SolutionDir)\INRC2\lib;$(LibraryPath)</LibraryPath>
+    <SourcePath>$(SolutionDir)\INRC2\src;$(SourcePath)</SourcePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(ProjectDir)\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(ProjectDir)\lib;$(LibraryPath)</LibraryPath>
-    <SourcePath>$(ProjectDir)\src;$(SourcePath)</SourcePath>
-    <ReferencePath>$(ProjectDir)\instance;$(ReferencePath)</ReferencePath>
+    <IncludePath>$(SolutionDir)\INRC2\include;$(IncludePath)</IncludePath>
+    <ReferencePath>$(SolutionDir)\INRC2\instance;$(ReferencePath)</ReferencePath>
+    <LibraryPath>$(SolutionDir)\INRC2\lib;$(LibraryPath)</LibraryPath>
+    <SourcePath>$(SolutionDir)\INRC2\src;$(SourcePath)</SourcePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -84,13 +84,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\INRC2.cpp" />
-    <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\NurseRostering.cpp" />
+    <ClCompile Include="..\INRC2\src\INRC2.cpp" />
+    <ClCompile Include="..\INRC2\src\NurseRostering.cpp" />
+    <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\INRC2.h" />
-    <ClInclude Include="include\NurseRostering.h" />
+    <ClInclude Include="..\INRC2\include\INRC2.h" />
+    <ClInclude Include="..\INRC2\include\NurseRostering.h" />
+    <ClInclude Include="INRC2_Debug.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

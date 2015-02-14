@@ -1,7 +1,8 @@
 /**
-*   usage : 1. set algorithm arguments in run()
+*   usage : 1. provide solver interface for Nurse Rostering Problem.
 *
 *   note :  1. [optimizable] Solver has virtual function.
+*           2. set algorithm arguments in run().
 */
 
 #ifndef NURSE_ROSTERING_H
@@ -14,31 +15,41 @@
 #include <vector>
 #include <string>
 #include <ctime>
+#include <map>
 
 
 class NurseRostering
 {
 public:
-    static const int DAY_NUM;
+    static const int WEEKDAY_NUM;
     static const int MAX_OBJ_VALUE;
 
-    typedef int ShiftID;  // ? for NONE, ? for ANY, positive number for a certain kind of shift
-    typedef int Skill;    // non-negative number for a certain kind of skill
-    struct Assign
+    typedef int NurseID;    // non-negative number for a certain nurse
+    typedef int ContractID; // non-negative number for a certain contract
+    typedef int ShiftID;    // ? for NONE, ? for ANY, non-negative number for a certain kind of shift
+    typedef int Skill;      // non-negative number for a certain kind of skill
+    class Assign
     {
+    public:
         ShiftID shift;
         Skill skill;
     };
-    typedef int ContractID;
 
-    struct Scenario
+    class Scenario
     {
+    public:
         int weekNum;
 
         std::vector<std::string> skillNames; // skillName[skill]
 
-        struct Shift
+        class Shift
         {
+        public:
+            static const ShiftID ShiftID_Any;
+            static const std::string ShiftName_Any;
+            static const ShiftID ShiftID_None;
+            static const std::string ShiftName_None;
+
             std::string name;
             int minConsecutiveShiftNum;
             int maxConsecutiveShiftNum;
@@ -48,11 +59,12 @@ public:
         };
         std::vector<Shift> shifts;
 
-        struct Contract
+        class Contract
         {
+        public:
             std::string name;
-            int minShiftNum;
-            int maxShiftNum;
+            int minShiftNum;    // total assignments in the planning horizon
+            int maxShiftNum;    // total assignments in the planning horizon
             int minConsecutiveWorkingDayNum;
             int maxConsecutiveWorkingDayNum;
             int minConsecutiveDayoffNum;
@@ -62,8 +74,9 @@ public:
         };
         std::vector<Contract> contracts;
 
-        struct Nurse
+        class Nurse
         {
+        public:
             std::string name;
             ContractID contract;
             std::vector<Skill> skills;
@@ -71,18 +84,20 @@ public:
         std::vector<Nurse> nurses;
     };
 
-    struct WeekData
+    class WeekData
     {
-        // shiftOffs[day][nurse] is a shift
-        std::vector< std::vector<ShiftID> > shiftOffs;
+    public:
+        // (shiftOffs[day][shift][nurse] == true) means shiftOff required
+        std::vector< std::vector< std::vector<bool> > > shiftOffs;
         // optNurseNums[day][shift][skill] is a number of nurse
         std::vector< std::vector< std::vector<int> > > optNurseNums;
         // optNurseNums[day][shift][skill] is a number of nurse
         std::vector< std::vector< std::vector<int> > > minNurseNums;
     };
 
-    struct NurseHistory
+    class NurseHistory
     {
+    public:
         int shiftNum;
         int workingWeekendNum;
         ShiftID lastShift;
@@ -96,15 +111,28 @@ public:
     class Solver
     {
     public:
-        struct Input
+        class Input
         {
         public:
+            Input()
+            {
+                shiftMap[NurseRostering::Scenario::Shift::ShiftName_Any] = NurseRostering::Scenario::Shift::ShiftID_Any;
+                shiftMap[NurseRostering::Scenario::Shift::ShiftName_None] = NurseRostering::Scenario::Shift::ShiftID_None;
+            }
+
+            int weekCount;  // number of weeks that have past (the number in history file)
             WeekData weekData;
             Scenario scenario;
             History history;
             std::string solutionFileName;
             std::string customOutputFileName;
             int randSeed;
+
+            // auxiliary data
+            std::map<std::string, ShiftID> shiftMap;
+            std::map<std::string, Skill> skillMap;
+            std::map<std::string, NurseID> nurseMap;
+            std::map<std::string, ContractID> contractMap;
         };
 
         class Output

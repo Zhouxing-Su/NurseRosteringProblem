@@ -4,8 +4,13 @@
 using namespace std;
 
 
-const int NurseRostering::DAY_NUM = 7;
-const int NurseRostering::MAX_OBJ_VALUE = 2147483647;
+const int NurseRostering::WEEKDAY_NUM = 7;
+const int NurseRostering::MAX_OBJ_VALUE = 2147483647; 
+
+const NurseRostering::ShiftID NurseRostering::Scenario::Shift::ShiftID_Any = -1;
+const std::string NurseRostering::Scenario::Shift::ShiftName_Any( "Any" );
+const NurseRostering::ShiftID NurseRostering::Scenario::Shift::ShiftID_None = -2;
+const std::string NurseRostering::Scenario::Shift::ShiftName_None( "None" );
 
 NurseRostering::NurseRostering()
 {
@@ -17,6 +22,9 @@ NurseRostering::~NurseRostering()
 {
 
 }
+
+
+
 
 
 NurseRostering::Solver::Solver( const Input &i, const std::string &an )

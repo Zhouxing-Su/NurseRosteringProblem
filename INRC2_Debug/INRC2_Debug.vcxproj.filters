@@ -15,21 +15,24 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\main.cpp">
+    <ClCompile Include="..\INRC2\src\NurseRostering.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="src\NurseRostering.cpp">
+    <ClCompile Include="main.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="src\INRC2.cpp">
+    <ClCompile Include="..\INRC2\src\INRC2.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\INRC2.h">
+    <ClInclude Include="..\INRC2\include\NurseRostering.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="include\NurseRostering.h">
+    <ClInclude Include="..\INRC2\include\INRC2.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="INRC2_Debug.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
