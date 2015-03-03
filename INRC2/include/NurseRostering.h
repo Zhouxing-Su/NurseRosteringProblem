@@ -3,6 +3,7 @@
 *
 *   note :  1. [optimizable] Solver has virtual function.
 *           2. set algorithm arguments in run().
+*           3. use a priority queue to manage available nurse when assigning?
 */
 
 #ifndef NURSE_ROSTERING_H
@@ -16,6 +17,7 @@
 #include <string>
 #include <ctime>
 #include <map>
+#include <set>
 
 
 class NurseRostering
@@ -28,17 +30,16 @@ public:
     typedef int ContractID; // non-negative number for a certain contract
     typedef int ShiftID;    // ? for NONE, ? for ANY, non-negative number for a certain kind of shift
     typedef int Skill;      // non-negative number for a certain kind of skill
-    class Assign
-    {
-    public:
-        ShiftID shift;
-        Skill skill;
-    };
+    // Output[day][shift][skill] is a set of nurses
+    typedef std::vector< std::vector< std::vector< std::set<NurseID> > > > Assign;
 
     class Scenario
     {
     public:
         int weekNum;
+        int shiftTypeNum;
+        int skillTypeNum;
+        int nurseNum;
 
         std::vector<std::string> skillNames; // skillName[skill]
 
@@ -111,68 +112,54 @@ public:
     class Solver
     {
     public:
-        class Input
-        {
-        public:
-            Input()
-            {
-                shiftMap[NurseRostering::Scenario::Shift::ShiftName_Any] = NurseRostering::Scenario::Shift::ShiftID_Any;
-                shiftMap[NurseRostering::Scenario::Shift::ShiftName_None] = NurseRostering::Scenario::Shift::ShiftID_None;
-            }
-
-            int weekCount;  // number of weeks that have past (the number in history file)
-            WeekData weekData;
-            Scenario scenario;
-            History history;
-            std::string solutionFileName;
-            std::string customOutputFileName;
-            int randSeed;
-
-            // auxiliary data
-            std::map<std::string, ShiftID> shiftMap;
-            std::map<std::string, Skill> skillMap;
-            std::map<std::string, NurseID> nurseMap;
-            std::map<std::string, ContractID> contractMap;
-        };
-
         class Output
         {
         public:
             Output() :objVal( -1 ) {}
-            Output( int objValue, const std::vector< std::vector<Assign> > &assignments )
-                :objVal( objValue ), assigns( assignments )
+            Output( int objValue, const Assign &assignment )
+                :objVal( objValue ), assign( assignment )
             {
             }
 
-            // Output[day][nurse] is an Assign
-            std::vector< std::vector<Assign> > assigns;
+            Assign assign;
             int objVal;
         };
 
+        // set algorithm name, set parameters, generate initial solution
         virtual void init() = 0;
+        // search for optima
         virtual void solve() = 0;
+        // calculate objective with original input instead of auxiliary data structure
         virtual int check() const = 0;
+        // print simple information of the solution to console
         virtual void print() const = 0;
+        // record solution to specified file
+        virtual void record() const = 0;
 
         // log to file ( require ios::app flag or "a" mode )
         static void initResultSheet( std::ofstream &csvFile );
-        void appendResultToSheet( const std::string &instanceFileName,
-            std::ofstream &csvFile ) const;  // contain check()
+        void appendResultToSheet( const std::string &instanceName,
+            const std::string logFileName ) const;  // contain check()
 
-        Solver( const Input &input, const std::string &algorithmName );
+        Solver( const NurseRostering &input );
         virtual ~Solver();
 
-    private:
-        const WeekData weekData;
+
+    public:
+        const WeekData& getWeekData() const { return weekData; }
+        const History& getHistory() const { return history; }
         const Scenario scenario;
-        const History history;
+
+    protected:
+        WeekData weekData;
+        History history;
 
         Output optima;
 
         const std::string solutionFileName;
         const std::string customOutputFileName;
         const int randSeed;
-        const std::string algorithmName;
+        std::string algorithmName;
         clock_t startTime;
         clock_t endTime;
         int iterCount;
@@ -181,29 +168,51 @@ public:
 
     class TabuSolver : public Solver
     {
+        friend class Solution;
     public:
         virtual void init();
         virtual void solve();
         virtual int check() const;
         virtual void print() const;
+        virtual void record() const;
 
-        TabuSolver( const Input &input, const std::string &algorithmName );
+        TabuSolver( const NurseRostering &input );
         virtual ~TabuSolver();
 
     private:
         class Solution
         {
         public:
+            Solution( TabuSolver &solver, int skillNum, int shiftNum );
 
         private:
+            void genInitSln_random();
 
+            TabuSolver &solver;
+            Assign assign;
         };
 
         Solution sln;
     };
 
+
     NurseRostering();
-    ~NurseRostering();
+
+
+    // data to identify a nurse rostering problem
+    std::string solutionFileName;
+    std::string customOutputFileName;
+    int randSeed;
+    int weekCount;  // number of weeks that have past (the number in history file)
+    WeekData weekData;
+    Scenario scenario;
+    History history;
+
+    // auxiliary data
+    std::map<std::string, ShiftID> shiftMap;
+    std::map<std::string, Skill> skillMap;
+    std::map<std::string, NurseID> nurseMap;
+    std::map<std::string, ContractID> contractMap;
 
 private:
 

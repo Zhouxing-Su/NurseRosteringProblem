@@ -1,7 +1,7 @@
 /**
 *   usage : 1. invoke solver interface to solve problem.
 *
-*   note :  1. 
+*   note :  1.
 */
 
 #ifndef INRC2_H
@@ -33,11 +33,11 @@ const std::string ARGV_CUSTOM_OUTPUT = "cusOut";
 const std::string ARGV_RANDOM_SEED = "rand";
 
 
-void run( int argc, char *argv[] );
+void run( int argc, char *argv[], const std::string &instance = std::string() );
 
-void readScenario( const std::string &scenarioFileName, NurseRostering::Solver::Input &input );
-void readHistory( const std::string &historyFileName, NurseRostering::Solver::Input &input );
-void readWeekData( const std::string &weekDataFileName, NurseRostering::Solver::Input &input );
+void readScenario( const std::string &scenarioFileName, NurseRostering &input );
+void readHistory( const std::string &historyFileName, NurseRostering &input );
+void readWeekData( const std::string &weekDataFileName, NurseRostering &input );
 NurseRostering::Solver* readCustomInput( const std::string &customInputFileName );
 
 
