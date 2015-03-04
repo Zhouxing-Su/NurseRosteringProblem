@@ -227,7 +227,7 @@ void readWeekData( const std::string &weekDataFileName, NurseRostering &input )
             break;
         }
         NurseRostering::ShiftID shift = input.shiftMap[shiftName];
-        NurseRostering::Skill skill = input.skillMap[skillName];
+        NurseRostering::SkillID skill = input.skillMap[skillName];
         for (int weekday = 0; weekday < 7; weekday++) {
             ifs >> c >> weekdata.minNurseNums[weekday][shift][skill]
                 >> c >> weekdata.optNurseNums[weekday][shift][skill] >> c;

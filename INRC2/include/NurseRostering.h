@@ -4,6 +4,8 @@
 *   note :  1. [optimizable] Solver has virtual function.
 *           2. set algorithm arguments in run().
 *           3. use a priority queue to manage available nurse when assigning?
+*           4. record 8 day which the first day is last day of last week to unify
+*              the succession judgment.
 */
 
 #ifndef NURSE_ROSTERING_H
@@ -18,6 +20,7 @@
 #include <ctime>
 #include <map>
 #include <set>
+#include <algorithm>
 
 
 class NurseRostering
@@ -29,8 +32,8 @@ public:
     typedef int NurseID;    // non-negative number for a certain nurse
     typedef int ContractID; // non-negative number for a certain contract
     typedef int ShiftID;    // ? for NONE, ? for ANY, non-negative number for a certain kind of shift
-    typedef int Skill;      // non-negative number for a certain kind of skill
-    // Output[day][shift][skill] is a set of nurses
+    typedef int SkillID;      // non-negative number for a certain kind of skill
+    // Assign[day][shift][skill] is a set of nurses
     typedef std::vector< std::vector< std::vector< std::set<NurseID> > > > Assign;
 
     class Scenario
@@ -80,7 +83,7 @@ public:
         public:
             std::string name;
             ContractID contract;
-            std::vector<Skill> skills;
+            std::vector<SkillID> skills;
         };
         std::vector<Nurse> nurses;
     };
@@ -147,7 +150,7 @@ public:
 
     public:
         const WeekData& getWeekData() const { return weekData; }
-        const History& getHistory() const { return history; }
+        const NurseHistory& getHistory( NurseID nurse ) const { return history[nurse]; }
         const Scenario scenario;
 
     protected:
@@ -168,7 +171,6 @@ public:
 
     class TabuSolver : public Solver
     {
-        friend class Solution;
     public:
         virtual void init();
         virtual void solve();
@@ -176,6 +178,8 @@ public:
         virtual void print() const;
         virtual void record() const;
 
+        // initialize data about nurse-skill relation
+        void discoverNurseSkillRelation();  // initialize nurseWithSkill, nurseNumOfSkill
         TabuSolver( const NurseRostering &input );
         virtual ~TabuSolver();
 
@@ -183,16 +187,23 @@ public:
         class Solution
         {
         public:
-            Solution( TabuSolver &solver, int skillNum, int shiftNum );
+            void genInitSln_random();
+            bool isAvailableAssign( NurseID nurse, ShiftID shift, int weekday ) const;
+
+            Solution( TabuSolver &solver );
 
         private:
-            void genInitSln_random();
-
             TabuSolver &solver;
             Assign assign;
+            History newHistory; // information of this week which affect next week
         };
 
         Solution sln;
+
+        // nurseNumOfSkill[skill] is the number of nurses with that skill
+        std::vector<int> nurseNumOfSkill;
+        // nurseWithSkill[skill] is a set of nurses who have that skill
+        std::vector<std::vector<NurseID> > nurseWithSkill;
     };
 
 
@@ -210,7 +221,7 @@ public:
 
     // auxiliary data
     std::map<std::string, ShiftID> shiftMap;
-    std::map<std::string, Skill> skillMap;
+    std::map<std::string, SkillID> skillMap;
     std::map<std::string, NurseID> nurseMap;
     std::map<std::string, ContractID> contractMap;
 

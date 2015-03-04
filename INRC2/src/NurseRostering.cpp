@@ -71,7 +71,9 @@ void NurseRostering::Solver::appendResultToSheet( const std::string &instanceNam
 
 void NurseRostering::TabuSolver::init()
 {
+    discoverNurseSkillRelation();
 
+    sln.genInitSln_random();
 }
 
 void NurseRostering::TabuSolver::solve()
@@ -95,7 +97,7 @@ void NurseRostering::TabuSolver::record() const
 }
 
 NurseRostering::TabuSolver::TabuSolver( const NurseRostering &i )
-    :Solver( i ), sln( *this, i.scenario.skillNames.size(), i.scenario.shifts.size() )
+    :Solver( i ), sln( *this )
 {
 
 }
@@ -105,31 +107,70 @@ NurseRostering::TabuSolver::~TabuSolver()
 
 }
 
-NurseRostering::TabuSolver::Solution::Solution( TabuSolver &s, int skillNum, int shiftNum )
-    :solver( s )
+void NurseRostering::TabuSolver::discoverNurseSkillRelation()
+{
+    nurseNumOfSkill = vector<int>( scenario.skillTypeNum, 0 );
+    nurseWithSkill = vector< vector<NurseID> >( scenario.nurseNum );
+
+    for (NurseID n = 0; n < scenario.nurseNum; n++) {
+        const vector<SkillID> &skills = scenario.nurses[n].skills;
+        int skillNum = skills.size();
+        for (int s = 0; s < skillNum; s++) {
+            nurseNumOfSkill[skills[s]]++;
+            nurseWithSkill[s].push_back( n );
+        }
+    }
+}
+
+NurseRostering::TabuSolver::Solution::Solution( TabuSolver &s )
+    :solver( s ), assign( WEEKDAY_NUM, vector< vector< set<NurseID> > >( s.scenario.shiftTypeNum, vector< set<NurseID> >( s.scenario.skillTypeNum ) ) )
 {
 
 }
 
 void NurseRostering::TabuSolver::Solution::genInitSln_random()
 {
-    int availableNurseNum = solver.scenario.nurseNum;
-    vector<NurseID> availableNurse( availableNurseNum );
-    for (int i = 0; i < solver.scenario.nurseNum; i++) {
-        availableNurse[i] = i;
-    }
-
     for (int weekday = 0; weekday < WEEKDAY_NUM; weekday++) {
-        for (ShiftID shift = 0; shift < solver.scenario.shiftTypeNum; shift++) {
-            for (Skill skill = 0; skill < solver.scenario.skillTypeNum; skill++) {
+        // find out available nurses ( remove forbidden shift succession )
+        vector< vector<NurseID> > availableNurse( solver.nurseWithSkill );
+
+        // the less nurseNumOfSkill[skill] is, the smaller index in skillRank a skill will get
+        std::vector<SkillID> skillRank;
+
+        for (SkillID skill = 0; skill < solver.scenario.skillTypeNum; skill++) {
+            for (ShiftID shift = 0; shift < solver.scenario.shiftTypeNum; shift++) {
                 for (int i = 0; i < solver.getWeekData().minNurseNums[weekday][shift][skill]; i++) {
-                    int nurse = rand() % availableNurseNum;
-                    assign[weekday][shift][skill].insert( availableNurse[nurse] );
+                    int nurse = rand() % availableNurse[skill].size();
+
+
+
+                    // TODO
+
+
+                    assign[weekday][shift][skill].insert( availableNurse[skill][nurse] );
                     // remove unavailable nurse
                     //store nurse set with certain skill?
                     // re-insert available nurse
+
+
+
+
+
+
+
                 }
             }
         }
     }
+}
+
+bool NurseRostering::TabuSolver::Solution::isAvailableAssign( NurseID nurse, ShiftID shift, int weekday ) const
+{
+    if (weekday == 0) { // check history information
+        return solver.scenario.shifts[solver.getHistory( nurse ).lastShift].illegalNextShifts[shift];
+    } else {
+        ;
+    }
+
+    return true;
 }
