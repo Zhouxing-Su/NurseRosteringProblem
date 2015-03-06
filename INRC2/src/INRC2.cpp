@@ -250,7 +250,7 @@ void readWeekData( const std::string &weekDataFileName, NurseRostering &input )
         int weekday = weekdayMap[weekdayName];
         NurseRostering::ShiftID shift = input.shiftMap[shiftName];
         NurseRostering::NurseID nurse = input.nurseMap[nurseName];
-        if (shift == NurseRostering::Scenario::Shift::ShiftID_Any) {
+        if (shift == NurseRostering::Scenario::Shift::ID_ANY) {
             for (int s = input.scenario.shifts.size() - 1; s >= 0; s--) {
                 weekdata.shiftOffs[weekday][s][nurse] = true;
             }

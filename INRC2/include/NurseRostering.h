@@ -21,6 +21,7 @@
 #include <map>
 #include <set>
 #include <algorithm>
+//#include <numeric>
 
 
 class NurseRostering
@@ -31,10 +32,8 @@ public:
 
     typedef int NurseID;    // non-negative number for a certain nurse
     typedef int ContractID; // non-negative number for a certain contract
-    typedef int ShiftID;    // ? for NONE, ? for ANY, non-negative number for a certain kind of shift
-    typedef int SkillID;      // non-negative number for a certain kind of skill
-    // Assign[day][shift][skill] is a set of nurses
-    typedef std::vector< std::vector< std::vector< std::set<NurseID> > > > Assign;
+    typedef int ShiftID;    // NONE, ANY or non-negative number for a certain kind of shift
+    typedef int SkillID;    // non-negative number for a certain kind of skill
 
     class Scenario
     {
@@ -49,10 +48,10 @@ public:
         class Shift
         {
         public:
-            static const ShiftID ShiftID_Any;
-            static const std::string ShiftName_Any;
-            static const ShiftID ShiftID_None;
-            static const std::string ShiftName_None;
+            static const ShiftID ID_ANY;
+            static const std::string NAME_ANY;
+            static const ShiftID ID_NONE;
+            static const std::string NAME_NONE;
 
             std::string name;
             int minConsecutiveShiftNum;
@@ -81,6 +80,8 @@ public:
         class Nurse
         {
         public:
+            static const NurseID ID_NONE;
+
             std::string name;
             ContractID contract;
             std::vector<SkillID> skills;
@@ -112,9 +113,22 @@ public:
     // history[nurse] is the history of a certain nurse
     typedef std::vector<NurseHistory> History;
 
+    class SingleAssign
+    {
+    public:
+        SingleAssign( ShiftID sh = Scenario::Shift::ID_NONE, SkillID sk = 0 ) :shift( sh ), skill( sk ) {}
+
+        ShiftID shift;
+        SkillID skill;
+    };
+    // Assign[nurse][day] is a SingleAssign
+    typedef std::vector< std::vector< SingleAssign > > Assign;
+
     class Solver
     {
     public:
+        static const int ILLEGAL_SOLUTION;
+
         class Output
         {
         public:
@@ -132,10 +146,12 @@ public:
         virtual void init() = 0;
         // search for optima
         virtual void solve() = 0;
-        // calculate objective with original input instead of auxiliary data structure
-        virtual int check() const = 0;
+        // calculate objective of optima with original input instead of auxiliary data structure
+        // return objective value if solution is legal, else ILLEGAL_SOLUTION
+        virtual int check( const Assign &assgin ) const;
+        virtual int check() const;
         // print simple information of the solution to console
-        virtual void print() const = 0;
+        virtual void print() const;
         // record solution to specified file
         virtual void record() const = 0;
 
@@ -174,8 +190,6 @@ public:
     public:
         virtual void init();
         virtual void solve();
-        virtual int check() const;
-        virtual void print() const;
         virtual void record() const;
 
         // initialize data about nurse-skill relation
@@ -184,15 +198,45 @@ public:
         virtual ~TabuSolver();
 
     private:
+        typedef std::vector< std::vector<std::vector<NurseID> > > NurseWithSkill;
+
         class Solution
         {
         public:
-            void genInitSln_random();
-            bool isAvailableAssign( NurseID nurse, ShiftID shift, int weekday ) const;
+            bool genInitSln_random();
+            bool isValidAssign( NurseID nurse, ShiftID shift, int weekday ) const;
+            std::vector< std::vector<NurseID> > getAvailableNurseOfTheFirstDay();
 
             Solution( TabuSolver &solver );
 
         private:
+            class AvailableNurses
+            {
+            public:
+                // reset flags of available nurses
+                // this method should be called before any other invoking
+                void setEnvironment( int weekday, SkillID skill );
+                // reset validNurseNum_CurShift
+                // this method should be called before getNurse()
+                void setShift( ShiftID shift );
+
+                // always get an available nurse and update validation information
+                NurseID getNurse();
+
+                AvailableNurses( const Solution &s ) :sln( s ), nurseWithSkill( s.solver.nurseWithSkill ) {}
+
+            private:
+                const Solution &sln;
+                NurseWithSkill nurseWithSkill;
+
+                int weekday;
+                ShiftID shift;
+                SkillID skill;
+                int minSkillNum;
+                std::vector<int> validNurseNum_CurShift;
+                std::vector<int> validNurseNum_CurDay;
+            };
+
             TabuSolver &solver;
             Assign assign;
             History newHistory; // information of this week which affect next week
@@ -202,8 +246,8 @@ public:
 
         // nurseNumOfSkill[skill] is the number of nurses with that skill
         std::vector<int> nurseNumOfSkill;
-        // nurseWithSkill[skill] is a set of nurses who have that skill
-        std::vector<std::vector<NurseID> > nurseWithSkill;
+        // nurseWithSkill[skill][skillNum-1] is a set of nurses who have that skill and have skillNum skills in total
+        NurseWithSkill nurseWithSkill;
     };
 
 
