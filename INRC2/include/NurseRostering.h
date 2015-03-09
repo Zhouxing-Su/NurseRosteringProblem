@@ -27,52 +27,49 @@
 class NurseRostering
 {
 public:
-    static const int WEEKDAY_NUM;
-    static const int MAX_OBJ_VALUE;
-
+    typedef int ObjValue;   // unit of objective function
     typedef int NurseID;    // non-negative number for a certain nurse
     typedef int ContractID; // non-negative number for a certain contract
     typedef int ShiftID;    // NONE, ANY or non-negative number for a certain kind of shift
     typedef int SkillID;    // non-negative number for a certain kind of skill
 
+    // NurseNum_Day_Shift_Skill[day][shift][skill] is a number of nurse
+    typedef std::vector< std::vector< std::vector<int> > > NurseNum_Day_Shift_Skill;
+
     class Scenario
     {
     public:
-        int weekNum;
+        int maxWeekCount;
         int shiftTypeNum;
         int skillTypeNum;
         int nurseNum;
 
-        std::vector<std::string> skillNames; // skillName[skill]
-
         class Shift
         {
         public:
-            static const ShiftID ID_ANY;
+            static const ShiftID ID_ANY = -1;
             static const std::string NAME_ANY;
-            static const ShiftID ID_NONE;
+            static const ShiftID ID_NONE = -2;
             static const std::string NAME_NONE;
 
-            std::string name;
             int minConsecutiveShiftNum;
             int maxConsecutiveShiftNum;
             // (illegalNextShift[nextShift] == true) means nextShift 
-            // is forbidden to be succession of this shift
-            std::vector<bool> illegalNextShifts;
+            // is available to be succession of this shift
+            std::vector<bool> legalNextShifts;
         };
         std::vector<Shift> shifts;
 
         class Contract
         {
         public:
-            std::string name;
             int minShiftNum;    // total assignments in the planning horizon
             int maxShiftNum;    // total assignments in the planning horizon
             int minConsecutiveWorkingDayNum;
             int maxConsecutiveWorkingDayNum;
             int minConsecutiveDayoffNum;
             int maxConsecutiveDayoffNum;
-            int maxWorkingWeekendNum;
+            int maxWorkingWeekendNum;   // total assignments in the planning horizon
             bool completeWeekend;
         };
         std::vector<Contract> contracts;
@@ -80,9 +77,8 @@ public:
         class Nurse
         {
         public:
-            static const NurseID ID_NONE;
+            static const NurseID ID_NONE = -1;
 
-            std::string name;
             ContractID contract;
             std::vector<SkillID> skills;
         };
@@ -95,9 +91,9 @@ public:
         // (shiftOffs[day][shift][nurse] == true) means shiftOff required
         std::vector< std::vector< std::vector<bool> > > shiftOffs;
         // optNurseNums[day][shift][skill] is a number of nurse
-        std::vector< std::vector< std::vector<int> > > optNurseNums;
+        NurseNum_Day_Shift_Skill optNurseNums;
         // optNurseNums[day][shift][skill] is a number of nurse
-        std::vector< std::vector< std::vector<int> > > minNurseNums;
+        NurseNum_Day_Shift_Skill minNurseNums;
     };
 
     class NurseHistory
@@ -113,6 +109,24 @@ public:
     // history[nurse] is the history of a certain nurse
     typedef std::vector<NurseHistory> History;
 
+    class Names
+    {
+    public:
+        std::string scenarioName;
+
+        std::vector<std::string> skillNames;    // skillMap[skillNames[skillID]] == skillID
+        std::map<std::string, SkillID> skillMap;
+
+        std::vector<std::string> shiftNames;    // shiftMap[shiftNames[shiftID]] == shiftID
+        std::map<std::string, ShiftID> shiftMap;
+
+        std::vector<std::string> contractNames; // contractMap[contractNames[contractID]] == contractID
+        std::map<std::string, ContractID> contractMap;
+
+        std::vector<std::string> nurseNames;    // nurseMap[nurseNames[nurseID]] == nurseID
+        std::map<std::string, NurseID> nurseMap;
+    };
+
     class SingleAssign
     {
     public:
@@ -127,7 +141,7 @@ public:
     class Solver
     {
     public:
-        static const int ILLEGAL_SOLUTION;
+        static const int ILLEGAL_SOLUTION = -1;
 
         class Output
         {
@@ -139,45 +153,46 @@ public:
             }
 
             Assign assign;
-            int objVal;
+            ObjValue objVal;
         };
 
         // set algorithm name, set parameters, generate initial solution
         virtual void init() = 0;
         // search for optima
         virtual void solve() = 0;
+        // return const reference of the optima
+        const Output& getOptima() const
+        {
+            return optima;
+        }
+        // print simple information of the solution to console
+        void print() const;
+        // record solution to specified file and create custom file if required
+        void record( const std::string logFileName, const std::string &instanceName ) const;  // contain check()
+        // return true if the optima solution is feasible and objValue is the same
+        bool check() const;
+
         // calculate objective of optima with original input instead of auxiliary data structure
         // return objective value if solution is legal, else ILLEGAL_SOLUTION
-        virtual int check( const Assign &assgin ) const;
-        virtual int check() const;
-        // print simple information of the solution to console
-        virtual void print() const;
-        // record solution to specified file
-        virtual void record() const = 0;
+        bool checkFeasibility( const Assign &assgin ) const;
+        bool checkFeasibility() const;  // check optima assign
+        int checkObjValue( const Assign &assign ) const;
+        int checkObjValue() const;  // check optima assign
 
-        // log to file ( require ios::app flag or "a" mode )
-        static void initResultSheet( std::ofstream &csvFile );
-        void appendResultToSheet( const std::string &instanceName,
-            const std::string logFileName ) const;  // contain check()
-
-        Solver( const NurseRostering &input );
+        Solver( const NurseRostering &input, const std::string &name, clock_t startTime );
         virtual ~Solver();
 
 
-    public:
-        const WeekData& getWeekData() const { return weekData; }
-        const NurseHistory& getHistory( NurseID nurse ) const { return history[nurse]; }
-        const Scenario scenario;
+        const NurseRostering &problem;
 
     protected:
-        WeekData weekData;
-        History history;
+        // create header of the table ( require ios::app flag or "a" mode )
+        static void initResultSheet( std::ofstream &csvFile );
+
+        NurseNum_Day_Shift_Skill countNurseNums( const Assign &assign ) const;
 
         Output optima;
 
-        const std::string solutionFileName;
-        const std::string customOutputFileName;
-        const int randSeed;
         std::string algorithmName;
         clock_t startTime;
         clock_t endTime;
@@ -188,26 +203,40 @@ public:
     class TabuSolver : public Solver
     {
     public:
+        static const std::string Name;
+
         virtual void init();
         virtual void solve();
-        virtual void record() const;
 
         // initialize data about nurse-skill relation
         void discoverNurseSkillRelation();  // initialize nurseWithSkill, nurseNumOfSkill
-        TabuSolver( const NurseRostering &input );
+        TabuSolver( const NurseRostering &input, clock_t startTime = clock() );
         virtual ~TabuSolver();
 
     private:
+        // NurseWithSkill[skill][skillNum-1] is a set of nurses who have that skill and have skillNum skills in total
         typedef std::vector< std::vector<std::vector<NurseID> > > NurseWithSkill;
 
         class Solution
         {
         public:
+            void resetAssign();   // reset assign
             bool genInitSln_random();
-            bool isValidAssign( NurseID nurse, ShiftID shift, int weekday ) const;
-            std::vector< std::vector<NurseID> > getAvailableNurseOfTheFirstDay();
+            void genNewHistory();
+
+            // shift must not be none shift
+            bool isValidSuccession( NurseID nurse, ShiftID shift, int weekday ) const;
+            // require assign be initialized to Shift::ID_NONE
+            bool isAssigned( NurseID nurse, int weekday ) const
+            {
+                return (assign[nurse][weekday].shift != NurseRostering::Scenario::Shift::ID_NONE);
+            }
 
             Solution( TabuSolver &solver );
+            operator Output() const
+            {
+                return Output( objValue, assign );
+            }
 
         private:
             class AvailableNurses
@@ -224,7 +253,6 @@ public:
                 NurseID getNurse();
 
                 AvailableNurses( const Solution &s ) :sln( s ), nurseWithSkill( s.solver.nurseWithSkill ) {}
-
             private:
                 const Solution &sln;
                 NurseWithSkill nurseWithSkill;
@@ -232,14 +260,15 @@ public:
                 int weekday;
                 ShiftID shift;
                 SkillID skill;
-                int minSkillNum;
+                unsigned minSkillNum;
                 std::vector<int> validNurseNum_CurShift;
                 std::vector<int> validNurseNum_CurDay;
             };
 
             TabuSolver &solver;
+
+            ObjValue objValue;
             Assign assign;
-            History newHistory; // information of this week which affect next week
         };
 
         Solution sln;
@@ -251,23 +280,24 @@ public:
     };
 
 
+    static const int WEEKDAY_NUM = 7;
+
+    static const ObjValue MAX_OBJ_VALUE = 2000000000;
+    static const int MAX_RUNNING_TIME = 1073741824;  // in millisecond
+
+
+    // must set all data members by direct accessing!
     NurseRostering();
 
 
     // data to identify a nurse rostering problem
-    std::string solutionFileName;
-    std::string customOutputFileName;
     int randSeed;
-    int weekCount;  // number of weeks that have past (the number in history file)
+    int runningTime;    // time in millisecond
+    int weekCount;      // count from 0 (the number in history file)
     WeekData weekData;
     Scenario scenario;
     History history;
-
-    // auxiliary data
-    std::map<std::string, ShiftID> shiftMap;
-    std::map<std::string, SkillID> skillMap;
-    std::map<std::string, NurseID> nurseMap;
-    std::map<std::string, ContractID> contractMap;
+    Names names;
 
 private:
 

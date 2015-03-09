@@ -2,6 +2,7 @@
 
 
 using namespace std;
+using namespace INRC2;
 
 
 int main()
@@ -14,51 +15,59 @@ int main()
 
 
 #define INSTANCE "n005w4"
-#define OUTPUT "Sln_n005w4_h0_w1233_run0"
+#define OUTPUT "output"
 void test_n005w4_1233()
 {
-    char *argv0[80] = {
+    char *argv0[] = {
         "INRC2.exe",
         "--sce", DIR "/" INSTANCE "/" SCENARIO( INSTANCE ),
-        "--his", DIR "/" INSTANCE "/" "H0-n005w4-0.txt",
-        "--week", DIR "/" INSTANCE "/" WEEKDATA( INSTANCE, "1" ),
-        "--sol", OUTPUT "/" "Sol0.txt",
-        "--cusOut", OUTPUT "/" "custom1"
-    };  // 11
-
-    char *argv1[80] = {
-        "INRC2.exe",
-        "--sce", DIR "/" INSTANCE "/" SCENARIO( INSTANCE ),
-        "--his", OUTPUT "/" "His1.txt",
+        "--his", DIR "/" INSTANCE "/" HISTORY( INSTANCE, "0" ),
         "--week", DIR "/" INSTANCE "/" WEEKDATA( INSTANCE, "2" ),
-        "--sol", OUTPUT "/" "Sol1.txt",
-        "-cusIn", OUTPUT "/" "custom1",
-        "--cusOut", OUTPUT "/" "custom2"
-    };  // 13
+        "--sol", OUTPUT "/" "sol-week0.txt",
+        //"--cusOut", OUTPUT "/" "custom1",
+        "--rand", "0",
+        "--timeout", "10"
+    };
 
-    char *argv2[80] = {
+    char *argv1[] = {
         "INRC2.exe",
         "--sce", DIR "/" INSTANCE "/" SCENARIO( INSTANCE ),
-        "--his", OUTPUT "/" "His2.txt",
-        "--week", DIR "/" INSTANCE "/" WEEKDATA( INSTANCE, "3" ),
-        "--sol", OUTPUT "/" "Sol2.txt",
-        "-cusIn", OUTPUT "/" "custom2",
-        "--cusOut", OUTPUT "/" "custom3"
-    };  // 13
+        "--his", OUTPUT "/" "history-week0.txt",
+        "--week", DIR "/" INSTANCE "/" WEEKDATA( INSTANCE, "0" ),
+        "--sol", OUTPUT "/" "sol-week1.txt",
+        //"-cusIn", OUTPUT "/" "custom1",
+        //"--cusOut", OUTPUT "/" "custom2",
+        "--rand", "0",
+        "--timeout", "10"
+    };
 
-    char *argv3[80] = {
+    char *argv2[] = {
         "INRC2.exe",
         "--sce", DIR "/" INSTANCE "/" SCENARIO( INSTANCE ),
-        "--his", OUTPUT "/" "His3.txt",
-        "--week", DIR "/" INSTANCE "/" WEEKDATA( INSTANCE, "3" ),
-        "--sol", OUTPUT "/" "Sol3.txt",
-        "-cusIn", OUTPUT "/" "custom3"
-    };  // 11
+        "--his", OUTPUT "/" "history-week1.txt",
+        "--week", DIR "/" INSTANCE "/" WEEKDATA( INSTANCE, "2" ),
+        "--sol", OUTPUT "/" "sol-week2.txt",
+        //"-cusIn", OUTPUT "/" "custom2",
+        //"--cusOut", OUTPUT "/" "custom3",
+        "--rand", "0",
+        "--timeout", "10"
+    };
 
-    run( 11, argv0, "n005w4_h0_w1233_0" );
-    run( 13, argv1, "n005w4_h0_w1233_1" );
-    run( 13, argv2, "n005w4_h0_w1233_2" );
-    run( 11, argv3, "n005w4_h0_w1233_3" );
+    char *argv3[] = {
+        "INRC2.exe",
+        "--sce", DIR "/" INSTANCE "/" SCENARIO( INSTANCE ),
+        "--his", OUTPUT "/" "history-week2.txt",
+        "--week", DIR "/" INSTANCE "/" WEEKDATA( INSTANCE, "1" ),
+        "--sol", OUTPUT "/" "sol-week3.txt",
+        //"-cusIn", OUTPUT "/" "custom3",
+        "--rand", "0",
+        "--timeout", "10"
+    };
+
+    run( sizeof( argv0 ) / sizeof( void* ), argv0 );
+    run( sizeof( argv1 ) / sizeof( void* ), argv1 );
+    run( sizeof( argv2 ) / sizeof( void* ), argv2 );
+    run( sizeof( argv3 ) / sizeof( void* ), argv3 );
 }
 #undef OUTPUT
 #undef INSTANCE

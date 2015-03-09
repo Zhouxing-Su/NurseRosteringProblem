@@ -1,0 +1,26 @@
+SOLUTION
+1 n005w4
+
+ASSIGNMENTS = 22
+Patrick Mon Late Nurse
+Patrick Tue Night Nurse
+Patrick Fri Night HeadNurse
+Patrick Sat Night HeadNurse
+Andrea Mon Early HeadNurse
+Andrea Wed Late HeadNurse
+Andrea Fri Late Nurse
+Andrea Sat Late Nurse
+Stefaan Mon Late HeadNurse
+Stefaan Tue Night HeadNurse
+Stefaan Sat Early HeadNurse
+Sara Tue Late Nurse
+Sara Wed Night Nurse
+Sara Thu Night Nurse
+Sara Fri Night Nurse
+Sara Sun Late Nurse
+Nguyen Mon Early Nurse
+Nguyen Tue Early Nurse
+Nguyen Wed Early Nurse
+Nguyen Fri Early Nurse
+Nguyen Sat Early Nurse
+Nguyen Sun Night Nurse

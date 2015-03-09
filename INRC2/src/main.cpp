@@ -2,12 +2,12 @@
 
 
 using namespace std;
+using namespace INRC2;
 
 
 int main( int argc, char *argv[] )
 {
     run( argc, argv );
 
-    system( "pause" );
     return 0;
 }

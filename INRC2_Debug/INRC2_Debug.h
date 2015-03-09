@@ -12,15 +12,16 @@
 
 
 // all arguments are string literal
-#define DIR "instance"
+#define DIR "../INRC2/instance"
 #define SCENARIO(instance) "Sc-" instance ".txt"
-#define WEEKDATA(instance, week) "WD-" instance "-" week ".txt"
+#define HISTORY(instance, sn) "H0-" instance "-" sn ".txt"
+#define WEEKDATA(instance, sn) "WD-" instance "-" sn ".txt"
 
 
 void test_n005w4_1233();
 
 
-const char *fullArgv[80] = {
+const char *fullArgv[] = {
     "INRC2.exe",
     "--sce", "",
     "--his", "",
@@ -29,7 +30,8 @@ const char *fullArgv[80] = {
     "-cusIn", "",
     "--cusOut", "",
     "--rand", ""
-};  // 15
+    "--timeout", ""
+};
 
 
 #endif

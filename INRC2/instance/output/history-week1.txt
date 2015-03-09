@@ -1,0 +1,9 @@
+HISTORY
+2 n005w4
+
+NURSE_HISTORY
+Patrick 7 2 None 0 0 1
+Andrea 8 2 None 0 0 1
+Stefaan 7 2 None 0 0 1
+Sara 12 2 Late 1 1 0
+Nguyen 12 2 Night 1 3 0
