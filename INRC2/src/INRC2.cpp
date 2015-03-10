@@ -47,10 +47,10 @@ namespace INRC2
         }
         if (argvMap.find( ARGV_TIME ) != argvMap.end()) {
             istringstream iss( argvMap[ARGV_TIME] );
-            iss >> input.runningTime;
-            input.runningTime *= 1000;  // convert second to millisecond
+            iss >> input.timeout;
+            input.timeout *= 1000;  // convert second to millisecond
         } else {
-            input.runningTime = NurseRostering::MAX_RUNNING_TIME;
+            input.timeout = NurseRostering::MAX_RUNNING_TIME;
         }
 
         // start computation

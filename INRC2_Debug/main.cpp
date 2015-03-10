@@ -7,67 +7,98 @@ using namespace INRC2;
 
 int main()
 {
-    test_n005w4_1233();
+    test( testOutputDir, 0, '0', "1233", 10 );
+    //test_customIO( testOutputDir, 0, '0', "1233", 10 );
 
     system( "pause" );
     return 0;
 }
 
-
-#define INSTANCE "n005w4"
-#define OUTPUT "output"
-void test_n005w4_1233()
+void prepareArgv_FirstWeek( const char *outputDir, char *argv[], int i, char h, char w, std::string t )
 {
-    char *argv0[] = {
-        "INRC2.exe",
-        "--sce", DIR "/" INSTANCE "/" SCENARIO( INSTANCE ),
-        "--his", DIR "/" INSTANCE "/" HISTORY( INSTANCE, "0" ),
-        "--week", DIR "/" INSTANCE "/" WEEKDATA( INSTANCE, "2" ),
-        "--sol", OUTPUT "/" "sol-week0.txt",
-        //"--cusOut", OUTPUT "/" "custom1",
-        "--rand", "0",
-        "--timeout", "10"
-    };
-
-    char *argv1[] = {
-        "INRC2.exe",
-        "--sce", DIR "/" INSTANCE "/" SCENARIO( INSTANCE ),
-        "--his", OUTPUT "/" "history-week0.txt",
-        "--week", DIR "/" INSTANCE "/" WEEKDATA( INSTANCE, "0" ),
-        "--sol", OUTPUT "/" "sol-week1.txt",
-        //"-cusIn", OUTPUT "/" "custom1",
-        //"--cusOut", OUTPUT "/" "custom2",
-        "--rand", "0",
-        "--timeout", "10"
-    };
-
-    char *argv2[] = {
-        "INRC2.exe",
-        "--sce", DIR "/" INSTANCE "/" SCENARIO( INSTANCE ),
-        "--his", OUTPUT "/" "history-week1.txt",
-        "--week", DIR "/" INSTANCE "/" WEEKDATA( INSTANCE, "2" ),
-        "--sol", OUTPUT "/" "sol-week2.txt",
-        //"-cusIn", OUTPUT "/" "custom2",
-        //"--cusOut", OUTPUT "/" "custom3",
-        "--rand", "0",
-        "--timeout", "10"
-    };
-
-    char *argv3[] = {
-        "INRC2.exe",
-        "--sce", DIR "/" INSTANCE "/" SCENARIO( INSTANCE ),
-        "--his", OUTPUT "/" "history-week2.txt",
-        "--week", DIR "/" INSTANCE "/" WEEKDATA( INSTANCE, "1" ),
-        "--sol", OUTPUT "/" "sol-week3.txt",
-        //"-cusIn", OUTPUT "/" "custom3",
-        "--rand", "0",
-        "--timeout", "10"
-    };
-
-    run( sizeof( argv0 ) / sizeof( void* ), argv0 );
-    run( sizeof( argv1 ) / sizeof( void* ), argv1 );
-    run( sizeof( argv2 ) / sizeof( void* ), argv2 );
-    run( sizeof( argv3 ) / sizeof( void* ), argv3 );
+    string sce = dir + instance[i] + scePrefix + instance[i] + fileSuffix;
+    string his = dir + instance[i] + initHisPrefix + instance[i] + '-' + h + fileSuffix;
+    string week = dir + instance[i] + weekPrefix + instance[i] + '-' + w + fileSuffix;
+    string sol = outputDir + solPrefix + "0" + fileSuffix;
+    argv[0] = fullArgv[0];
+    argv[1] = fullArgv[1];
+    argv[2] = new char[sce.size() + 1];
+    strcpy( argv[2], sce.c_str() );
+    argv[3] = fullArgv[3];
+    argv[4] = new char[his.size() + 1];
+    strcpy( argv[4], his.c_str() );
+    argv[5] = fullArgv[5];
+    argv[6] = new char[week.size() + 1];
+    strcpy( argv[6], week.c_str() );
+    argv[7] = fullArgv[7];
+    argv[8] = new char[sol.size() + 1];
+    strcpy( argv[8], sol.c_str() );
+    argv[9] = fullArgv[9];
+    argv[10] = new char[t.size() + 1];
+    strcpy( argv[10], t.c_str() );
 }
-#undef OUTPUT
-#undef INSTANCE
+
+void prepareArgv( const char *outputDir, char *argv[], int i, const char *weeks, char w, std::string t )
+{
+    string sce = dir + instance[i] + scePrefix + instance[i] + fileSuffix;
+    string his = outputDir + hisPrefix + (--w) + fileSuffix;
+    string week = dir + instance[i] + weekPrefix + instance[i] + '-' + weeks[w - '0'] + fileSuffix;
+    string sol = outputDir + solPrefix + (++w) + fileSuffix;
+    argv[0] = fullArgv[0];
+    argv[1] = fullArgv[1];
+    argv[2] = new char[sce.size() + 1];
+    strcpy( argv[2], sce.c_str() );
+    argv[3] = fullArgv[3];
+    argv[4] = new char[his.size() + 1];
+    strcpy( argv[4], his.c_str() );
+    argv[5] = fullArgv[5];
+    argv[6] = new char[week.size() + 1];
+    strcpy( argv[6], week.c_str() );
+    argv[7] = fullArgv[7];
+    argv[8] = new char[sol.size() + 1];
+    strcpy( argv[8], sol.c_str() );
+    argv[9] = fullArgv[9];
+    argv[10] = new char[t.size() + 1];
+    strcpy( argv[10], t.c_str() );
+}
+
+void test( const char *outputDir, int instIndex, char initHis, const char *weeks, int timeoutInSec )
+{
+    ostringstream t;
+    t << timeoutInSec;
+
+    char *argv[ArgcVal::full];
+    int argc = ArgcVal::noRandCusInCusOut;;
+
+    prepareArgv_FirstWeek( outputDir, argv, instIndex, initHis, weeks[0], t.str() );
+    run( argc, argv );
+
+    for (char w = '1'; w < instance[instIndex][5]; w++) {
+        prepareArgv( outputDir, argv, instIndex, weeks, w, t.str() );
+        run( argc, argv );
+    }
+}
+
+void test_customIO( const char *outputDir, int instIndex, char initHis, const char *weeks, int timeoutInSec )
+{
+    ostringstream t;
+    t << timeoutInSec;
+
+    int argc;
+    char *argv[ArgcVal::full];
+
+    argc = ArgcVal::noRandCusIn;
+    prepareArgv_FirstWeek( outputDir, argv, instIndex, initHis, weeks[0], t.str() );
+    run( argc, argv );
+
+    char w = '1';
+    for (; w < (instance[instIndex][5] - 1); w++) {
+        argc = ArgcVal::noRand;
+        prepareArgv( outputDir, argv, instIndex, weeks, w, t.str() );
+        run( argc, argv );
+    }
+
+    argc = ArgcVal::noRandCusOut;
+    prepareArgv( outputDir, argv, instIndex, weeks, w, t.str() );
+    run( argc, argv );
+}

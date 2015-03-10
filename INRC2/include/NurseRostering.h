@@ -39,7 +39,8 @@ public:
     class Scenario
     {
     public:
-        int maxWeekCount;
+        // if there are weekNum weeks in the planning horizon, maxWeekCount = (weekNum - 1) 
+        int maxWeekCount;   // count from 0
         int shiftTypeNum;
         int skillTypeNum;
         int nurseNum;
@@ -142,18 +143,21 @@ public:
     {
     public:
         static const int ILLEGAL_SOLUTION = -1;
+        static const int CHECK_TIME_INTERVAL_MASK_IN_ITER = ((1 << 10) - 1);
+        static const int SAVE_SOLUTION_TIME_IN_MILLISECOND = 50;
 
         class Output
         {
         public:
             Output() :objVal( -1 ) {}
             Output( int objValue, const Assign &assignment )
-                :objVal( objValue ), assign( assignment )
+                :objVal( objValue ), assign( assignment ), findTime( clock() )
             {
             }
 
             Assign assign;
             ObjValue objVal;
+            clock_t findTime;
         };
 
         // set algorithm name, set parameters, generate initial solution
@@ -189,6 +193,7 @@ public:
         // create header of the table ( require ios::app flag or "a" mode )
         static void initResultSheet( std::ofstream &csvFile );
 
+
         NurseNum_Day_Shift_Skill countNurseNums( const Assign &assign ) const;
 
         Output optima;
@@ -222,7 +227,7 @@ public:
         public:
             void resetAssign();   // reset assign
             bool genInitSln_random();
-            void genNewHistory();
+            void repair();
 
             // shift must not be none shift
             bool isValidSuccession( NurseID nurse, ShiftID shift, int weekday ) const;
@@ -292,7 +297,7 @@ public:
 
     // data to identify a nurse rostering problem
     int randSeed;
-    int runningTime;    // time in millisecond
+    int timeout;    // time in millisecond
     int weekCount;      // count from 0 (the number in history file)
     WeekData weekData;
     Scenario scenario;

@@ -23,7 +23,8 @@ NurseRostering::NurseRostering()
 
 
 NurseRostering::Solver::Solver( const NurseRostering &input, const std::string &name, clock_t st )
-    : problem( input ), algorithmName( name ), iterCount( 0 ), generationCount( 0 ), startTime( st )
+    : problem( input ), algorithmName( name ), iterCount( 0 ), generationCount( 0 ),
+    startTime( st ), endTime( st + input.timeout - SAVE_SOLUTION_TIME_IN_MILLISECOND )
 {
 }
 
@@ -166,7 +167,7 @@ void NurseRostering::Solver::record( const std::string logFileName, const std::s
         << instanceName << ","
         << algorithmName << ","
         << problem.randSeed << ","
-        << (endTime - startTime) << "ms,"
+        << (optima.findTime - startTime) << "ms,"
         << iterCount << ","
         << generationCount << ","
         << optima.objVal << ",";
@@ -207,23 +208,27 @@ void NurseRostering::TabuSolver::init()
 {
     discoverNurseSkillRelation();
 
-    while (true) {
-        bool feasible = sln.genInitSln_random();
-        if (feasible == true) {
-            break;
-        } else {
-            sln.resetAssign();
-        }
+    if (sln.genInitSln_random() == false) {
+        sln.repair();
     }
-    optima = NurseRostering::Solver::Output( sln );
 
+    optima = NurseRostering::Solver::Output( sln );
 }
 
 void NurseRostering::TabuSolver::solve()
 {
+    while (true) {
+        // check time
+        ++iterCount;
+        if (!(iterCount & CHECK_TIME_INTERVAL_MASK_IN_ITER)) {
+            if (clock() >= endTime) {
+                break;
+            }
+        }
 
+        // 
 
-    endTime = clock();
+    }
 }
 
 NurseRostering::TabuSolver::TabuSolver( const NurseRostering &i, clock_t st )
@@ -326,9 +331,17 @@ bool NurseRostering::TabuSolver::Solution::genInitSln_random()
     return true;
 }
 
-void NurseRostering::TabuSolver::Solution::genNewHistory()
+void NurseRostering::TabuSolver::Solution::repair()
 {
-
+    // TODO
+    while (true) {
+        bool feasible = genInitSln_random();
+        if (feasible) {
+            break;
+        } else {
+            resetAssign();
+        }
+    }
 }
 
 bool NurseRostering::TabuSolver::Solution::isValidSuccession( NurseID nurse, ShiftID shift, int weekday ) const

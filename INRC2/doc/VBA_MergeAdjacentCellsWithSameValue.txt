@@ -1,0 +1,41 @@
+Sub MergeCellsWithSameValue()
+    Application.ScreenUpdating = False
+    Application.DisplayAlerts = False
+    
+    Dim r As Integer
+    Dim c As Integer
+    
+    Sheet1.UsedRange.EntireRow.AutoFit
+    Sheet1.UsedRange.EntireColumn.AutoFit
+    Sheet1.UsedRange.HorizontalAlignment = xlCenter
+    Sheet1.UsedRange.VerticalAlignment = xlCenter
+    
+    For r = Sheet1.UsedRange.Rows.Count To 1 Step -1
+        For c = Sheet1.UsedRange.Columns.Count To 1 Step -1
+            If Not IsEmpty(Cells(r, c)) Then
+                If Not IsNumeric(Left(Cells(r, c).Value, 1)) Then
+                    If r > 1 Then
+                        If Not IsEmpty(Cells(r - 1, c).Value) Then
+                            If Cells(r, c) = Cells(r - 1, c) Then
+                                Range(Cells(r, c), Cells(r - 1, c)).Merge
+                                GoTo NEXTLOOP
+                            End If
+                        End If
+                    End If
+                    If c > 1 Then
+                        If Not IsEmpty(Cells(r, c - 1).Value) Then
+                            If Cells(r, c) = Cells(r, c - 1) Then
+                                Range(Cells(r, c), Cells(r, c - 1)).Merge
+                                GoTo NEXTLOOP
+                            End If
+                        End If
+                    End If
+                End If
+            End If
+NEXTLOOP:
+        Next
+    Next
+
+    Application.DisplayAlerts = True
+    Application.ScreenUpdating = True
+End Sub
