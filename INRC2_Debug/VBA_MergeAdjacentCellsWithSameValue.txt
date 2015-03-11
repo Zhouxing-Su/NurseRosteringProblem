@@ -1,14 +1,15 @@
+open the analysis sheet,
+press Alt+F11,
+double click "ThisWorkBook" in VBAProject,
+copy following code after "=========",
+run.
+========================================================================
 Sub MergeCellsWithSameValue()
     Application.ScreenUpdating = False
     Application.DisplayAlerts = False
     
     Dim r As Integer
     Dim c As Integer
-    
-    Sheet1.UsedRange.EntireRow.AutoFit
-    Sheet1.UsedRange.EntireColumn.AutoFit
-    Sheet1.UsedRange.HorizontalAlignment = xlCenter
-    Sheet1.UsedRange.VerticalAlignment = xlCenter
     
     For r = Sheet1.UsedRange.Rows.Count To 1 Step -1
         For c = Sheet1.UsedRange.Columns.Count To 1 Step -1
@@ -35,6 +36,11 @@ Sub MergeCellsWithSameValue()
 NEXTLOOP:
         Next
     Next
+    
+    Sheet1.UsedRange.EntireRow.AutoFit
+    Sheet1.UsedRange.EntireColumn.AutoFit
+    Sheet1.UsedRange.HorizontalAlignment = xlCenter
+    Sheet1.UsedRange.VerticalAlignment = xlCenter
 
     Application.DisplayAlerts = True
     Application.ScreenUpdating = True

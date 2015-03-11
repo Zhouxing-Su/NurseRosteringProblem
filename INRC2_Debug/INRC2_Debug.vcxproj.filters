@@ -24,6 +24,12 @@
     <ClCompile Include="..\INRC2\src\INRC2.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="InstanceAnalysis.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="BatchTest.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\INRC2\include\NurseRostering.h">
@@ -35,5 +41,12 @@
     <ClInclude Include="INRC2_Debug.h">
       <Filter>头文件</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="VBA_MergeAdjacentCellsWithSameValue.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="InstanceAnalysis.csv" />
+    <None Include="log.csv" />
   </ItemGroup>
 </Project>

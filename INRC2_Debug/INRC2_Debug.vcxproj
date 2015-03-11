@@ -86,12 +86,21 @@
   <ItemGroup>
     <ClCompile Include="..\INRC2\src\INRC2.cpp" />
     <ClCompile Include="..\INRC2\src\NurseRostering.cpp" />
+    <ClCompile Include="BatchTest.cpp" />
+    <ClCompile Include="InstanceAnalysis.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\INRC2\include\INRC2.h" />
     <ClInclude Include="..\INRC2\include\NurseRostering.h" />
     <ClInclude Include="INRC2_Debug.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="VBA_MergeAdjacentCellsWithSameValue.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="InstanceAnalysis.csv" />
+    <None Include="log.csv" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
