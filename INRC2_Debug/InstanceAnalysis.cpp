@@ -11,7 +11,7 @@ void analyzeInstance()
     const string header1_prefix0( "Scenario,Min|Max|Limit,AvgNurse" );
     const string header1_prefix1( "Scenario,AvgNursePerWeek,PerWeekend" );
     const string header1_suffix( ",Avg|Ideal Nurse" );
-    const string header2_prefix0( "WeekData,Min|Opt,Min|Max" );
+    const string header2_prefix0( "WeekData,Min|Opt,Min|Opt" );
     const string header2_prefix1( "WeekData,TotalRequire,WeekendRequire" );
     const string header2_suffix( ",Min|Opt RequirePerSkill" );
 
@@ -86,14 +86,15 @@ void analyzeInstance()
             for (int weekday = 0; weekday < 7; weekday++) {
                 for (int sh = 0; sh < p.scenario.shiftTypeNum; sh++) {
                     for (int sk = 0; sk < p.scenario.skillTypeNum; sk++) {
-                        int num = p.weekData.minNurseNums[weekday][sh][sk];
-                        totalMinNurseRequire += num;
-                        totalOptNurseRequire += num;
-                        minRequirePerSkill[sk] += num;
-                        optRequirePerSkill[sk] += num;
+                        int minn = p.weekData.minNurseNums[weekday][sh][sk];
+                        int optn = p.weekData.optNurseNums[weekday][sh][sk];
+                        totalMinNurseRequire += minn;
+                        totalOptNurseRequire += optn;
+                        minRequirePerSkill[sk] += minn;
+                        optRequirePerSkill[sk] += optn;
                         if (weekday >= 5) {
-                            minNurseRequireOnWeekend += num;
-                            optNurseRequireOnWeekend += num;
+                            minNurseRequireOnWeekend += minn;
+                            optNurseRequireOnWeekend += optn;
                         }
                     }
                 }
