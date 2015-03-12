@@ -41,6 +41,9 @@
     <ClInclude Include="INRC2_Debug.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\INRC2\include\utility.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="VBA_MergeAdjacentCellsWithSameValue.txt" />

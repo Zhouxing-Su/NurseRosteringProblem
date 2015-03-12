@@ -47,8 +47,9 @@ namespace INRC2
         }
         if (argvMap.find( ARGV_TIME ) != argvMap.end()) {
             istringstream iss( argvMap[ARGV_TIME] );
-            iss >> input.timeout;
-            input.timeout *= 1000;  // convert second to millisecond
+            double timeout;
+            iss >> timeout;
+            input.timeout = static_cast<int>(timeout * 1000);  // convert second to millisecond
         } else {
             input.timeout = NurseRostering::MAX_RUNNING_TIME;
         }
@@ -209,9 +210,9 @@ namespace INRC2
     void readWeekData( const std::string &weekDataFileName, NurseRostering &input )
     {
         NurseRostering::WeekData &weekdata = input.weekData;
-        weekdata.minNurseNums = vector< vector< vector<int> > >( NurseRostering::WEEKDAY_NUM, vector< vector<int> >( input.scenario.shifts.size(), vector<int>( input.scenario.skillTypeNum ) ) );
-        weekdata.optNurseNums = vector< vector< vector<int> > >( NurseRostering::WEEKDAY_NUM, vector< vector<int> >( input.scenario.shifts.size(), vector<int>( input.scenario.skillTypeNum ) ) );
-        weekdata.shiftOffs = vector< vector< vector<bool> > >( NurseRostering::WEEKDAY_NUM, vector< vector<bool> >( input.scenario.shifts.size(), vector<bool>( input.scenario.nurseNum, false ) ) );
+        weekdata.minNurseNums = vector< vector< vector<int> > >( NurseRostering::Weekday::NUM, vector< vector<int> >( input.scenario.shifts.size(), vector<int>( input.scenario.skillTypeNum ) ) );
+        weekdata.optNurseNums = vector< vector< vector<int> > >( NurseRostering::Weekday::NUM, vector< vector<int> >( input.scenario.shifts.size(), vector<int>( input.scenario.skillTypeNum ) ) );
+        weekdata.shiftOffs = vector< vector< vector<bool> > >( NurseRostering::Weekday::NUM, vector< vector<bool> >( input.scenario.shifts.size(), vector<bool>( input.scenario.nurseNum, false ) ) );
         char c;
         char buf[MAX_BUF_SIZE];
         ifstream ifs( weekDataFileName );
@@ -229,7 +230,7 @@ namespace INRC2
             }
             NurseRostering::ShiftID shift = input.names.shiftMap[shiftName];
             NurseRostering::SkillID skill = input.names.skillMap[skillName];
-            for (int weekday = 0; weekday < 7; ++weekday) {
+            for (int weekday = NurseRostering::Weekday::Mon; weekday < 7; ++weekday) {
                 ifs >> c >> weekdata.minNurseNums[weekday][shift][skill]
                     >> c >> weekdata.optNurseNums[weekday][shift][skill] >> c;
             }
@@ -272,7 +273,7 @@ namespace INRC2
         int totalAssign = 0;
         ostringstream oss;
         for (NurseRostering::NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
-            for (int weekday = 0; weekday < NurseRostering::WEEKDAY_NUM; ++weekday) {
+            for (int weekday = NurseRostering::Weekday::Mon; weekday < NurseRostering::Weekday::NUM; ++weekday) {
                 if (assign[nurse][weekday].shift != NurseRostering::Scenario::Shift::ID_NONE) {
                     ++totalAssign;
                     oss << names.nurseNames[nurse] << ' '

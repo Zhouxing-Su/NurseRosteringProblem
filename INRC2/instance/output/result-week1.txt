@@ -1,4 +1,4 @@
-0
-fail to generate feasible solution.
-fail to generate feasible solution.
-fail to generate feasible solution.
+26850
+21870
+21870
+21870

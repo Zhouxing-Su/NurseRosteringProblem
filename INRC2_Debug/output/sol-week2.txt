@@ -1,17 +1,17 @@
 SOLUTION
--858993460 n005w4
+2 n005w4
 
 ASSIGNMENTS = 24
 Patrick Mon Night HeadNurse
-Patrick Thu Night Nurse
-Patrick Fri Night HeadNurse
+Patrick Thu Late HeadNurse
+Patrick Fri Night Nurse
 Patrick Sun Late Nurse
 Andrea Tue Early Nurse
-Andrea Wed Night HeadNurse
-Andrea Fri Night Nurse
+Andrea Thu Night Nurse
+Andrea Fri Night HeadNurse
 Andrea Sun Early HeadNurse
 Stefaan Mon Early HeadNurse
-Stefaan Thu Late HeadNurse
+Stefaan Wed Night HeadNurse
 Stefaan Sun Late HeadNurse
 Sara Mon Night Nurse
 Sara Wed Early Nurse

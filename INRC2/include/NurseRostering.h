@@ -21,20 +21,36 @@
 #include <map>
 #include <set>
 #include <algorithm>
-//#include <numeric>
+
+#include "utility.h"
 
 
 class NurseRostering
 {
 public:
+    static const int MAX_RUNNING_TIME = 1073741824;  // in millisecond
+    enum Weekday { Mon = 0, Tue, Wed, Thu, Fri, Sat, Sun, NUM };
+    enum Penalty
+    {
+        InsufficientStaff = 30,
+        ConsecutiveShift = 15,
+        ConsecutiveDay = 30,
+        ConsecutiveDayoff = 30,
+        Preference = 10,
+        CompleteWeekend = 30,
+        TotalAssign = 20,
+        TotalWorkingWeekend = 30
+    };
+
+
     typedef int ObjValue;   // unit of objective function
     typedef int NurseID;    // non-negative number for a certain nurse
     typedef int ContractID; // non-negative number for a certain contract
     typedef int ShiftID;    // NONE, ANY or non-negative number for a certain kind of shift
     typedef int SkillID;    // non-negative number for a certain kind of skill
 
-    // NurseNum_Day_Shift_Skill[day][shift][skill] is a number of nurse
-    typedef std::vector< std::vector< std::vector<int> > > NurseNum_Day_Shift_Skill;
+    // NurseNum[day][shift][skill] is a number of nurse
+    typedef std::vector< std::vector< std::vector<int> > > NurseNum;
 
     class Scenario
     {
@@ -48,9 +64,9 @@ public:
         class Shift
         {
         public:
-            static const ShiftID ID_ANY = -1;
+            static const ShiftID ID_ANY;
             static const std::string NAME_ANY;
-            static const ShiftID ID_NONE = -2;
+            static const ShiftID ID_NONE;
             static const std::string NAME_NONE;
 
             int minConsecutiveShiftNum;
@@ -78,7 +94,7 @@ public:
         class Nurse
         {
         public:
-            static const NurseID ID_NONE = -1;
+            static const NurseID ID_NONE;
 
             ContractID contract;
             std::vector<SkillID> skills;
@@ -92,9 +108,9 @@ public:
         // (shiftOffs[day][shift][nurse] == true) means shiftOff required
         std::vector< std::vector< std::vector<bool> > > shiftOffs;
         // optNurseNums[day][shift][skill] is a number of nurse
-        NurseNum_Day_Shift_Skill optNurseNums;
+        NurseNum optNurseNums;
         // optNurseNums[day][shift][skill] is a number of nurse
-        NurseNum_Day_Shift_Skill minNurseNums;
+        NurseNum minNurseNums;
     };
 
     class NurseHistory
@@ -137,7 +153,20 @@ public:
         SkillID skill;
     };
     // Assign[nurse][day] is a SingleAssign
-    typedef std::vector< std::vector< SingleAssign > > Assign;
+    class Assign : public std::vector < std::vector< SingleAssign > >
+    {
+    public:
+        Assign() {}
+        Assign( int nurseNum, int weekdayNum, const SingleAssign &singleAssign = SingleAssign() )
+            : std::vector< std::vector< SingleAssign > >( nurseNum, std::vector< SingleAssign >( weekdayNum, singleAssign ) ) {}
+
+        bool isAssigned( NurseID nurse, int weekday ) const
+        {
+            return (at( nurse ).at( weekday ).shift != NurseRostering::Scenario::Shift::ID_NONE);
+        }
+    private:
+
+    };
 
     class Solver
     {
@@ -165,10 +194,7 @@ public:
         // search for optima
         virtual void solve() = 0;
         // return const reference of the optima
-        const Output& getOptima() const
-        {
-            return optima;
-        }
+        const Output& getOptima() const { return optima; }
         // print simple information of the solution to console
         void print() const;
         // record solution to specified file and create custom file if required
@@ -193,8 +219,15 @@ public:
         // create header of the table ( require ios::app flag or "a" mode )
         static void initResultSheet( std::ofstream &csvFile );
 
+        NurseNum countNurseNums( const Assign &assign ) const;
+        void updateConsecutiveInfo_problemOnBorder( int &objValue,
+            const Assign &assign, NurseID nurse, int weekday, ShiftID lastShift,
+            int &consecutiveShift, int &consecutiveDay, int &consecutiveDayOff ) const;
+        void updateConsecutiveInfo( int &objValue,
+            const Assign &assign, NurseID nurse, int weekday, ShiftID lastShift,
+            int &consecutiveShift, int &consecutiveDay, int &consecutiveDayOff,
+            bool &shiftBegin, bool &dayBegin, bool &dayoffBegin ) const;
 
-        NurseNum_Day_Shift_Skill countNurseNums( const Assign &assign ) const;
 
         Output optima;
 
@@ -219,7 +252,8 @@ public:
         virtual ~TabuSolver();
 
     private:
-        // NurseWithSkill[skill][skillNum-1] is a set of nurses who have that skill and have skillNum skills in total
+        // NurseWithSkill[skill][skillNum-1] is a set of nurses 
+        // who have that skill and have skillNum skills in total
         typedef std::vector< std::vector<std::vector<NurseID> > > NurseWithSkill;
 
         class Solution
@@ -227,15 +261,13 @@ public:
         public:
             void resetAssign();   // reset assign
             bool genInitSln_random();
+            void initAssistData();
+            void initObjValue();
             void repair();
 
+            const Assign& getAssign() const { return assign; }
             // shift must not be none shift
             bool isValidSuccession( NurseID nurse, ShiftID shift, int weekday ) const;
-            // require assign be initialized to Shift::ID_NONE
-            bool isAssigned( NurseID nurse, int weekday ) const
-            {
-                return (assign[nurse][weekday].shift != NurseRostering::Scenario::Shift::ID_NONE);
-            }
 
             Solution( TabuSolver &solver );
             operator Output() const
@@ -285,10 +317,7 @@ public:
     };
 
 
-    static const int WEEKDAY_NUM = 7;
-
-    static const ObjValue MAX_OBJ_VALUE = 2000000000;
-    static const int MAX_RUNNING_TIME = 1073741824;  // in millisecond
+    static const ObjValue MAX_OBJ_VALUE;
 
 
     // must set all data members by direct accessing!

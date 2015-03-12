@@ -35,7 +35,7 @@ namespace INRC2
     const std::string ARGV_RANDOM_SEED( "rand" );
     const std::string ARGV_TIME( "timeout" );  // in seconds
 
-    const std::string weekdayNames[NurseRostering::WEEKDAY_NUM] = {
+    const std::string weekdayNames[NurseRostering::Weekday::NUM] = {
         "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"
     };
     const std::map<std::string, int> weekdayMap = {

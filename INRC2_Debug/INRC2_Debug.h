@@ -10,6 +10,7 @@
 
 #include <cstring>
 #include <cstdlib>
+#include <ctime>
 #include <vector>
 #include <string>
 #include <sstream>
@@ -31,6 +32,12 @@ enum ArgcVal
     noRandCusInCusOut = noCusInCusOut - single
 };
 
+enum ArgvIndex
+{
+    program = 0, __sce, sce, __his, his, __week, week, __sol, sol,
+    __timout, timeout, __rand, rand, __cusIn, cusIn, __cusOut, cusOut
+};
+
 extern char *fullArgv[ArgcVal::full];
 
 extern const char *testOutputDir;
@@ -45,13 +52,16 @@ extern const std::string solPrefix;
 extern const std::string fileSuffix;
 
 
+void makeSureDirExist( const std::string &dir );
 
 void analyzeInstance();
 
-void test( const char *outputDir, int instIndex, char initHis, const char *weeks, int timeoutInSec );
-void test_customIO( const char *outputDir, int instIndex, char initHis, const char *weeks, int timeoutInSec );
-void prepareArgv_FirstWeek( const char *outputDir, char *argv[], int instIndex, char initHis, char week, std::string timeoutInSec );
-void prepareArgv( const char *outputDir, char *argv[], int instIndex, const char *weeks, char week, std::string timeoutInSec );
+void test( const char *outputDir, int instIndex, char initHis, const char *weeks, int timeoutInSec, int randSeed = static_cast<int>(time( NULL ) + clock()) );
+void test_customIO( const char *outputDir, int instIndex, char initHis, const char *weeks, int timeoutInSec, std::string cusIn, std::string cusOut );
+void prepareArgv_FirstWeek( const char *outputDir, char *argv[], int instIndex, char initHis,
+    char week, std::string timeoutInSec, std::string randSeed = "", std::string cusIn = "", std::string cusOut = "" );
+void prepareArgv( const char *outputDir, char *argv[], int instIndex, const char *weeks, char week,
+    std::string timeoutInSec, std::string randSeed = "", std::string cusIn = "", std::string cusOut = "" );
 
 
 #endif

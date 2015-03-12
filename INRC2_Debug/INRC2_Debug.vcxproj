@@ -93,6 +93,7 @@
   <ItemGroup>
     <ClInclude Include="..\INRC2\include\INRC2.h" />
     <ClInclude Include="..\INRC2\include\NurseRostering.h" />
+    <ClInclude Include="..\INRC2\include\utility.h" />
     <ClInclude Include="INRC2_Debug.h" />
   </ItemGroup>
   <ItemGroup>
