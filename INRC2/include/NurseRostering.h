@@ -247,7 +247,7 @@ public:
         virtual void solve();
 
         // initialize data about nurse-skill relation
-        void discoverNurseSkillRelation();  // initialize nurseWithSkill, nurseNumOfSkill
+        void initAssistData();  // initialize nurseWithSkill, nurseNumOfSkill
         TabuSolver( const NurseRostering &input, clock_t startTime = clock() );
         virtual ~TabuSolver();
 
@@ -259,8 +259,8 @@ public:
         class Solution
         {
         public:
+            bool initAssign();
             void resetAssign();   // reset assign
-            bool genInitSln_random();
             void initAssistData();
             void initObjValue();
             void repair();

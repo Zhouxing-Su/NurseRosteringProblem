@@ -35,8 +35,10 @@ enum ArgcVal
 enum ArgvIndex
 {
     program = 0, __sce, sce, __his, his, __week, week, __sol, sol,
-    __timout, timeout, __rand, rand, __cusIn, cusIn, __cusOut, cusOut
+    __timout, timeout, __randSeed, randSeed, __cusIn, cusIn, __cusOut, cusOut
 };
+
+static const int MAX_ARGV_LEN = 256;
 
 extern char *fullArgv[ArgcVal::full];
 
@@ -56,11 +58,12 @@ void makeSureDirExist( const std::string &dir );
 
 void analyzeInstance();
 
-void test( const char *outputDir, int instIndex, char initHis, const char *weeks, int timeoutInSec, int randSeed = static_cast<int>(time( NULL ) + clock()) );
+void test( const char *outputDir, int instIndex, char initHis, const char *weeks, int timeoutInSec );
+void test( const char *outputDir, int instIndex, char initHis, const char *weeks, int timeoutInSec, int randSeed );
 void test_customIO( const char *outputDir, int instIndex, char initHis, const char *weeks, int timeoutInSec, std::string cusIn, std::string cusOut );
-void prepareArgv_FirstWeek( const char *outputDir, char *argv[], int instIndex, char initHis,
+void prepareArgv_FirstWeek( const char *outputDir, char *argv[], char argvBuf[][MAX_ARGV_LEN], int instIndex, char initHis,
     char week, std::string timeoutInSec, std::string randSeed = "", std::string cusIn = "", std::string cusOut = "" );
-void prepareArgv( const char *outputDir, char *argv[], int instIndex, const char *weeks, char week,
+void prepareArgv( const char *outputDir, char *argv[], char argvBuf[][MAX_ARGV_LEN], int instIndex, const char *weeks, char week,
     std::string timeoutInSec, std::string randSeed = "", std::string cusIn = "", std::string cusOut = "" );
 
 

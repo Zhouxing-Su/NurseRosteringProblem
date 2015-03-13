@@ -140,15 +140,21 @@ int NurseRostering::Solver::checkObjValue( const Assign &assign ) const
         }
         // since penalty was calculated when switching assign, the penalty of last 
         // consecutive assignments are not considered. so finish it here.
-        if (consecutiveDayOff > problem.scenario.contracts[problem.scenario.nurses[nurse].contract].maxConsecutiveDayoffNum) {
+        if (dayoffBegin && problem.history[nurse].consecutiveDayoffNum > problem.scenario.contracts[problem.scenario.nurses[nurse].contract].maxConsecutiveDayoffNum) {
+            objValue += Penalty::ConsecutiveDayoff * Weekday::NUM;
+        } else if (consecutiveDayOff > problem.scenario.contracts[problem.scenario.nurses[nurse].contract].maxConsecutiveDayoffNum) {
             objValue += Penalty::ConsecutiveDayoff *
                 (consecutiveDayOff - problem.scenario.contracts[problem.scenario.nurses[nurse].contract].maxConsecutiveDayoffNum);
         } else if (consecutiveDayOff == 0) {    // working day
-            if (consecutiveShift > problem.scenario.shifts[assign[nurse][Weekday::Sun].shift].maxConsecutiveShiftNum) {
+            if (shiftBegin && problem.history[nurse].consecutiveShiftNum > problem.scenario.shifts[assign[nurse][Weekday::Sun].shift].maxConsecutiveShiftNum) {
+                objValue += Penalty::ConsecutiveShift * Weekday::NUM;
+            } else if (consecutiveShift > problem.scenario.shifts[assign[nurse][Weekday::Sun].shift].maxConsecutiveShiftNum) {
                 objValue += Penalty::ConsecutiveShift *
                     (consecutiveShift - problem.scenario.shifts[assign[nurse][Weekday::Sun].shift].maxConsecutiveShiftNum);
             }
-            if (consecutiveDay > problem.scenario.contracts[problem.scenario.nurses[nurse].contract].maxConsecutiveWorkingDayNum) {
+            if (dayBegin && problem.history[nurse].consecutiveWorkingDayNum > problem.scenario.contracts[problem.scenario.nurses[nurse].contract].maxConsecutiveWorkingDayNum) {
+                objValue += Penalty::ConsecutiveDay * Weekday::NUM;
+            } else if (consecutiveDay > problem.scenario.contracts[problem.scenario.nurses[nurse].contract].maxConsecutiveWorkingDayNum) {
                 objValue += Penalty::ConsecutiveDay *
                     (consecutiveDay - problem.scenario.contracts[problem.scenario.nurses[nurse].contract].maxConsecutiveWorkingDayNum);
             }
@@ -405,17 +411,24 @@ void NurseRostering::Solver::updateConsecutiveInfo( int &objValue,
 
 void NurseRostering::TabuSolver::init()
 {
-    discoverNurseSkillRelation();
+    // TODO
+    srand( problem.randSeed );
 
-    if (sln.genInitSln_random() == false) {
+    initAssistData();
+
+    if (sln.initAssign() == false) {
         sln.repair();
     }
+
+    sln.initObjValue();
+    sln.initAssistData();
 
     optima = NurseRostering::Solver::Output( sln );
 }
 
 void NurseRostering::TabuSolver::solve()
 {
+    // TODO
     while (true) {
         // check time
         ++iterCount;
@@ -443,7 +456,7 @@ NurseRostering::TabuSolver::~TabuSolver()
 
 }
 
-void NurseRostering::TabuSolver::discoverNurseSkillRelation()
+void NurseRostering::TabuSolver::initAssistData()
 {
     for (NurseID n = 0; n < problem.scenario.nurseNum; ++n) {
         const vector<SkillID> &skills = problem.scenario.nurses[n].skills;
@@ -470,13 +483,8 @@ NurseRostering::TabuSolver::Solution::Solution( TabuSolver &s )
 
 }
 
-void NurseRostering::TabuSolver::Solution::resetAssign()
-{
-    assign = Assign( solver.problem.scenario.nurseNum, Weekday::NUM );
-}
 
-
-bool NurseRostering::TabuSolver::Solution::genInitSln_random()
+bool NurseRostering::TabuSolver::Solution::initAssign()
 {
     AvailableNurses availableNurse( *this );
 
@@ -526,17 +534,24 @@ bool NurseRostering::TabuSolver::Solution::genInitSln_random()
         }
     }
 
-    initObjValue();
     return true;
 }
 
+void NurseRostering::TabuSolver::Solution::resetAssign()
+{
+    assign = Assign( solver.problem.scenario.nurseNum, Weekday::NUM );
+}
+
+
 void NurseRostering::TabuSolver::Solution::initAssistData()
 {
+    // TODO
 
 }
 
 void NurseRostering::TabuSolver::Solution::initObjValue()
 {
+    // TODO
     objValue = solver.checkObjValue( assign );
 }
 
@@ -544,7 +559,7 @@ void NurseRostering::TabuSolver::Solution::repair()
 {
     // TODO
     while (true) {
-        bool feasible = genInitSln_random();
+        bool feasible = initAssign();
         if (feasible) {
             break;
         } else {
