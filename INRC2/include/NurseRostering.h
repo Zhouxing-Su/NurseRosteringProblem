@@ -6,7 +6,7 @@
 *           3. use a priority queue to manage available nurse when assigning?
 *           4. record 8 day which the first day is last day of last week to unify
 *              the succession judgment.
-*           5. [optimizable] put initObjValue() in initAssign() or call it in init() ?
+*           5. [optimizable] put evaluateObjValue() in initAssign() or call it in init() ?
 */
 
 #ifndef NURSE_ROSTERING_H
@@ -259,9 +259,9 @@ public:
         class Solution
         {
         public:
-            bool initAssign();  // generate initial solution
-            void resetAssign(); // reset all shift to Shift::ID_NONE
-            void initObjValue();
+            bool genInitAssign();   // assign must be default value( call resetAssign() )
+            void resetAssign();     // reset all shift to Shift::ID_NONE
+            void evaluateObjValue();
             void repair();
             void searchNeighborhood();
 
@@ -355,7 +355,6 @@ public:
                         shiftHigh[i] = i;
                     }
                 }
-
                 Consecutive( const Consecutive &c )
                 {
                     memcpy( dayHigh, c.dayHigh, sizeof( dayHigh ) );
@@ -363,7 +362,6 @@ public:
                     memcpy( shiftHigh, c.shiftHigh, sizeof( shiftHigh ) );
                     memcpy( shiftLow, c.shiftLow, sizeof( shiftLow ) );
                 }
-
                 Consecutive& operator=(const Consecutive &c)
                 {
                     memcpy( dayHigh, c.dayHigh, sizeof( dayHigh ) );
@@ -390,10 +388,19 @@ public:
             void assignLow( int weekday, int nextDay, int prevDay, int high[Weekday::NUM], int low[Weekday::NUM], bool affectLeft );
             void assignMiddle( int weekday, int nextDay, int prevDay, int high[Weekday::NUM], int low[Weekday::NUM] );
 
+            void evaluateInsufficientStaff();
+            void evaluateConsecutiveShift();
+            void evaluateConsecutiveDay();
+            void evaluateConsecutiveDayOff();
+            void evaluatePreference();
+            void evaluateCompleteWeekend();
+            void evaluateTotalAssign();
+            void evaluateTotalWorkingWeekend();
+
             TabuSolver &solver;
 
-            // nurse numbers for each single assignment
-            NurseNumsOnSingleAssign nurseNums;
+            // missing nurse numbers for each single assignment
+            NurseNumsOnSingleAssign missingNurseNums;
             // consecutive[nurse] is the consecutive assignments record for nurse
             std::vector<Consecutive> consecutives;
 

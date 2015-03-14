@@ -104,14 +104,14 @@ bool NurseRostering::Solver::checkFeasibility() const
 int NurseRostering::Solver::checkObjValue( const Assign &assign ) const
 {
     ObjValue objValue = 0;
-    NurseNumsOnSingleAssign nurseNum( countNurseNums( assign ) );
+    NurseNumsOnSingleAssign nurseNums( countNurseNums( assign ) );
 
     // check S1: Insufficient staffing for optimal coverage (30)
     for (int weekday = Weekday::Mon; weekday < Weekday::NUM; ++weekday) {
         for (ShiftID shift = 0; shift < problem.scenario.shiftTypeNum; ++shift) {
             for (SkillID skill = 0; skill < problem.scenario.skillTypeNum; ++skill) {
                 int missingNurse = (problem.weekData.optNurseNums[weekday][shift][skill]
-                    - nurseNum[weekday][shift][skill]);
+                    - nurseNums[weekday][shift][skill]);
                 if (missingNurse > 0) {
                     objValue += Penalty::InsufficientStaff * missingNurse;
                 }
@@ -176,8 +176,8 @@ int NurseRostering::Solver::checkObjValue( const Assign &assign ) const
     for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
         objValue += Penalty::CompleteWeekend *
             (problem.scenario.contracts[problem.scenario.nurses[nurse].contract].completeWeekend
-            && assign.isAssigned( nurse, Weekday::Sat )
-            != assign.isAssigned( nurse, Weekday::Sun ));
+            && (assign.isAssigned( nurse, Weekday::Sat )
+            != assign.isAssigned( nurse, Weekday::Sun )));
     }
 
     // check S6: Total assignments (20)
@@ -376,11 +376,11 @@ void NurseRostering::TabuSolver::init()
 
     initAssistData();
 
-    if (sln.initAssign() == false) {
+    if (sln.genInitAssign() == false) {
         sln.repair();
     }
 
-    sln.initObjValue();
+    sln.evaluateObjValue();
 
     optima = NurseRostering::Solver::Output( sln );
 }
@@ -437,14 +437,14 @@ void NurseRostering::TabuSolver::initAssistData()
 
 
 NurseRostering::TabuSolver::Solution::Solution( TabuSolver &s )
-    : solver( s ), assign( s.problem.scenario.nurseNum, Weekday::NUM ), nurseNums( Weekday::NUM,
-    vector< vector<int> >( s.problem.scenario.shiftTypeNum, vector<int>( s.problem.scenario.skillTypeNum, 0 ) ) ),
+    : solver( s ), assign( s.problem.scenario.nurseNum, Weekday::NUM ),
+    missingNurseNums( s.problem.weekData.optNurseNums ),
     consecutives( vector<Consecutive>( s.problem.scenario.nurseNum ) )
 {
 
 }
 
-bool NurseRostering::TabuSolver::Solution::initAssign()
+bool NurseRostering::TabuSolver::Solution::genInitAssign()
 {
     AvailableNurses availableNurse( *this );
 
@@ -500,23 +500,29 @@ bool NurseRostering::TabuSolver::Solution::initAssign()
 void NurseRostering::TabuSolver::Solution::resetAssign()
 {
     consecutives = vector<Consecutive>();
-    nurseNums = NurseNumsOnSingleAssign( Weekday::NUM,
-        vector< vector<int> >( solver.problem.scenario.shiftTypeNum, vector<int>( solver.problem.scenario.skillTypeNum, 0 ) ) );
+    missingNurseNums = solver.problem.weekData.optNurseNums;
     assign = Assign( solver.problem.scenario.nurseNum, Weekday::NUM );
 }
 
-void NurseRostering::TabuSolver::Solution::initObjValue()
+void NurseRostering::TabuSolver::Solution::evaluateObjValue()
 {
-    // TODO
     objValue = 0;
-    objValue = solver.checkObjValue( assign );
+
+    evaluateInsufficientStaff();
+    evaluateConsecutiveShift();
+    evaluateConsecutiveDay();
+    evaluateConsecutiveDayOff();
+    evaluatePreference();
+    evaluateCompleteWeekend();
+    evaluateTotalAssign();
+    evaluateTotalWorkingWeekend();
 }
 
 void NurseRostering::TabuSolver::Solution::repair()
 {
     // TODO
     while (true) {
-        bool feasible = initAssign();
+        bool feasible = genInitAssign();
         if (feasible) {
             break;
         } else {
@@ -552,9 +558,9 @@ void NurseRostering::TabuSolver::Solution::assignShift( int weekday, NurseID nur
 
     updateConsecutive( weekday, nurse, shift, skill );
 
-    ++nurseNums[weekday][shift][skill];
+    --missingNurseNums[weekday][shift][skill];
     if (assign.isAssigned( nurse, weekday )) {
-        --nurseNums[weekday][assign[nurse][weekday].shift][assign[nurse][weekday].skill];
+        ++missingNurseNums[weekday][assign[nurse][weekday].shift][assign[nurse][weekday].skill];
     }
 
     assign[nurse][weekday] = SingleAssign( shift, skill );
@@ -569,7 +575,7 @@ void NurseRostering::TabuSolver::Solution::removeShift( int weekday, NurseID nur
 
     updateConsecutive( weekday, nurse, NurseRostering::Scenario::Shift::ID_NONE, 0 );
 
-    --nurseNums[weekday][assign[nurse][weekday].shift][assign[nurse][weekday].skill];
+    ++missingNurseNums[weekday][assign[nurse][weekday].shift][assign[nurse][weekday].skill];
 
     assign[nurse][weekday] = SingleAssign();
 }
@@ -664,6 +670,103 @@ void NurseRostering::TabuSolver::Solution::assignMiddle( int weekday, int nextDa
     }
     high[weekday] = weekday;
     low[weekday] = weekday;
+}
+
+void NurseRostering::TabuSolver::Solution::evaluateInsufficientStaff()
+{
+    for (int weekday = Weekday::Mon; weekday < Weekday::NUM; ++weekday) {
+        for (ShiftID shift = 0; shift < solver.problem.scenario.shiftTypeNum; ++shift) {
+            for (SkillID skill = 0; skill < solver.problem.scenario.skillTypeNum; ++skill) {
+                if (missingNurseNums[weekday][shift][skill] > 0) {
+                    objValue += Penalty::InsufficientStaff * missingNurseNums[weekday][shift][skill];
+                }
+            }
+        }
+    }
+}
+
+void NurseRostering::TabuSolver::Solution::evaluateConsecutiveShift()
+{
+    for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
+
+    }
+}
+
+void NurseRostering::TabuSolver::Solution::evaluateConsecutiveDay()
+{
+
+}
+
+void NurseRostering::TabuSolver::Solution::evaluateConsecutiveDayOff()
+{
+
+}
+
+void NurseRostering::TabuSolver::Solution::evaluatePreference()
+{
+    for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
+        for (int weekday = Weekday::Mon; weekday < Weekday::NUM; ++weekday) {
+            ShiftID shift = assign[nurse][weekday].shift;
+            if (shift != NurseRostering::Scenario::Shift::ID_NONE) {
+                objValue += Penalty::Preference *
+                    solver.problem.weekData.shiftOffs[weekday][shift][nurse];
+            }
+        }
+    }
+}
+
+void NurseRostering::TabuSolver::Solution::evaluateCompleteWeekend()
+{
+    for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
+        objValue += Penalty::CompleteWeekend *
+            (solver.problem.scenario.contracts[solver.problem.scenario.nurses[nurse].contract].completeWeekend
+            && (assign.isAssigned( nurse, Weekday::Sat )
+            != assign.isAssigned( nurse, Weekday::Sun )));
+    }
+}
+
+void NurseRostering::TabuSolver::Solution::evaluateTotalAssign()
+{
+    if (solver.problem.weekCount < solver.problem.scenario.maxWeekCount) {
+        // TODO
+
+
+
+
+
+    } else {    // final week
+        for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
+            int assignNum = solver.problem.history[nurse].shiftNum;
+            for (int weekday = Weekday::Mon; weekday < Weekday::NUM; ++weekday) {
+                assignNum += assign.isAssigned( nurse, weekday );
+            }
+            objValue += Penalty::TotalAssign * distanceToRange( assignNum,
+                solver.problem.scenario.contracts[solver.problem.scenario.nurses[nurse].contract].minShiftNum,
+                solver.problem.scenario.contracts[solver.problem.scenario.nurses[nurse].contract].maxShiftNum );
+        }
+    }
+}
+
+void NurseRostering::TabuSolver::Solution::evaluateTotalWorkingWeekend()
+{
+    if (solver.problem.weekCount < solver.problem.scenario.maxWeekCount) {
+        // TODO
+
+
+
+
+
+    } else {    // final week
+        for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
+            int workingWeekend = solver.problem.history[nurse].workingWeekendNum +
+                (assign.isAssigned( nurse, Weekday::Sat ) || assign.isAssigned( nurse, Weekday::Sun ));
+            // calculate exceeding weekends
+            workingWeekend -= solver.problem.scenario.contracts[solver.problem.scenario.nurses[nurse].contract].maxWorkingWeekendNum;
+            if (workingWeekend > 0) {
+                objValue += Penalty::TotalWorkingWeekend * workingWeekend;
+            }
+        }
+    }
 }
 
 
