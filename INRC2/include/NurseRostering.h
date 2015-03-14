@@ -22,6 +22,7 @@
 #include <map>
 #include <set>
 #include <algorithm>
+#include <cstdlib>
 
 #include "utility.h"
 
@@ -222,9 +223,6 @@ public:
         static void initResultSheet( std::ofstream &csvFile );
 
         NurseNumsOnSingleAssign countNurseNums( const Assign &assign ) const;
-        void updateConsecutiveInfo_problemOnBorder( int &objValue,
-            const Assign &assign, NurseID nurse, int weekday, ShiftID lastShift,
-            int &consecutiveShift, int &consecutiveDay, int &consecutiveDayOff ) const;
         void updateConsecutiveInfo( int &objValue,
             const Assign &assign, NurseID nurse, int weekday, ShiftID lastShift,
             int &consecutiveShift, int &consecutiveDay, int &consecutiveDayOff,
@@ -358,6 +356,23 @@ public:
                     }
                 }
 
+                Consecutive( const Consecutive &c )
+                {
+                    memcpy( dayHigh, c.dayHigh, sizeof( dayHigh ) );
+                    memcpy( dayLow, c.dayLow, sizeof( dayLow ) );
+                    memcpy( shiftHigh, c.shiftHigh, sizeof( shiftHigh ) );
+                    memcpy( shiftLow, c.shiftLow, sizeof( shiftLow ) );
+                }
+
+                Consecutive& operator=(const Consecutive &c)
+                {
+                    memcpy( dayHigh, c.dayHigh, sizeof( dayHigh ) );
+                    memcpy( dayLow, c.dayLow, sizeof( dayLow ) );
+                    memcpy( shiftHigh, c.shiftHigh, sizeof( shiftHigh ) );
+                    memcpy( shiftLow, c.shiftLow, sizeof( shiftLow ) );
+                    return *this;
+                }
+
                 int dayLow[Weekday::NUM];
                 int dayHigh[Weekday::NUM];
                 int shiftLow[Weekday::NUM];
@@ -369,7 +384,7 @@ public:
             ObjValue testRemoveShift( int weekday, NurseID nurse );
             void assignShift( int weekday, NurseID nurse, ShiftID shift, SkillID skill );
             void removeShift( int weekday, NurseID nurse );
-            
+
             void updateConsecutive( int weekday, NurseID nurse, ShiftID shift, SkillID skill );
             void assignHigh( int weekday, int nextDay, int prevDay, int high[Weekday::NUM], int low[Weekday::NUM], bool affectRight );
             void assignLow( int weekday, int nextDay, int prevDay, int high[Weekday::NUM], int low[Weekday::NUM], bool affectLeft );

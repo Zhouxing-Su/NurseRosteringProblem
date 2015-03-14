@@ -438,7 +438,8 @@ void NurseRostering::TabuSolver::initAssistData()
 
 NurseRostering::TabuSolver::Solution::Solution( TabuSolver &s )
     : solver( s ), assign( s.problem.scenario.nurseNum, Weekday::NUM ), nurseNums( Weekday::NUM,
-    vector< vector<int> >( s.problem.scenario.shiftTypeNum, vector<int>( s.problem.scenario.skillTypeNum, 0 ) ) )
+    vector< vector<int> >( s.problem.scenario.shiftTypeNum, vector<int>( s.problem.scenario.skillTypeNum, 0 ) ) ),
+    consecutives( vector<Consecutive>( s.problem.scenario.nurseNum ) )
 {
 
 }
@@ -498,12 +499,16 @@ bool NurseRostering::TabuSolver::Solution::initAssign()
 
 void NurseRostering::TabuSolver::Solution::resetAssign()
 {
+    consecutives = vector<Consecutive>();
+    nurseNums = NurseNumsOnSingleAssign( Weekday::NUM,
+        vector< vector<int> >( solver.problem.scenario.shiftTypeNum, vector<int>( solver.problem.scenario.skillTypeNum, 0 ) ) );
     assign = Assign( solver.problem.scenario.nurseNum, Weekday::NUM );
 }
 
 void NurseRostering::TabuSolver::Solution::initObjValue()
 {
     // TODO
+    objValue = 0;
     objValue = solver.checkObjValue( assign );
 }
 
@@ -548,7 +553,9 @@ void NurseRostering::TabuSolver::Solution::assignShift( int weekday, NurseID nur
     updateConsecutive( weekday, nurse, shift, skill );
 
     ++nurseNums[weekday][shift][skill];
-    --nurseNums[weekday][assign[nurse][weekday].shift][assign[nurse][weekday].skill];
+    if (assign.isAssigned( nurse, weekday )) {
+        --nurseNums[weekday][assign[nurse][weekday].shift][assign[nurse][weekday].skill];
+    }
 
     assign[nurse][weekday] = SingleAssign( shift, skill );
 }
@@ -556,7 +563,7 @@ void NurseRostering::TabuSolver::Solution::assignShift( int weekday, NurseID nur
 void NurseRostering::TabuSolver::Solution::removeShift( int weekday, NurseID nurse )
 {
     // TODO : make sure they won't be the same and leave out this
-    if (NurseRostering::Scenario::Shift::ID_NONE == assign[nurse][weekday].shift) {
+    if (assign.isAssigned( nurse, weekday )) {
         return;
     }
 
@@ -589,25 +596,25 @@ void NurseRostering::TabuSolver::Solution::updateConsecutive( int weekday, Nurse
 
     if (weekday == c.dayHigh[weekday]) {
         assignHigh( weekday, nextDay, prevDay, c.dayHigh, c.dayLow,
-            (nextDay != Weekday::Sun) );
+            (weekday != Weekday::Sun) );
         // there won't be any shift next day, so (weekday == c.shiftHigh[weekday]) must be true
         assignHigh( weekday, nextDay, prevDay, c.shiftHigh, c.shiftLow,
-            ((prevDay != Weekday::Mon) && (shift == assign[nurse][prevDay].shift)) );
+            ((weekday != Weekday::Sun) && (shift == assign[nurse][nextDay].shift)) );
     } else if (weekday == c.dayLow[weekday]) {
         assignLow( weekday, nextDay, prevDay, c.dayHigh, c.dayLow,
-            (nextDay != Weekday::Mon) );
+            (weekday != Weekday::Mon) );
         // there won't be any shift previous day, so (weekday == c.shiftLow[weekday]) must be true
         assignLow( weekday, nextDay, prevDay, c.shiftHigh, c.shiftLow,
-            ((prevDay != Weekday::Mon) && (shift == assign[nurse][prevDay].shift)) );
+            ((weekday != Weekday::Mon) && (shift == assign[nurse][prevDay].shift)) );
     } else {    // in the middle of consecutive days
         assignMiddle( weekday, nextDay, prevDay, c.dayHigh, c.dayLow );
         // consider shift
         if (weekday == c.shiftHigh[weekday]) {
             assignHigh( weekday, nextDay, prevDay, c.shiftHigh, c.shiftLow,
-                ((nextDay != Weekday::Sun) && (shift == assign[nurse][nextDay].shift)) );
+                ((weekday != Weekday::Sun) && (shift == assign[nurse][nextDay].shift)) );
         } else if (weekday == c.shiftLow[weekday]) {
             assignLow( weekday, nextDay, prevDay, c.shiftHigh, c.shiftLow,
-                ((prevDay != Weekday::Mon) && (shift == assign[nurse][prevDay].shift)) );
+                ((weekday != Weekday::Mon) && (shift == assign[nurse][prevDay].shift)) );
         } else {
             assignMiddle( weekday, nextDay, prevDay, c.shiftHigh, c.shiftLow );
         }
