@@ -6,6 +6,7 @@
 *           3. use a priority queue to manage available nurse when assigning?
 *           4. record 8 day which the first day is last day of last week to unify
 *              the succession judgment.
+*           5. [optimizable] put initObjValue() in initAssign() or call it in init() ?
 */
 
 #ifndef NURSE_ROSTERING_H
@@ -49,8 +50,8 @@ public:
     typedef int ShiftID;    // NONE, ANY or non-negative number for a certain kind of shift
     typedef int SkillID;    // non-negative number for a certain kind of skill
 
-    // NurseNum[day][shift][skill] is a number of nurse
-    typedef std::vector< std::vector< std::vector<int> > > NurseNum;
+    // NurseNumsOnSingleAssign[day][shift][skill] is a number of nurse
+    typedef std::vector< std::vector< std::vector<int> > > NurseNumsOnSingleAssign;
 
     class Scenario
     {
@@ -108,9 +109,9 @@ public:
         // (shiftOffs[day][shift][nurse] == true) means shiftOff required
         std::vector< std::vector< std::vector<bool> > > shiftOffs;
         // optNurseNums[day][shift][skill] is a number of nurse
-        NurseNum optNurseNums;
+        NurseNumsOnSingleAssign optNurseNums;
         // optNurseNums[day][shift][skill] is a number of nurse
-        NurseNum minNurseNums;
+        NurseNumsOnSingleAssign minNurseNums;
     };
 
     class NurseHistory
@@ -147,6 +148,7 @@ public:
     class SingleAssign
     {
     public:
+        // the default constructor means there is no assignment
         SingleAssign( ShiftID sh = Scenario::Shift::ID_NONE, SkillID sk = 0 ) :shift( sh ), skill( sk ) {}
 
         ShiftID shift;
@@ -157,7 +159,7 @@ public:
     {
     public:
         Assign() {}
-        Assign( int nurseNum, int weekdayNum, const SingleAssign &singleAssign = SingleAssign() )
+        Assign( int nurseNum, int weekdayNum = Weekday::NUM, const SingleAssign &singleAssign = SingleAssign() )
             : std::vector< std::vector< SingleAssign > >( nurseNum, std::vector< SingleAssign >( weekdayNum, singleAssign ) ) {}
 
         bool isAssigned( NurseID nurse, int weekday ) const
@@ -219,7 +221,7 @@ public:
         // create header of the table ( require ios::app flag or "a" mode )
         static void initResultSheet( std::ofstream &csvFile );
 
-        NurseNum countNurseNums( const Assign &assign ) const;
+        NurseNumsOnSingleAssign countNurseNums( const Assign &assign ) const;
         void updateConsecutiveInfo_problemOnBorder( int &objValue,
             const Assign &assign, NurseID nurse, int weekday, ShiftID lastShift,
             int &consecutiveShift, int &consecutiveDay, int &consecutiveDayOff ) const;
@@ -259,11 +261,11 @@ public:
         class Solution
         {
         public:
-            bool initAssign();
-            void resetAssign();   // reset assign
-            void initAssistData();
+            bool initAssign();  // generate initial solution
+            void resetAssign(); // reset all shift to Shift::ID_NONE
             void initObjValue();
             void repair();
+            void searchNeighborhood();
 
             const Assign& getAssign() const { return assign; }
             // shift must not be none shift
@@ -276,6 +278,28 @@ public:
             }
 
         private:
+            // available nurses for a single assignment
+            //==========================================
+            // an   :   available nurse
+            // ants :   available nurse this shift
+            // antd :   available nurse this day
+            // 
+            //        i       k|      m|       
+            //   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+            // an| | |x| | | |y| | | |z| | | |
+            //   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+            //                 |       |       
+            //               ants     antd
+            //
+            //  if an[i] is not available for this shift:
+            //      an[i] <-> an[k];
+            //      --ants;
+            //  if an[i] is not available for this day:
+            //      an[i] <-> an[k];
+            //      an[k] <-> an[m];
+            //      --ants;
+            //      --antd;
+            //==========================================
             class AvailableNurses
             {
             public:
@@ -302,17 +326,71 @@ public:
                 std::vector<int> validNurseNum_CurDay;
             };
 
+            // consecutive information for a nurse
+            //==========================================
+            // this is an demo for switching consecutive working day and day off.
+            // consecutive assignments use the same method.
+            // 
+            //    E L O L E E E
+            //   +-+-+-+-+-+-+-+
+            //   |0|1|2|3|4|4|4|  high
+            //   |0|1|2|3|6|6|6|  low
+            //   +-+-+-+-+-+-+-+        +-+-+-+-+-+-+-+
+            //      |       |  E->O     |0|1|2|3|4|5|6|
+            //      | L->O  +---------->|0|1|2|3|4|5|6|
+            //      |                   +-+-+-+-+-+-+-+
+            //      |  +-+-+-+-+-+-+-+
+            //      +->|0|1|1|3|3|3|6|
+            //         |0|2|2|5|5|5|6| 
+            //         +-+-+-+-+-+-+-+
+            //
+            //==========================================
+            class Consecutive
+            {
+            public:
+                Consecutive()
+                {
+                    for (int i = 0; i < Weekday::NUM; ++i) {
+                        dayLow[i] = i;
+                        dayHigh[i] = i;
+                        shiftLow[i] = i;
+                        shiftHigh[i] = i;
+                    }
+                }
+
+                int dayLow[Weekday::NUM];
+                int dayHigh[Weekday::NUM];
+                int shiftLow[Weekday::NUM];
+                int shiftHigh[Weekday::NUM];
+            };
+
+
+            ObjValue testAssignShift( int weekday, NurseID nurse, ShiftID shift, SkillID skill );
+            ObjValue testRemoveShift( int weekday, NurseID nurse );
+            void assignShift( int weekday, NurseID nurse, ShiftID shift, SkillID skill );
+            void removeShift( int weekday, NurseID nurse );
+            
+            void updateConsecutive( int weekday, NurseID nurse, ShiftID shift, SkillID skill );
+            void assignHigh( int weekday, int nextDay, int prevDay, int high[Weekday::NUM], int low[Weekday::NUM], bool affectRight );
+            void assignLow( int weekday, int nextDay, int prevDay, int high[Weekday::NUM], int low[Weekday::NUM], bool affectLeft );
+            void assignMiddle( int weekday, int nextDay, int prevDay, int high[Weekday::NUM], int low[Weekday::NUM] );
+
             TabuSolver &solver;
+
+            // nurse numbers for each single assignment
+            NurseNumsOnSingleAssign nurseNums;
+            // consecutive[nurse] is the consecutive assignments record for nurse
+            std::vector<Consecutive> consecutives;
 
             ObjValue objValue;
             Assign assign;
         };
 
+
         Solution sln;
 
         // nurseNumOfSkill[skill] is the number of nurses with that skill
-        std::vector<int> nurseNumOfSkill;
-        // nurseWithSkill[skill][skillNum-1] is a set of nurses who have that skill and have skillNum skills in total
+        std::vector<SkillID> nurseNumOfSkill;
         NurseWithSkill nurseWithSkill;
     };
 
