@@ -193,15 +193,20 @@ namespace INRC2
         ifs.getline( buf, MAX_BUF_LEN );    // empty line
         ifs.getline( buf, MAX_BUF_LEN );    // NURSE_HISTORY
 
-        history.resize( input.scenario.nurses.size() );
-        for (int i = history.size(); i > 0; --i) {
+        history.shiftNum.resize( input.scenario.nurseNum );
+        history.workingWeekendNum.resize( input.scenario.nurseNum );
+        history.lastShift.resize( input.scenario.nurseNum );
+        history.consecutiveShiftNum.resize( input.scenario.nurseNum );
+        history.consecutiveWorkingDayNum.resize( input.scenario.nurseNum );
+        history.consecutiveDayoffNum.resize( input.scenario.nurseNum );
+        for (int i = input.scenario.nurseNum; i > 0; --i) {
             string nurseName, lastShiftName;
             ifs >> nurseName;
-            NurseRostering::NurseHistory &nurseHistory = history[input.names.nurseMap[nurseName]];
-            ifs >> nurseHistory.shiftNum >> nurseHistory.workingWeekendNum
-                >> lastShiftName >> nurseHistory.consecutiveShiftNum
-                >> nurseHistory.consecutiveWorkingDayNum >> nurseHistory.consecutiveDayoffNum;
-            nurseHistory.lastShift = input.names.shiftMap[lastShiftName];
+            NurseRostering::NurseID nurse = input.names.nurseMap[nurseName];
+            ifs >> history.shiftNum[nurse] >> history.workingWeekendNum[nurse]
+                >> lastShiftName >> history.consecutiveShiftNum[nurse]
+                >> history.consecutiveWorkingDayNum[nurse] >> history.consecutiveDayoffNum[nurse];
+            history.lastShift[nurse] = input.names.shiftMap[lastShiftName];
         }
 
         ifs.close();

@@ -115,18 +115,17 @@ public:
         NurseNumsOnSingleAssign minNurseNums;
     };
 
-    class NurseHistory
+    // history.XXX[nurse] is the XXX of a certain nurse
+    class History
     {
     public:
-        int shiftNum;
-        int workingWeekendNum;
-        ShiftID lastShift;
-        int consecutiveShiftNum;
-        int consecutiveWorkingDayNum;
-        int consecutiveDayoffNum;
+        std::vector<int> shiftNum;
+        std::vector<int> workingWeekendNum;
+        std::vector<ShiftID> lastShift;
+        std::vector<int> consecutiveShiftNum;
+        std::vector<int> consecutiveWorkingDayNum;
+        std::vector<int> consecutiveDayoffNum;
     };
-    // history[nurse] is the history of a certain nurse
-    typedef std::vector<NurseHistory> History;
 
     class Names
     {
@@ -223,7 +222,7 @@ public:
         static void initResultSheet( std::ofstream &csvFile );
 
         NurseNumsOnSingleAssign countNurseNums( const Assign &assign ) const;
-        void updateConsecutiveInfo( int &objValue,
+        void checkConsecutiveViolation( int &objValue,
             const Assign &assign, NurseID nurse, int weekday, ShiftID lastShift,
             int &consecutiveShift, int &consecutiveDay, int &consecutiveDayOff,
             bool &shiftBegin, bool &dayBegin, bool &dayoffBegin ) const;
@@ -349,10 +348,10 @@ public:
                 Consecutive()
                 {
                     for (int i = 0; i < Weekday::NUM; ++i) {
-                        dayLow[i] = i;
-                        dayHigh[i] = i;
-                        shiftLow[i] = i;
-                        shiftHigh[i] = i;
+                        dayLow[i] = Weekday::Mon;
+                        dayHigh[i] = Weekday::Sun;
+                        shiftLow[i] = Weekday::Mon;
+                        shiftHigh[i] = Weekday::Sun;
                     }
                 }
                 Consecutive( const Consecutive &c )
@@ -383,7 +382,7 @@ public:
             void assignShift( int weekday, NurseID nurse, ShiftID shift, SkillID skill );
             void removeShift( int weekday, NurseID nurse );
 
-            void updateConsecutive( int weekday, NurseID nurse, ShiftID shift, SkillID skill );
+            void updateConsecutive( int weekday, NurseID nurse, ShiftID shift );
             void assignHigh( int weekday, int nextDay, int prevDay, int high[Weekday::NUM], int low[Weekday::NUM], bool affectRight );
             void assignLow( int weekday, int nextDay, int prevDay, int high[Weekday::NUM], int low[Weekday::NUM], bool affectLeft );
             void assignMiddle( int weekday, int nextDay, int prevDay, int high[Weekday::NUM], int low[Weekday::NUM] );
@@ -399,6 +398,8 @@ public:
 
             TabuSolver &solver;
 
+            // total assignments for each nurse
+            std::vector<int> totalAssignNums;
             // missing nurse numbers for each single assignment
             NurseNumsOnSingleAssign missingNurseNums;
             // consecutive[nurse] is the consecutive assignments record for nurse
