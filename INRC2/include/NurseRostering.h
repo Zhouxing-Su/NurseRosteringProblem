@@ -37,14 +37,15 @@ public:
     enum Weekday { Mon = 0, Tue, Wed, Thu, Fri, Sat, Sun, NUM };
     enum Penalty
     {
-        InsufficientStaff = 30,
-        ConsecutiveShift = 15,
-        ConsecutiveDay = 30,
-        ConsecutiveDayOff = 30,
-        Preference = 10,
-        CompleteWeekend = 30,
-        TotalAssign = 20,
-        TotalWorkingWeekend = 30
+        AMP = 1000,
+        InsufficientStaff = (AMP * 30),
+        ConsecutiveShift = (AMP * 15),
+        ConsecutiveDay = (AMP * 30),
+        ConsecutiveDayOff = (AMP * 30),
+        Preference = (AMP * 10),
+        CompleteWeekend = (AMP * 30),
+        TotalAssign = (AMP * 20),
+        TotalWorkingWeekend = (AMP * 30)
     };
 
 
