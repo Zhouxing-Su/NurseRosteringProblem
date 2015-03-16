@@ -7,6 +7,9 @@
 *           4. record 8 day which the first day is last day of last week to unify
 *              the succession judgment.
 *           5. [optimizable] put evaluateObjValue() in initAssign() or call it in init() ?
+*           6. [optimizable] evaluateConsecutiveDay() and evaluateConsecutiveDayOff() can
+*               be put together and not consider if there is an assignment. but there is
+*               a difficult problem with consecutive state on the beginning of the week.
 */
 
 #ifndef NURSE_ROSTERING_H
@@ -37,7 +40,7 @@ public:
         InsufficientStaff = 30,
         ConsecutiveShift = 15,
         ConsecutiveDay = 30,
-        ConsecutiveDayoff = 30,
+        ConsecutiveDayOff = 30,
         Preference = 10,
         CompleteWeekend = 30,
         TotalAssign = 20,
@@ -59,6 +62,7 @@ public:
     public:
         // if there are weekNum weeks in the planning horizon, maxWeekCount = (weekNum - 1) 
         int maxWeekCount;   // count from 0
+        int totalWeekNum;   // count from 1
         int shiftTypeNum;
         int skillTypeNum;
         int nurseNum;
@@ -162,9 +166,14 @@ public:
         Assign( int nurseNum, int weekdayNum = Weekday::NUM, const SingleAssign &singleAssign = SingleAssign() )
             : std::vector< std::vector< SingleAssign > >( nurseNum, std::vector< SingleAssign >( weekdayNum, singleAssign ) ) {}
 
-        bool isAssigned( NurseID nurse, int weekday ) const
+        static bool isWorking( ShiftID shift )
         {
-            return (at( nurse ).at( weekday ).shift != NurseRostering::Scenario::Shift::ID_NONE);
+            return (shift != NurseRostering::Scenario::Shift::ID_NONE);
+        }
+
+        bool isWorking( NurseID nurse, int weekday ) const
+        {
+            return isWorking( at( nurse ).at( weekday ).shift );
         }
     private:
 
@@ -218,12 +227,18 @@ public:
         const NurseRostering &problem;
 
     protected:
+        // solver will check time every certain number of iterations
+        // this determines if it is the right iteration to check time
+        static bool isIterForTimeCheck( int iterCount )
+        {
+            return (!(iterCount & CHECK_TIME_INTERVAL_MASK_IN_ITER));
+        }
         // create header of the table ( require ios::app flag or "a" mode )
         static void initResultSheet( std::ofstream &csvFile );
 
         NurseNumsOnSingleAssign countNurseNums( const Assign &assign ) const;
         void checkConsecutiveViolation( int &objValue,
-            const Assign &assign, NurseID nurse, int weekday, ShiftID lastShift,
+            const Assign &assign, NurseID nurse, int weekday, ShiftID lastShiftID,
             int &consecutiveShift, int &consecutiveDay, int &consecutiveDayOff,
             bool &shiftBegin, bool &dayBegin, bool &dayoffBegin ) const;
 
@@ -347,12 +362,10 @@ public:
             public:
                 Consecutive()
                 {
-                    for (int i = 0; i < Weekday::NUM; ++i) {
-                        dayLow[i] = Weekday::Mon;
-                        dayHigh[i] = Weekday::Sun;
-                        shiftLow[i] = Weekday::Mon;
-                        shiftHigh[i] = Weekday::Sun;
-                    }
+                    std::fill( dayLow, dayLow + Weekday::NUM, Weekday::Mon );
+                    std::fill( dayHigh, dayHigh + Weekday::NUM, Weekday::Sun );
+                    std::fill( shiftLow, shiftLow + Weekday::NUM, Weekday::Mon );
+                    std::fill( shiftHigh, shiftHigh + Weekday::NUM, Weekday::Sun );
                 }
                 Consecutive( const Consecutive &c )
                 {
@@ -405,8 +418,17 @@ public:
             // consecutive[nurse] is the consecutive assignments record for nurse
             std::vector<Consecutive> consecutives;
 
-            ObjValue objValue;
             Assign assign;
+
+            ObjValue objValue;
+            ObjValue objInsufficientStaff;
+            ObjValue objConsecutiveShift;
+            ObjValue objConsecutiveDay;
+            ObjValue objConsecutiveDayOff;
+            ObjValue objPreference;
+            ObjValue objCompleteWeekend;
+            ObjValue objTotalAssign;
+            ObjValue objTotalWorkingWeekend;
         };
 
 
@@ -427,8 +449,9 @@ public:
 
     // data to identify a nurse rostering problem
     int randSeed;
-    int timeout;    // time in millisecond
-    int weekCount;      // count from 0 (the number in history file)
+    int timeout;        // time in millisecond
+    int pastWeekCount;  // count from 0 (the number in history file)
+    int currentWeek;    // count from 1
     WeekData weekData;
     Scenario scenario;
     History history;

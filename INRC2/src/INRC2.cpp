@@ -95,8 +95,8 @@ namespace INRC2
 
         ifs.getline( buf, MAX_BUF_LEN );        // empty line
         ifs.getline( buf, MAX_BUF_LEN, '=' );   // WEEKS =
-        ifs >> scenario.maxWeekCount;
-        --scenario.maxWeekCount;
+        ifs >> scenario.totalWeekNum;
+        scenario.maxWeekCount = scenario.totalWeekNum - 1;
         ifs.getline( buf, MAX_BUF_LEN );        // clear line
 
         ifs.getline( buf, MAX_BUF_LEN );        // empty line
@@ -188,7 +188,8 @@ namespace INRC2
         ifstream ifs( historyFileName );
 
         ifs.getline( buf, MAX_BUF_LEN );    // HISTORY
-        ifs >> input.weekCount;             // X
+        ifs >> input.pastWeekCount;         // X
+        input.currentWeek = input.pastWeekCount + 1;
         ifs.getline( buf, MAX_BUF_LEN );    //  nXXXwX
         ifs.getline( buf, MAX_BUF_LEN );    // empty line
         ifs.getline( buf, MAX_BUF_LEN );    // NURSE_HISTORY
@@ -273,7 +274,7 @@ namespace INRC2
         ofstream ofs( solutionFileName );
 
         ofs << "SOLUTION" << endl;
-        ofs << solver.problem.weekCount << ' '
+        ofs << solver.problem.pastWeekCount << ' '
             << solver.problem.names.scenarioName << endl << endl;
         int totalAssign = 0;
         ostringstream oss;

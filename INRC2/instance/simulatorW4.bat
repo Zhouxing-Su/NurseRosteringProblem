@@ -1,6 +1,6 @@
 %~d0
 cd %~dp0
-set instance=n040w4
+set instance=n005w4
 set h0=0
 set w1=1
 set w2=2
