@@ -27,17 +27,20 @@ namespace INRC2
                 readScenario( argvMap[ARGV_SCENARIO], input );
             } else {
                 cerr << "missing obligate argument(scenario)" << endl;
+                return;
             }
             if (argvMap.find( ARGV_HISTORY ) != argvMap.end()) {
                 readHistory( argvMap[ARGV_HISTORY], input );
             } else {
                 cerr << "missing obligate argument(history)" << endl;
+                return;
             }
         }
         if (argvMap.find( ARGV_WEEKDATA ) != argvMap.end()) {
             readWeekData( argvMap[ARGV_WEEKDATA], input );
         } else {
             cerr << "missing obligate argument(week data)" << endl;
+            return;
         }
         if (argvMap.find( ARGV_RANDOM_SEED ) != argvMap.end()) {
             istringstream iss( argvMap[ARGV_RANDOM_SEED] );
@@ -64,6 +67,7 @@ namespace INRC2
             writeSolution( argvMap[ARGV_SOLUTION], solver );
         } else {
             cerr << "missing obligate argument(solution file name)" << endl;
+            return;
         }
         if (argvMap.find( ARGV_CUSTOM_OUTPUT ) != argvMap.end()) {
             writeCustomOutput( argvMap[ARGV_CUSTOM_OUTPUT] );
@@ -188,8 +192,8 @@ namespace INRC2
         ifstream ifs( historyFileName );
 
         ifs.getline( buf, MAX_BUF_LEN );    // HISTORY
-        ifs >> input.pastWeekCount;         // X
-        input.currentWeek = input.pastWeekCount + 1;
+        ifs >> history.pastWeekCount;         // X
+        history.currentWeek = history.pastWeekCount + 1;
         ifs.getline( buf, MAX_BUF_LEN );    //  nXXXwX
         ifs.getline( buf, MAX_BUF_LEN );    // empty line
         ifs.getline( buf, MAX_BUF_LEN );    // NURSE_HISTORY
@@ -264,6 +268,7 @@ namespace INRC2
 
     void readCustomInput( const std::string &customInputFileName, NurseRostering &input )
     {
+        // TODO
 
     }
 
@@ -274,7 +279,7 @@ namespace INRC2
         ofstream ofs( solutionFileName );
 
         ofs << "SOLUTION" << endl;
-        ofs << solver.problem.pastWeekCount << ' '
+        ofs << solver.problem.history.pastWeekCount << ' '
             << solver.problem.names.scenarioName << endl << endl;
         int totalAssign = 0;
         ostringstream oss;
@@ -296,6 +301,9 @@ namespace INRC2
 
     void writeCustomOutput( const std::string &customOutputFileName )
     {
-
+        // TODO : what needs to be write
+        // names
+        // scenario
+        // new history
     }
 }

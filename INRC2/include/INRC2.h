@@ -1,7 +1,8 @@
 /**
 *   usage : 1. invoke solver interface to solve problem.
 *
-*   note :  1. remove code with [!] which is code for debugging
+*   note :  1. remove code with [!] which is code for debugging.
+*           2. remove all cerr.
 */
 
 #ifndef INRC2_H

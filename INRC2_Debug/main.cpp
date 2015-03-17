@@ -36,7 +36,7 @@ const std::string fileSuffix( ".txt" );
 int main()
 {
     //analyzeInstance();
-    test( testOutputDir, 0, '0', "1233", 1, 10 );
+    test( testOutputDir, 0, '0', "1233", 0, 10 );
     //test_customIO( testOutputDir, 0, '0', "1233", 1, 10 );
 
     system( "pause" );

@@ -124,6 +124,9 @@ public:
     class History
     {
     public:
+        int pastWeekCount;  // count from 0 (the number in history file)
+        int currentWeek;    // count from 1
+
         std::vector<int> shiftNum;
         std::vector<int> workingWeekendNum;
         std::vector<ShiftID> lastShift;
@@ -285,6 +288,7 @@ public:
             bool isValidSuccession( NurseID nurse, ShiftID shift, int weekday ) const;
 
             Solution( TabuSolver &solver );
+            History genHistory() const; // history for next week
             operator Output() const
             {
                 return Output( objValue, assign );
@@ -450,9 +454,7 @@ public:
 
     // data to identify a nurse rostering problem
     int randSeed;
-    int timeout;        // time in millisecond
-    int pastWeekCount;  // count from 0 (the number in history file)
-    int currentWeek;    // count from 1
+    int timeout;        // time in millisecond. 0 for just generate initial solution
     WeekData weekData;
     Scenario scenario;
     History history;

@@ -193,23 +193,23 @@ int NurseRostering::Solver::checkObjValue( const Assign &assign ) const
             assignNum += assign.isWorking( nurse, weekday );
         }
         objValue += Penalty::TotalAssign * distanceToRange( assignNum * totalWeekNum,
-            min * problem.currentWeek, max * problem.currentWeek ) / totalWeekNum;
+            min * problem.history.currentWeek, max * problem.history.currentWeek ) / totalWeekNum;
 
         int maxWeekend = problem.scenario.contracts[problem.scenario.nurses[nurse].contract].maxWorkingWeekendNum;
         int historyWeekend = problem.history.workingWeekendNum[nurse] * totalWeekNum;
-        int exceedingWeekend = historyWeekend - (maxWeekend * problem.currentWeek) +
+        int exceedingWeekend = historyWeekend - (maxWeekend * problem.history.currentWeek) +
             ((assign.isWorking( nurse, Weekday::Sat ) || assign.isWorking( nurse, Weekday::Sun )) * totalWeekNum);
         if (exceedingWeekend > 0) {
             objValue += Penalty::TotalWorkingWeekend * exceedingWeekend / totalWeekNum;
         }
 
         // remove penalty in the history except the first week
-        if (problem.pastWeekCount > 0) {
+        if (problem.history.pastWeekCount > 0) {
             objValue -= Penalty::TotalAssign * distanceToRange(
                 problem.history.shiftNum[nurse] * totalWeekNum,
-                min * problem.pastWeekCount, max * problem.pastWeekCount ) / totalWeekNum;
+                min * problem.history.pastWeekCount, max * problem.history.pastWeekCount ) / totalWeekNum;
 
-            historyWeekend -= maxWeekend * problem.pastWeekCount;
+            historyWeekend -= maxWeekend * problem.history.pastWeekCount;
             if (historyWeekend > 0) {
                 objValue -= Penalty::TotalWorkingWeekend * historyWeekend / totalWeekNum;
             }
@@ -375,7 +375,6 @@ void NurseRostering::Solver::checkConsecutiveViolation( int &objValue,
 
 void NurseRostering::TabuSolver::init()
 {
-    // TODO
     srand( problem.randSeed );
 
     initAssistData();
@@ -391,7 +390,6 @@ void NurseRostering::TabuSolver::init()
 
 void NurseRostering::TabuSolver::solve()
 {
-    // TODO
     while (true) {
         // check time
         ++iterCount;
@@ -401,7 +399,7 @@ void NurseRostering::TabuSolver::solve()
             }
         }
 
-        // 
+        // TODO
 
     }
 }
@@ -624,7 +622,9 @@ void NurseRostering::TabuSolver::Solution::updateConsecutive( int weekday, Nurse
     int dayHigh = c.dayHigh[weekday];
 
     if ((weekday != c.dayHigh[weekday]) && (weekday != c.dayLow[weekday])) {
-        assignMiddle( weekday, nextDay, prevDay, c.dayHigh, c.dayLow );
+        if (assign.isWorking( nurse, weekday ) != Assign::isWorking( shift )) {
+            assignMiddle( weekday, nextDay, prevDay, c.dayHigh, c.dayLow );
+        }
         // consider shift
         if ((weekday != c.shiftHigh[weekday]) && (weekday != c.shiftLow[weekday])) {
             assignMiddle( weekday, nextDay, prevDay, c.shiftHigh, c.shiftLow );
@@ -952,14 +952,14 @@ void NurseRostering::TabuSolver::Solution::evaluateTotalAssign()
         int max = scenario.contracts[scenario.nurses[nurse].contract].maxShiftNum;
         objTotalAssign += Penalty::TotalAssign * distanceToRange(
             totalAssignNums[nurse] * totalWeekNum,
-            min * solver.problem.currentWeek,
-            max * solver.problem.currentWeek ) / totalWeekNum;
+            min * solver.problem.history.currentWeek,
+            max * solver.problem.history.currentWeek ) / totalWeekNum;
         // remove penalty in the history except the first week
-        if (solver.problem.pastWeekCount > 0) {
+        if (solver.problem.history.pastWeekCount > 0) {
             objTotalAssign -= Penalty::TotalAssign * distanceToRange(
                 solver.problem.history.shiftNum[nurse] * totalWeekNum,
-                min * solver.problem.pastWeekCount,
-                max * solver.problem.pastWeekCount ) / totalWeekNum;
+                min * solver.problem.history.pastWeekCount,
+                max * solver.problem.history.pastWeekCount ) / totalWeekNum;
         }
     }
 }
@@ -971,15 +971,15 @@ void NurseRostering::TabuSolver::Solution::evaluateTotalWorkingWeekend()
     for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
         int maxWeekend = solver.problem.scenario.contracts[solver.problem.scenario.nurses[nurse].contract].maxWorkingWeekendNum;
         int historyWeekend = solver.problem.history.workingWeekendNum[nurse] * totalWeekNum;
-        int exceedingWeekend = historyWeekend - (maxWeekend * solver.problem.currentWeek) +
+        int exceedingWeekend = historyWeekend - (maxWeekend * solver.problem.history.currentWeek) +
             ((assign.isWorking( nurse, Weekday::Sat ) || assign.isWorking( nurse, Weekday::Sun )) * totalWeekNum);
         if (exceedingWeekend > 0) {
             objTotalWorkingWeekend += Penalty::TotalWorkingWeekend *
                 exceedingWeekend / totalWeekNum;
         }
         // remove penalty in the history except the first week
-        if (solver.problem.pastWeekCount > 0) {
-            historyWeekend -= maxWeekend * solver.problem.pastWeekCount;
+        if (solver.problem.history.pastWeekCount > 0) {
+            historyWeekend -= maxWeekend * solver.problem.history.pastWeekCount;
             if (historyWeekend > 0) {
                 objTotalWorkingWeekend -= Penalty::TotalWorkingWeekend *
                     historyWeekend / totalWeekNum;
@@ -988,6 +988,13 @@ void NurseRostering::TabuSolver::Solution::evaluateTotalWorkingWeekend()
     }
 }
 
+NurseRostering::History NurseRostering::TabuSolver::Solution::genHistory() const
+{
+    History newHistory;
+
+    newHistory.pastWeekCount = solver.problem.history.currentWeek;
+    newHistory.currentWeek = solver.problem.history.currentWeek + 1;
+}
 
 void NurseRostering::TabuSolver::Solution::AvailableNurses::setEnvironment( int w, SkillID s )
 {
