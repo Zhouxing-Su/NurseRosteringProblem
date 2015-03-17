@@ -16,6 +16,7 @@
 #include <sstream>
 #include <fstream>
 
+#include "DebugFlag.h"
 #include "INRC2.h"
 
 
@@ -52,6 +53,7 @@ extern const std::string initHisPrefix;
 extern const std::string hisPrefix;
 extern const std::string solPrefix;
 extern const std::string fileSuffix;
+extern const std::string cusPrefix;
 
 
 void makeSureDirExist( const std::string &dir );
@@ -60,9 +62,10 @@ void analyzeInstance();
 
 void test( const char *outputDir, int instIndex, char initHis, const char *weeks, int timeoutInSec );
 void test( const char *outputDir, int instIndex, char initHis, const char *weeks, int timeoutInSec, int randSeed );
-void test_customIO( const char *outputDir, int instIndex, char initHis, const char *weeks, int timeoutInSec, std::string cusIn, std::string cusOut );
+void test_customIO( const char *outputDir, int instIndex, char initHis, const char *weeks, int timeoutInSec );
+void test_customIO( const char *outputDir, int instIndex, char initHis, const char *weeks, int timeoutInSec, int randSeed );
 void prepareArgv_FirstWeek( const char *outputDir, char *argv[], char argvBuf[][MAX_ARGV_LEN], int instIndex, char initHis,
-    char week, std::string timeoutInSec, std::string randSeed = "", std::string cusIn = "", std::string cusOut = "" );
+    char week, std::string timeoutInSec, std::string randSeed = "", std::string cusOut = "" );
 void prepareArgv( const char *outputDir, char *argv[], char argvBuf[][MAX_ARGV_LEN], int instIndex, const char *weeks, char week,
     std::string timeoutInSec, std::string randSeed = "", std::string cusIn = "", std::string cusOut = "" );
 

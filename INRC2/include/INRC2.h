@@ -1,8 +1,7 @@
 /**
 *   usage : 1. invoke solver interface to solve problem.
 *
-*   note :  1. remove code with [!] which is code for debugging.
-*           2. remove all cerr.
+*   note :  1. 
 */
 
 #ifndef INRC2_H
@@ -17,6 +16,7 @@
 #include <cstdlib>
 #include <ctime>
 
+#include "DebugFlag.h"
 #include "NurseRostering.h"
 
 
@@ -51,7 +51,7 @@ namespace INRC2
     void readWeekData( const std::string &weekDataFileName, NurseRostering &input );
     void readCustomInput( const std::string &customInputFileName, NurseRostering &input );
     void writeSolution( const std::string &solutionFileName, const NurseRostering::Solver &solver );
-    void writeCustomOutput( const std::string &customOutputFileName );
+    void writeCustomOutput( const std::string &customOutputFileName, const NurseRostering::Solver &solver );
 }
 
 

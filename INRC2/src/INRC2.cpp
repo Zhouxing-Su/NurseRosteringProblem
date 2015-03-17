@@ -19,27 +19,30 @@ namespace INRC2
         // read input
         NurseRostering input;
         // recover scenario first, for week data may use information in it
-        // if there is custom input, the context can be recovered more efficiently
+        if (argvMap.find( ARGV_SCENARIO ) != argvMap.end()) {
+            readScenario( argvMap[ARGV_SCENARIO], input );
+        } else {
+#ifdef INRC2_DEBUG
+            cerr << "missing obligate argument(scenario)" << endl;
+#endif
+            return;
+        }
         if (argvMap.find( ARGV_CUSTOM_INPUT ) != argvMap.end()) {
             readCustomInput( argvMap[ARGV_CUSTOM_INPUT], input );
+        } else if (argvMap.find( ARGV_HISTORY ) != argvMap.end()) {
+            readHistory( argvMap[ARGV_HISTORY], input );
         } else {
-            if (argvMap.find( ARGV_SCENARIO ) != argvMap.end()) {
-                readScenario( argvMap[ARGV_SCENARIO], input );
-            } else {
-                cerr << "missing obligate argument(scenario)" << endl;
-                return;
-            }
-            if (argvMap.find( ARGV_HISTORY ) != argvMap.end()) {
-                readHistory( argvMap[ARGV_HISTORY], input );
-            } else {
-                cerr << "missing obligate argument(history)" << endl;
-                return;
-            }
+#ifdef INRC2_DEBUG
+            cerr << "missing obligate argument(history)" << endl;
+#endif
+            return;
         }
         if (argvMap.find( ARGV_WEEKDATA ) != argvMap.end()) {
             readWeekData( argvMap[ARGV_WEEKDATA], input );
         } else {
+#ifdef INRC2_DEBUG
             cerr << "missing obligate argument(week data)" << endl;
+#endif
             return;
         }
         if (argvMap.find( ARGV_RANDOM_SEED ) != argvMap.end()) {
@@ -66,14 +69,16 @@ namespace INRC2
         if (argvMap.find( ARGV_SOLUTION ) != argvMap.end()) {
             writeSolution( argvMap[ARGV_SOLUTION], solver );
         } else {
+#ifdef INRC2_DEBUG
             cerr << "missing obligate argument(solution file name)" << endl;
+#endif
             return;
         }
         if (argvMap.find( ARGV_CUSTOM_OUTPUT ) != argvMap.end()) {
-            writeCustomOutput( argvMap[ARGV_CUSTOM_OUTPUT] );
+            writeCustomOutput( argvMap[ARGV_CUSTOM_OUTPUT], solver );
         }
 
-        //[!] just check and log when debugging
+#ifdef INRC2_DEBUG
         if (!solver.check()) {
             cerr << "logic error in optima solution." << endl;
         }
@@ -85,6 +90,7 @@ namespace INRC2
             << '[' << argvMap[ARGV_HISTORY].substr( historyFileNameIndex ) << ']'
             << '[' << argvMap[ARGV_WEEKDATA].substr( weekdataFileNameIndex ) << ']';
         solver.record( LOG_FILE, oss.str() );
+#endif
     }
 
     void readScenario( const std::string &scenarioFileName, NurseRostering &input )
@@ -198,20 +204,20 @@ namespace INRC2
         ifs.getline( buf, MAX_BUF_LEN );    // empty line
         ifs.getline( buf, MAX_BUF_LEN );    // NURSE_HISTORY
 
-        history.shiftNum.resize( input.scenario.nurseNum );
-        history.workingWeekendNum.resize( input.scenario.nurseNum );
-        history.lastShift.resize( input.scenario.nurseNum );
-        history.consecutiveShiftNum.resize( input.scenario.nurseNum );
-        history.consecutiveWorkingDayNum.resize( input.scenario.nurseNum );
-        history.consecutiveDayoffNum.resize( input.scenario.nurseNum );
+        history.totalAssignNums.resize( input.scenario.nurseNum );
+        history.totalWorkingWeekendNums.resize( input.scenario.nurseNum );
+        history.lastShifts.resize( input.scenario.nurseNum );
+        history.consecutiveShiftNums.resize( input.scenario.nurseNum );
+        history.consecutiveDayNums.resize( input.scenario.nurseNum );
+        history.consecutiveDayoffNums.resize( input.scenario.nurseNum );
         for (int i = input.scenario.nurseNum; i > 0; --i) {
             string nurseName, lastShiftName;
             ifs >> nurseName;
             NurseRostering::NurseID nurse = input.names.nurseMap[nurseName];
-            ifs >> history.shiftNum[nurse] >> history.workingWeekendNum[nurse]
-                >> lastShiftName >> history.consecutiveShiftNum[nurse]
-                >> history.consecutiveWorkingDayNum[nurse] >> history.consecutiveDayoffNum[nurse];
-            history.lastShift[nurse] = input.names.shiftMap[lastShiftName];
+            ifs >> history.totalAssignNums[nurse] >> history.totalWorkingWeekendNums[nurse]
+                >> lastShiftName >> history.consecutiveShiftNums[nurse]
+                >> history.consecutiveDayNums[nurse] >> history.consecutiveDayoffNums[nurse];
+            history.lastShifts[nurse] = input.names.shiftMap[lastShiftName];
         }
 
         ifs.close();
@@ -268,8 +274,40 @@ namespace INRC2
 
     void readCustomInput( const std::string &customInputFileName, NurseRostering &input )
     {
-        // TODO
+        ifstream ifs( customInputFileName, ios::binary );
 
+        const int nurseNum = input.scenario.nurseNum;
+        int *totalAssignNums = new int[nurseNum];
+        int *totalWorkingWeekendNums = new int[nurseNum];
+        NurseRostering::ShiftID *lastShifts = new NurseRostering::ShiftID[nurseNum];
+        int *consecutiveShiftNums = new int[nurseNum];
+        int *consecutiveDayNums = new int[nurseNum];
+        int *consecutiveDayoffNums = new int[nurseNum];
+
+        ifs.read( reinterpret_cast<char *>(&input.history.pastWeekCount), sizeof( input.history.pastWeekCount ) );
+        ifs.read( reinterpret_cast<char *>(&input.history.currentWeek), sizeof( input.history.currentWeek ) );
+        ifs.read( reinterpret_cast<char *>(totalAssignNums), nurseNum * sizeof( int ) );
+        ifs.read( reinterpret_cast<char *>(totalWorkingWeekendNums), nurseNum * sizeof( int ) );
+        ifs.read( reinterpret_cast<char *>(lastShifts), nurseNum * sizeof( NurseRostering::ShiftID ) );
+        ifs.read( reinterpret_cast<char *>(consecutiveShiftNums), nurseNum * sizeof( int ) );
+        ifs.read( reinterpret_cast<char *>(consecutiveDayNums), nurseNum * sizeof( int ) );
+        ifs.read( reinterpret_cast<char *>(consecutiveDayoffNums), nurseNum * sizeof( int ) );
+
+        input.history.totalAssignNums = vector<int>( totalAssignNums, totalAssignNums + nurseNum );
+        input.history.totalWorkingWeekendNums = vector<int>( totalWorkingWeekendNums, totalWorkingWeekendNums + nurseNum );
+        input.history.lastShifts = vector<int>( lastShifts, lastShifts + nurseNum );
+        input.history.consecutiveShiftNums = vector<int>( consecutiveShiftNums, consecutiveShiftNums + nurseNum );
+        input.history.consecutiveDayNums = vector<int>( consecutiveDayNums, consecutiveDayNums + nurseNum );
+        input.history.consecutiveDayoffNums = vector<int>( consecutiveDayoffNums, consecutiveDayoffNums + nurseNum );
+
+        delete[] totalAssignNums;
+        delete[] totalWorkingWeekendNums;
+        delete[] lastShifts;
+        delete[] consecutiveShiftNums;
+        delete[] consecutiveDayNums;
+        delete[] consecutiveDayoffNums;
+
+        ifs.close();
     }
 
     void writeSolution( const std::string &solutionFileName, const NurseRostering::Solver &solver )
@@ -299,11 +337,19 @@ namespace INRC2
         ofs << oss.str();
     }
 
-    void writeCustomOutput( const std::string &customOutputFileName )
+    void writeCustomOutput( const std::string &customOutputFileName, const NurseRostering::Solver &solver )
     {
-        // TODO : what needs to be write
-        // names
-        // scenario
-        // new history
+        NurseRostering::History history( solver.genHistory() );
+
+        ofstream ofs( customOutputFileName, ios::binary );
+        ofs.write( reinterpret_cast<const char *>(&history.pastWeekCount), sizeof( history.pastWeekCount ) );
+        ofs.write( reinterpret_cast<const char *>(&history.currentWeek), sizeof( history.currentWeek ) );
+        ofs.write( reinterpret_cast<const char *>(history.totalAssignNums.data()), history.totalAssignNums.size() * sizeof( int ) );
+        ofs.write( reinterpret_cast<const char *>(history.totalWorkingWeekendNums.data()), history.totalWorkingWeekendNums.size() * sizeof( int ) );
+        ofs.write( reinterpret_cast<const char *>(history.lastShifts.data()), history.lastShifts.size() * sizeof( NurseRostering::ShiftID ) );
+        ofs.write( reinterpret_cast<const char *>(history.consecutiveShiftNums.data()), history.consecutiveShiftNums.size() * sizeof( int ) );
+        ofs.write( reinterpret_cast<const char *>(history.consecutiveDayNums.data()), history.consecutiveDayNums.size() * sizeof( int ) );
+        ofs.write( reinterpret_cast<const char *>(history.consecutiveDayoffNums.data()), history.consecutiveDayoffNums.size() * sizeof( int ) );
+        ofs.close();
     }
 }

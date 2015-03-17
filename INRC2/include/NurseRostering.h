@@ -27,6 +27,7 @@
 #include <algorithm>
 #include <cstdlib>
 
+#include "DebugFlag.h"
 #include "utility.h"
 
 
@@ -127,12 +128,12 @@ public:
         int pastWeekCount;  // count from 0 (the number in history file)
         int currentWeek;    // count from 1
 
-        std::vector<int> shiftNum;
-        std::vector<int> workingWeekendNum;
-        std::vector<ShiftID> lastShift;
-        std::vector<int> consecutiveShiftNum;
-        std::vector<int> consecutiveWorkingDayNum;
-        std::vector<int> consecutiveDayoffNum;
+        std::vector<int> totalAssignNums;
+        std::vector<int> totalWorkingWeekendNums;
+        std::vector<ShiftID> lastShifts;
+        std::vector<int> consecutiveShiftNums;
+        std::vector<int> consecutiveDayNums;
+        std::vector<int> consecutiveDayoffNums;
     };
 
     class Names
@@ -208,6 +209,8 @@ public:
         virtual void init() = 0;
         // search for optima
         virtual void solve() = 0;
+        // generate history for next week
+        virtual History genHistory() const = 0;
         // return const reference of the optima
         const Output& getOptima() const { return optima; }
         // print simple information of the solution to console
@@ -263,6 +266,7 @@ public:
 
         virtual void init();
         virtual void solve();
+        virtual History genHistory() const { return sln.genHistory(); }
 
         // initialize data about nurse-skill relation
         void initAssistData();  // initialize nurseWithSkill, nurseNumOfSkill
@@ -388,6 +392,17 @@ public:
                     return *this;
                 }
 
+                // if a shift lasts whole week, return true, else false
+                bool isSingleConsecutiveShift() const
+                {
+                    return (shiftLow[Weekday::Sun] == Weekday::Mon);
+                }
+                // if a day or day-off lasts whole week, return true, else false
+                bool isSingleConsecutiveDay() const
+                {
+                    return (dayLow[Weekday::Sun] == Weekday::Mon);
+                }
+
                 int dayLow[Weekday::NUM];
                 int dayHigh[Weekday::NUM];
                 int shiftLow[Weekday::NUM];
@@ -395,8 +410,8 @@ public:
             };
 
 
-            ObjValue testAssignShift( int weekday, NurseID nurse, ShiftID shift, SkillID skill );
-            ObjValue testRemoveShift( int weekday, NurseID nurse );
+            ObjValue tryAssignShift( int weekday, NurseID nurse, ShiftID shift, SkillID skill );
+            ObjValue tryRemoveShift( int weekday, NurseID nurse );
             void assignShift( int weekday, NurseID nurse, ShiftID shift, SkillID skill );
             void removeShift( int weekday, NurseID nurse );
 

@@ -13,7 +13,7 @@ char *fullArgv[ArgcVal::full] = {
     "--sol", "",
     "--timeout", "",
     "--rand", "",
-    "-cusIn", "",
+    "--cusIn", "",
     "--cusOut", ""
 };
 
@@ -31,13 +31,14 @@ const std::string initHisPrefix( "/H0-" );
 const std::string hisPrefix( "history-week" );
 const std::string solPrefix( "sol-week" );
 const std::string fileSuffix( ".txt" );
+const std::string cusPrefix( "custom-week" );
 
 
 int main()
 {
     //analyzeInstance();
-    test( testOutputDir, 0, '0', "1233", 0, 10 );
-    //test_customIO( testOutputDir, 0, '0', "1233", 1, 10 );
+    //test( testOutputDir, 0, '0', "1233", 0, 10 );
+    test_customIO( testOutputDir, 0, '0', "1233", 0, 10 );
 
     system( "pause" );
     return 0;

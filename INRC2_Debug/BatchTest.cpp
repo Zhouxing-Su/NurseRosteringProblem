@@ -52,7 +52,7 @@ void test( const char *outputDir, int instIndex, char initHis, const char *weeks
     }
 }
 
-void test_customIO( const char *outputDir, int instIndex, char initHis, const char *weeks, int timeoutInSec, string cusIn, string cusOut )
+void test_customIO( const char *outputDir, int instIndex, char initHis, const char *weeks, int timeoutInSec )
 {
     makeSureDirExist( outputDir );
     ostringstream t;
@@ -63,22 +63,55 @@ void test_customIO( const char *outputDir, int instIndex, char initHis, const ch
     char argvBuf[ArgcVal::full][MAX_ARGV_LEN];
 
     argc = ArgcVal::noRandCusIn;
-    prepareArgv_FirstWeek( outputDir, argv, argvBuf, instIndex, initHis, weeks[0], t.str(), "", cusIn, cusOut );
+    prepareArgv_FirstWeek( outputDir, argv, argvBuf, instIndex, initHis, weeks[0],
+        t.str(), "", (outputDir + cusPrefix + '0') );
     run( argc, argv );
 
     char w = '1';
     for (; w < (instance[instIndex][5] - 1); w++) {
         argc = ArgcVal::noRand;
-        prepareArgv( outputDir, argv, argvBuf, instIndex, weeks, w, t.str(), "", cusIn, cusOut );
+        prepareArgv( outputDir, argv, argvBuf, instIndex, weeks, w, t.str(), "",
+            outputDir + cusPrefix + static_cast<char>(w - 1), outputDir + cusPrefix + w );
         run( argc, argv );
     }
 
     argc = ArgcVal::noRandCusOut;
-    prepareArgv( outputDir, argv, argvBuf, instIndex, weeks, w, t.str(), "", cusIn, cusOut );
+    prepareArgv( outputDir, argv, argvBuf, instIndex, weeks, w, t.str(), "",
+        outputDir + cusPrefix + static_cast<char>(w - 1), "" );
     run( argc, argv );
 }
 
-void prepareArgv_FirstWeek( const char *outputDir, char *argv[], char argvBuf[][MAX_ARGV_LEN], int i, char h, char w, string t, string r, string ci, string co )
+void test_customIO( const char *outputDir, int instIndex, char initHis, const char *weeks, int timeoutInSec, int randSeed )
+{
+    makeSureDirExist( outputDir );
+    ostringstream t, r;
+    t << timeoutInSec;
+    r << randSeed;
+
+    int argc;
+    char *argv[ArgcVal::full];
+    char argvBuf[ArgcVal::full][MAX_ARGV_LEN];
+
+    argc = ArgcVal::noCusIn;
+    prepareArgv_FirstWeek( outputDir, argv, argvBuf, instIndex, initHis, weeks[0],
+        t.str(), r.str(), (outputDir + cusPrefix + '0') );
+    run( argc, argv );
+
+    char w = '1';
+    for (; w < (instance[instIndex][5] - 1); w++) {
+        argc = ArgcVal::full;
+        prepareArgv( outputDir, argv, argvBuf, instIndex, weeks, w, t.str(), r.str(),
+            outputDir + cusPrefix + static_cast<char>(w - 1), outputDir + cusPrefix + w );
+        run( argc, argv );
+    }
+
+    argc = ArgcVal::noCusOut;
+    prepareArgv( outputDir, argv, argvBuf, instIndex, weeks, w, t.str(), r.str(),
+        outputDir + cusPrefix + static_cast<char>(w - 1), "" );
+    run( argc, argv );
+}
+
+void prepareArgv_FirstWeek( const char *outputDir, char *argv[], char argvBuf[][MAX_ARGV_LEN], int i, char h, char w, string t, string r, string co )
 {
     string sce = dir + instance[i] + scePrefix + instance[i] + fileSuffix;
     string his = dir + instance[i] + initHisPrefix + instance[i] + '-' + h + fileSuffix;
@@ -104,11 +137,6 @@ void prepareArgv_FirstWeek( const char *outputDir, char *argv[], char argvBuf[][
     if (!r.empty()) {
         argv[++i] = fullArgv[ArgvIndex::__randSeed];
         strcpy( argvBuf[++i], r.c_str() );
-        argv[i] = argvBuf[i];
-    }
-    if (!ci.empty()) {
-        argv[++i] = fullArgv[ArgvIndex::__cusIn];
-        strcpy( argvBuf[++i], ci.c_str() );
         argv[i] = argvBuf[i];
     }
     if (!co.empty()) {

@@ -64,6 +64,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <Profile>true</Profile>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -91,6 +92,7 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\INRC2\include\DebugFlag.h" />
     <ClInclude Include="..\INRC2\include\INRC2.h" />
     <ClInclude Include="..\INRC2\include\NurseRostering.h" />
     <ClInclude Include="..\INRC2\include\utility.h" />

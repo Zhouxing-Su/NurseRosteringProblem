@@ -45,6 +45,7 @@
     <LibraryPath>$(ProjectDir)\lib;$(LibraryPath)</LibraryPath>
     <SourcePath>$(ProjectDir)\src;$(SourcePath)</SourcePath>
     <ReferencePath>$(ProjectDir)\instance;$(ReferencePath)</ReferencePath>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -89,6 +90,7 @@
     <ClCompile Include="src\NurseRostering.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\DebugFlag.h" />
     <ClInclude Include="include\INRC2.h" />
     <ClInclude Include="include\NurseRostering.h" />
     <ClInclude Include="include\utility.h" />
