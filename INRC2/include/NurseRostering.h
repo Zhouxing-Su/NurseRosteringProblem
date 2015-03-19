@@ -90,8 +90,8 @@ public:
         public:
             int minShiftNum;    // total assignments in the planning horizon
             int maxShiftNum;    // total assignments in the planning horizon
-            int minConsecutiveWorkingDayNum;
-            int maxConsecutiveWorkingDayNum;
+            int minConsecutiveDayNum;
+            int maxConsecutiveDayNum;
             int minConsecutiveDayoffNum;
             int maxConsecutiveDayoffNum;
             int maxWorkingWeekendNum;   // total assignments in the planning horizon
@@ -189,7 +189,7 @@ public:
     public:
         static const int ILLEGAL_SOLUTION = -1;
         static const int CHECK_TIME_INTERVAL_MASK_IN_ITER = ((1 << 10) - 1);
-        static const int SAVE_SOLUTION_TIME_IN_MILLISECOND = 50;
+        static const int SAVE_SOLUTION_TIME_IN_MILLISECOND = 500;
 
         class Output
         {
@@ -410,9 +410,21 @@ public:
             };
 
 
+            // find day number to be punished for a single block
+            ObjValue penaltyDayNum( NurseID nurse, int start, int end )
+            {
+
+            }
+
+            // evaluate cost of assigning a shift to nurse without shift in weekday
             ObjValue tryAssignShift( int weekday, NurseID nurse, ShiftID shift, SkillID skill );
+            // evaluate cost of assigning another shift to nurse already assigned in weekday
+            ObjValue tryChangeShift( int weekday, NurseID nurse, ShiftID shift, SkillID skill );
+            // evaluate cost of removing the shift from nurse already assigned in weekday
             ObjValue tryRemoveShift( int weekday, NurseID nurse );
+            // apply assigning a shift to nurse in weekday( assign or change)
             void assignShift( int weekday, NurseID nurse, ShiftID shift, SkillID skill );
+            // apply removing a shift to nurse in weekday
             void removeShift( int weekday, NurseID nurse );
 
             void updateConsecutive( int weekday, NurseID nurse, ShiftID shift );

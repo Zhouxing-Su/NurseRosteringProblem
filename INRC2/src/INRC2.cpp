@@ -159,8 +159,8 @@ namespace INRC2
             ifs >> input.names.contractNames[i] >> c            // name (
                 >> contract.minShiftNum >> c                        // XX,
                 >> contract.maxShiftNum >> c >> c                   // XX) (
-                >> contract.minConsecutiveWorkingDayNum >> c        // XX,
-                >> contract.maxConsecutiveWorkingDayNum >> c >> c   // XX) (
+                >> contract.minConsecutiveDayNum >> c        // XX,
+                >> contract.maxConsecutiveDayNum >> c >> c   // XX) (
                 >> contract.minConsecutiveDayoffNum >> c            // XX,
                 >> contract.maxConsecutiveDayoffNum >> c            // )
                 >> contract.maxWorkingWeekendNum
