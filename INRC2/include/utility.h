@@ -22,17 +22,30 @@ T distanceToRange( const T &target, const T &lowerBound, const T &upperBound )
 
 //
 // ---------+-----------
-//        bound
+//        bound---->
 //
-// if target is greater than high, the distance is (target - high)
+// if target is greater than bound, the distance is (target - bound)
 // else, the distance is 0
 // 
 // require operator-() and operator<()
 template <typename T>
-T exceedBound( const T &target, const T &bound )
+T exceedCount( const T &target, const T &bound )
 {
     T diff( target - bound );
-    if (0 < diff) {
-        return diff;
-    }
+    return (0 < diff) ? diff : 0;
+}
+
+//
+// ---------+-----------
+//   <----bound
+//
+// if target is less than bound, the distance is (bound - target)
+// else, the distance is 0
+// 
+// require operator-() and operator<()
+template <typename T>
+T absentCount( const T &target, const T &bound )
+{
+    T diff( bound - target );
+    return (0 < diff) ? diff : 0;
 }

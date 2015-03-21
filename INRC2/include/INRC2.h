@@ -1,7 +1,7 @@
 /**
 *   usage : 1. invoke solver interface to solve problem.
 *
-*   note :  1. 
+*   note :  1.
 */
 
 #ifndef INRC2_H
@@ -36,12 +36,17 @@ namespace INRC2
     const std::string ARGV_RANDOM_SEED( "rand" );
     const std::string ARGV_TIME( "timeout" );  // in seconds
 
-    const std::string weekdayNames[NurseRostering::Weekday::NUM] = {
-        "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"
+    const std::string weekdayNames[NurseRostering::Weekday::SIZE] = {
+        "HIS", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"
     };
     const std::map<std::string, int> weekdayMap = {
-        { weekdayNames[0], 0 }, { weekdayNames[1], 1 }, { weekdayNames[2], 2 }, { weekdayNames[3], 3 },
-        { weekdayNames[4], 4 }, { weekdayNames[5], 5 }, { weekdayNames[6], 6 },
+        { weekdayNames[NurseRostering::Weekday::Mon], NurseRostering::Weekday::Mon },
+        { weekdayNames[NurseRostering::Weekday::Tue], NurseRostering::Weekday::Tue },
+        { weekdayNames[NurseRostering::Weekday::Wed], NurseRostering::Weekday::Wed },
+        { weekdayNames[NurseRostering::Weekday::Thu], NurseRostering::Weekday::Thu },
+        { weekdayNames[NurseRostering::Weekday::Fri], NurseRostering::Weekday::Fri },
+        { weekdayNames[NurseRostering::Weekday::Sat], NurseRostering::Weekday::Sat },
+        { weekdayNames[NurseRostering::Weekday::Sun], NurseRostering::Weekday::Sun }
     };
 
     void run( int argc, char *argv[] );

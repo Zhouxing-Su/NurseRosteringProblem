@@ -35,7 +35,7 @@ class NurseRostering
 {
 public:
     static const int MAX_RUNNING_TIME = 1073741824;  // in millisecond
-    enum Weekday { Mon = 0, Tue, Wed, Thu, Fri, Sat, Sun, NUM };
+    enum Weekday { HIS = 0, Mon, Tue, Wed, Thu, Fri, Sat, Sun, NUM = Sun, SIZE };
     enum Penalty
     {
         AMP = 1000,
@@ -168,7 +168,7 @@ public:
     {
     public:
         Assign() {}
-        Assign( int nurseNum, int weekdayNum = Weekday::NUM, const SingleAssign &singleAssign = SingleAssign() )
+        Assign( int nurseNum, int weekdayNum = Weekday::SIZE, const SingleAssign &singleAssign = SingleAssign() )
             : std::vector< std::vector< SingleAssign > >( nurseNum, std::vector< SingleAssign >( weekdayNum, singleAssign ) ) {}
 
         static bool isWorking( ShiftID shift )
@@ -351,6 +351,8 @@ public:
             //==========================================
             // this is an demo for switching consecutive working day and day off.
             // consecutive assignments use the same method.
+            // besides, there is 1 slot for history and update towards left side 
+            // should test if weekday is greater or equal to Weekday::HIS which is 0.
             // 
             //    E L O L E E E
             //   +-+-+-+-+-+-+-+
@@ -369,12 +371,24 @@ public:
             class Consecutive
             {
             public:
-                Consecutive()
+                Consecutive() {}
+                Consecutive( const History &his, NurseID nurse )
                 {
-                    std::fill( dayLow, dayLow + Weekday::NUM, Weekday::Mon );
-                    std::fill( dayHigh, dayHigh + Weekday::NUM, Weekday::Sun );
-                    std::fill( shiftLow, shiftLow + Weekday::NUM, Weekday::Mon );
-                    std::fill( shiftHigh, shiftHigh + Weekday::NUM, Weekday::Sun );
+                    if (Assign::isWorking( his.lastShifts[nurse] )) {
+                        std::fill( dayLow, dayLow + Weekday::SIZE, Weekday::Mon );
+                        std::fill( dayHigh, dayHigh + Weekday::SIZE, Weekday::Sun );
+                        std::fill( shiftLow, shiftLow + Weekday::SIZE, Weekday::Mon );
+                        std::fill( shiftHigh, shiftHigh + Weekday::SIZE, Weekday::Sun );
+                        dayHigh[Weekday::HIS] = Weekday::HIS;
+                        dayLow[Weekday::HIS] = 1 - his.consecutiveDayNums[nurse];
+                        shiftHigh[Weekday::HIS] = Weekday::HIS;
+                        shiftLow[Weekday::HIS] = 1 - his.consecutiveShiftNums[nurse];
+                    } else {    // day off
+                        std::fill( dayLow, dayLow + Weekday::SIZE, 1 - his.consecutiveDayoffNums[nurse] );
+                        std::fill( dayHigh, dayHigh + Weekday::SIZE, Weekday::Sun );
+                        std::fill( shiftLow, shiftLow + Weekday::SIZE, 1 - his.consecutiveDayoffNums[nurse] );
+                        std::fill( shiftHigh, shiftHigh + Weekday::SIZE, Weekday::Sun );
+                    }
                 }
                 Consecutive( const Consecutive &c )
                 {
@@ -403,17 +417,20 @@ public:
                     return (dayLow[Weekday::Sun] == Weekday::Mon);
                 }
 
-                int dayLow[Weekday::NUM];
-                int dayHigh[Weekday::NUM];
-                int shiftLow[Weekday::NUM];
-                int shiftHigh[Weekday::NUM];
+                int dayLow[Weekday::SIZE];
+                int dayHigh[Weekday::SIZE];
+                int shiftLow[Weekday::SIZE];
+                int shiftHigh[Weekday::SIZE];
             };
 
 
             // find day number to be punished for a single block
-            ObjValue penaltyDayNum( NurseID nurse, int start, int end )
+            // work for shift, day and day-off
+            static ObjValue penaltyDayNum( int len, int end, int min, int max )
             {
-
+                return (end < Weekday::Sun) ?
+                    distanceToRange( len, min, max ) :
+                    exceedCount( len, max );
             }
 
             // evaluate cost of assigning a shift to nurse without shift in weekday
@@ -428,9 +445,9 @@ public:
             void removeShift( int weekday, NurseID nurse );
 
             void updateConsecutive( int weekday, NurseID nurse, ShiftID shift );
-            void assignHigh( int weekday, int nextDay, int prevDay, int high[Weekday::NUM], int low[Weekday::NUM], bool affectRight );
-            void assignLow( int weekday, int nextDay, int prevDay, int high[Weekday::NUM], int low[Weekday::NUM], bool affectLeft );
-            void assignMiddle( int weekday, int nextDay, int prevDay, int high[Weekday::NUM], int low[Weekday::NUM] );
+            void assignHigh( int weekday, int nextDay, int prevDay, int high[Weekday::SIZE], int low[Weekday::SIZE], bool affectRight );
+            void assignLow( int weekday, int nextDay, int prevDay, int high[Weekday::SIZE], int low[Weekday::SIZE], bool affectLeft );
+            void assignMiddle( int weekday, int nextDay, int prevDay, int high[Weekday::SIZE], int low[Weekday::SIZE] );
 
             void evaluateInsufficientStaff();
             void evaluateConsecutiveShift();
