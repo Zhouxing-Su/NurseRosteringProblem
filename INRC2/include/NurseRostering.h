@@ -10,6 +10,7 @@
 *           6. [optimizable] evaluateConsecutiveDay() and evaluateConsecutiveDayOff() can
 *               be put together and not consider if there is an assignment. but there is
 *               a difficult problem with consecutive state on the beginning of the week.
+*           7. [optimizable] make Weekday not related to Consecutive count from 0 to save space.
 */
 
 #ifndef NURSE_ROSTERING_H
@@ -409,12 +410,12 @@ public:
                 // if a shift lasts whole week, return true, else false
                 bool isSingleConsecutiveShift() const
                 {
-                    return (shiftLow[Weekday::Sun] == Weekday::Mon);
+                    return (shiftLow[Weekday::Sun] <= Weekday::Mon);
                 }
                 // if a day or day-off lasts whole week, return true, else false
                 bool isSingleConsecutiveDay() const
                 {
-                    return (dayLow[Weekday::Sun] == Weekday::Mon);
+                    return (dayLow[Weekday::Sun] <= Weekday::Mon);
                 }
 
                 int dayLow[Weekday::SIZE];
