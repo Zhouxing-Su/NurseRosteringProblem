@@ -564,17 +564,24 @@ bool NurseRostering::TabuSolver::Solution::isValidSuccession( NurseID nurse, Shi
         || solver.problem.scenario.shifts[assign[nurse][weekday - 1].shift].legalNextShifts[shift]);
 }
 
+bool NurseRostering::TabuSolver::Solution::isValidPrior( NurseID nurse, ShiftID shift, int weekday ) const
+{
+    return ((weekday >= Weekday::Sun) || (!assign.isWorking( nurse, weekday + 1 ))
+        || solver.problem.scenario.shifts[shift].legalNextShifts[assign[nurse][weekday + 1].shift]);
+}
+
 NurseRostering::ObjValue NurseRostering::TabuSolver::Solution::tryAssignShift( int weekday, NurseID nurse, ShiftID shiftID, SkillID skill )
 {
     ShiftID oldShiftID = assign[nurse][weekday].shift;
     // TODO : make sure they won't be the same and leave out this
     if ((shiftID == NurseRostering::Scenario::Shift::ID_NONE) || (shiftID == oldShiftID)
         || (oldShiftID != NurseRostering::Scenario::Shift::ID_NONE)) {
-        return 0;
+        return MAX_OBJ_VALUE;
     }
 
-    if (!isValidSuccession( nurse, shiftID, weekday )) {
-        return NurseRostering::MAX_OBJ_VALUE;
+    if (!(isValidSuccession( nurse, shiftID, weekday )
+        && isValidPrior( nurse, shiftID, weekday ))) {
+        return MAX_OBJ_VALUE;
     }
 
     int prevDay = weekday - 1;
@@ -769,15 +776,16 @@ NurseRostering::ObjValue NurseRostering::TabuSolver::Solution::tryChangeShift( i
     SkillID oldSkill = assign[nurse][weekday].skill;
     // TODO : make sure they won't be the same and leave out this
     if ((shiftID == NurseRostering::Scenario::Shift::ID_NONE) || (shiftID == oldShiftID)) {
-        return 0;
+        return MAX_OBJ_VALUE;
     }
 
     const WeekData &weekData( solver.problem.weekData );
     if (((weekData.optNurseNums[weekday][oldShiftID][oldSkill] -
         missingNurseNums[weekday][oldShiftID][oldSkill])
         < weekData.minNurseNums[weekday][oldShiftID][oldSkill])
-        || !isValidSuccession( nurse, shiftID, weekday )) {
-        return NurseRostering::MAX_OBJ_VALUE;
+        || !(isValidSuccession( nurse, shiftID, weekday )
+        && isValidPrior( nurse, shiftID, weekday ))) {
+        return MAX_OBJ_VALUE;
     }
 
     ObjValue delta = 0;
@@ -915,7 +923,7 @@ NurseRostering::ObjValue NurseRostering::TabuSolver::Solution::tryRemoveShift( i
     SkillID oldSkillID = assign[nurse][weekday].skill;
     // TODO : make sure they won't be the same and leave out this
     if (oldShiftID == NurseRostering::Scenario::Shift::ID_NONE) {
-        return 0;
+        return MAX_OBJ_VALUE;
     }
 
     int prevDay = weekday - 1;

@@ -11,6 +11,8 @@
 *               be put together and not consider if there is an assignment. but there is
 *               a difficult problem with consecutive state on the beginning of the week.
 *           7. [optimizable] make Weekday not related to Consecutive count from 0 to save space.
+*           8. [optimizable] make shiftID count from 1 and make Shift::ID_NONE 0,
+*               this will leave out isWorking() in isValidSuccesion().
 */
 
 #ifndef NURSE_ROSTERING_H
@@ -291,6 +293,7 @@ public:
             const Assign& getAssign() const { return assign; }
             // shift must not be none shift
             bool isValidSuccession( NurseID nurse, ShiftID shift, int weekday ) const;
+            bool isValidPrior( NurseID nurse, ShiftID shift, int weekday ) const;
 
             Solution( TabuSolver &solver );
             History genHistory() const; // history for next week
