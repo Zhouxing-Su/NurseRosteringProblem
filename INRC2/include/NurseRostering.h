@@ -13,6 +13,8 @@
 *           7. [optimizable] make Weekday not related to Consecutive count from 0 to save space.
 *           8. [optimizable] make shiftID count from 1 and make Shift::ID_NONE 0,
 *               this will leave out isWorking() in isValidSuccesion().
+*               also, add a slot after Sun in assign with shift ID_NONE to
+*               leave out (weekday >= Weekday::Sun) in isValidPrior()
 */
 
 #ifndef NURSE_ROSTERING_H
@@ -437,8 +439,8 @@ public:
                     exceedCount( len, max );
             }
 
-            // evaluate cost of assigning a shift to nurse without shift in weekday
-            ObjValue tryAssignShift( int weekday, NurseID nurse, ShiftID shift, SkillID skill );
+            // evaluate cost of adding a shift to nurse without shift in weekday
+            ObjValue tryAddShift( int weekday, NurseID nurse, ShiftID shift, SkillID skill );
             // evaluate cost of assigning another shift to nurse already assigned in weekday
             ObjValue tryChangeShift( int weekday, NurseID nurse, ShiftID shift, SkillID skill );
             // evaluate cost of removing the shift from nurse already assigned in weekday
