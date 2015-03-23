@@ -409,12 +409,12 @@ public:
 
                 // if a shift lasts whole week, return true, else false
                 bool isSingleConsecutiveShift() const
-                {
+                {   // shiftLow may be HIS, so use less or equal
                     return (shiftLow[Weekday::Sun] <= Weekday::Mon);
                 }
                 // if a day or day-off lasts whole week, return true, else false
                 bool isSingleConsecutiveDay() const
-                {
+                {   // dayLow may be HIS, so use less or equal
                     return (dayLow[Weekday::Sun] <= Weekday::Mon);
                 }
 
