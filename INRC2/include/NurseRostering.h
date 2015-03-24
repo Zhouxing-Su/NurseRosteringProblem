@@ -15,6 +15,8 @@
 *               this will leave out isWorking() in isValidSuccesion().
 *               also, add a slot after Sun in assign with shift ID_NONE to
 *               leave out (weekday >= Weekday::Sun) in isValidPrior()
+*           9. timeout may overflow in POSIX system since CLOCKS_PER_SEC is 1000000 which
+*               makes clock_t can only count to about 4000 seconds.
 */
 
 #ifndef NURSE_ROSTERING_H
@@ -39,7 +41,7 @@
 class NurseRostering
 {
 public:
-    static const int MAX_RUNNING_TIME = 1073741824;  // in millisecond
+    static const int MAX_RUNNING_TIME = 1073741824;  // in clock count
     enum Weekday { HIS = 0, Mon, Tue, Wed, Thu, Fri, Sat, Sun, NUM = Sun, SIZE };
     enum Penalty
     {
@@ -194,7 +196,7 @@ public:
     public:
         static const int ILLEGAL_SOLUTION = -1;
         static const int CHECK_TIME_INTERVAL_MASK_IN_ITER = ((1 << 10) - 1);
-        static const int SAVE_SOLUTION_TIME_IN_MILLISECOND = 500;
+        static const clock_t SAVE_SOLUTION_TIME;   // 0.5 seconds
 
         class Output
         {
@@ -248,11 +250,6 @@ public:
         {
             return (!(iterCount & CHECK_TIME_INTERVAL_MASK_IN_ITER));
         }
-        // check termination condition
-        bool isTimeOut() const
-        {
-            return (clock() >= endTime);
-        }
 
         NurseNumsOnSingleAssign countNurseNums( const Assign &assign ) const;
         void checkConsecutiveViolation( int &objValue,
@@ -265,7 +262,6 @@ public:
 
         std::string algorithmName;
         clock_t startTime;
-        clock_t endTime;
     };
 
     class TabuSolver : public Solver
@@ -516,7 +512,7 @@ public:
 
     // data to identify a nurse rostering problem
     int randSeed;
-    int timeout;        // time in millisecond. 0 for just generate initial solution
+    clock_t timeout;    // time in clock count. 0 for just generate initial solution
     WeekData weekData;
     Scenario scenario;
     History history;

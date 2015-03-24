@@ -55,7 +55,8 @@ namespace INRC2
             istringstream iss( argvMap[ARGV_TIME] );
             double timeout;
             iss >> timeout;
-            input.timeout = static_cast<int>(timeout * 1000);  // convert second to millisecond
+            input.timeout = static_cast<clock_t>(timeout * CLOCKS_PER_SEC)
+                - NurseRostering::Solver::SAVE_SOLUTION_TIME;  // convert second to clock count
         } else {
             input.timeout = NurseRostering::MAX_RUNNING_TIME;
         }
