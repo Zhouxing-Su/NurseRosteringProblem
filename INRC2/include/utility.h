@@ -1,3 +1,10 @@
+#ifndef UTILITY_H
+#define UTILITY_H
+
+
+#include <ctime>
+
+
 //
 // -------+--------+------
 //       low      high
@@ -49,3 +56,24 @@ T absentCount( const T &target, const T &bound )
     T diff( bound - target );
     return (0 < diff) ? diff : 0;
 }
+
+//
+class Timer
+{
+public:
+    Timer( clock_t duration, clock_t startTime = clock() )
+        :endTime( startTime + duration )
+    {
+    }
+
+    bool isTimeOut() const
+    {
+        return (clock() >= endTime);
+    }
+
+private:
+    clock_t endTime;
+};
+
+
+#endif

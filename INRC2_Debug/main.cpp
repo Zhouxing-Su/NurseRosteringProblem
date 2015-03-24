@@ -38,7 +38,7 @@ int main()
 {
     //analyzeInstance();
     //test( testOutputDir, 0, '0', "1233", 0, 10 );
-    test_customIO( testOutputDir, 0, '0', "1233", 0, 10 );
+    test_customIO( testOutputDir, 0, '0', "1233", 1000000, 10 );
 
     system( "pause" );
     return 0;

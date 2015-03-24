@@ -229,8 +229,9 @@ public:
         // return objective value if solution is legal, else ILLEGAL_SOLUTION
         bool checkFeasibility( const Assign &assgin ) const;
         bool checkFeasibility() const;  // check optima assign
-        int checkObjValue( const Assign &assign ) const;
-        int checkObjValue() const;  // check optima assign
+        ObjValue checkObjValue( const Assign &assign ) const;
+        ObjValue checkObjValue() const;  // check optima assign
+
 
         Solver( const NurseRostering &input, const std::string &name, clock_t startTime );
         virtual ~Solver();
@@ -239,14 +240,19 @@ public:
         const NurseRostering &problem;
 
     protected:
-        // solver will check time every certain number of iterations
+        // create header of the table ( require ios::app flag or "a" mode )
+        static void initResultSheet( std::ofstream &csvFile );
+        // solver can check termination condition every certain number of iterations
         // this determines if it is the right iteration to check time
-        static bool isIterForTimeCheck( int iterCount )
+        static bool isIterForTimeCheck( int iterCount ) // currently no use
         {
             return (!(iterCount & CHECK_TIME_INTERVAL_MASK_IN_ITER));
         }
-        // create header of the table ( require ios::app flag or "a" mode )
-        static void initResultSheet( std::ofstream &csvFile );
+        // check termination condition
+        bool isTimeOut() const
+        {
+            return (clock() >= endTime);
+        }
 
         NurseNumsOnSingleAssign countNurseNums( const Assign &assign ) const;
         void checkConsecutiveViolation( int &objValue,
@@ -260,8 +266,6 @@ public:
         std::string algorithmName;
         clock_t startTime;
         clock_t endTime;
-        int iterCount;
-        int generationCount;
     };
 
     class TabuSolver : public Solver
@@ -288,9 +292,10 @@ public:
         public:
             bool genInitAssign();   // assign must be default value( call resetAssign() )
             void resetAssign();     // reset all shift to Shift::ID_NONE
-            void evaluateObjValue();
-            void repair();
-            void searchNeighborhood();
+            void evaluateObjValue();    // using assist data structure
+            void repair();  // make infeasible solution feasible
+            // run until time out and return iteration count
+            void localSearch( const Timer &timer, Output &optima );
 
             const Assign& getAssign() const { return assign; }
             // shift must not be none shift
@@ -445,15 +450,22 @@ public:
             ObjValue tryChangeShift( int weekday, NurseID nurse, ShiftID shift, SkillID skill );
             // evaluate cost of removing the shift from nurse already assigned in weekday
             ObjValue tryRemoveShift( int weekday, NurseID nurse );
-            // apply assigning a shift to nurse in weekday( assign or change)
-            void assignShift( int weekday, NurseID nurse, ShiftID shift, SkillID skill );
+            // apply assigning a shift to nurse without shift in weekday
+            void addShift( int weekday, NurseID nurse, ShiftID shift, SkillID skill );
+            // apply assigning another shift to nurse already assigned in weekday
+            void changeShift( int weekday, NurseID nurse, ShiftID shift, SkillID skill );
             // apply removing a shift to nurse in weekday
             void removeShift( int weekday, NurseID nurse );
 
             void updateConsecutive( int weekday, NurseID nurse, ShiftID shift );
-            void assignHigh( int weekday, int nextDay, int prevDay, int high[Weekday::SIZE], int low[Weekday::SIZE], bool affectRight );
-            void assignLow( int weekday, int nextDay, int prevDay, int high[Weekday::SIZE], int low[Weekday::SIZE], bool affectLeft );
-            void assignMiddle( int weekday, int nextDay, int prevDay, int high[Weekday::SIZE], int low[Weekday::SIZE] );
+            // the assignment is on the right side of a consecutive block
+            void assignHigh( int weekday, int high[Weekday::SIZE], int low[Weekday::SIZE], bool affectRight );
+            // the assignment is on the left side of a consecutive block
+            void assignLow( int weekday, int high[Weekday::SIZE], int low[Weekday::SIZE], bool affectLeft );
+            // the assignment is in the middle of a consecutive block
+            void assignMiddle( int weekday, int high[Weekday::SIZE], int low[Weekday::SIZE] );
+            // the assignment is on a consecutive block with single slot
+            void assignSingle( int weekday, int high[Weekday::SIZE], int low[Weekday::SIZE], bool affectRight, bool affectLeft );
 
             void evaluateInsufficientStaff();
             void evaluateConsecutiveShift();
