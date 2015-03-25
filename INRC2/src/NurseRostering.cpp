@@ -477,6 +477,9 @@ bool NurseRostering::TabuSolver::Solution::genInitAssign()
             }
         private:
             vector<double> &dailyRequire;
+
+        private:    // forbidden operators
+            CmpDailyRequire& operator=(const CmpDailyRequire &) {}
         }cmpDailyRequire( dailyRequire );
         sort( skillRank.begin(), skillRank.end(), cmpDailyRequire );
 
@@ -542,63 +545,60 @@ void NurseRostering::TabuSolver::Solution::evaluateObjValue()
 void NurseRostering::TabuSolver::Solution::repair()
 {
     // TODO
-    while (true) {
-        bool feasible = genInitAssign();
-        if (feasible) {
-            break;
-        } else {
-            resetAssign();
-        }
-    }
+    bool feasible;
+    do {
+        resetAssign();
+        feasible = genInitAssign();
+    } while (!feasible);
 }
 
 void NurseRostering::TabuSolver::Solution::localSearch( const Timer &timer, Output &optima )
 {
 #ifdef INRC2_DEBUG
     clock_t startTime = clock();
-    ObjValue incrementalVal;
 #endif
 
     long long iterCount = 0;
+    int failCount = 0;
 
-    ObjValue delta;
-    for (; !timer.isTimeOut(); ++iterCount) {
-        int select = rand() % 3;
-        int weekday = (rand() % Weekday::NUM) + 1;
-        NurseID nurse = rand() % solver.problem.scenario.nurseNum;
-        ShiftID shift = rand() % solver.problem.scenario.shiftTypeNum;
-        SkillID skill = rand() % solver.problem.scenario.skillTypeNum;
-        switch (select) {
-            case 0:
-                delta = tryAddShift( weekday, nurse, shift, skill );
-                if (delta < MAX_OBJ_VALUE) {
-                    objValue += delta;
-                    addShift( weekday, nurse, shift, skill );
-                }
-                break;
-            case 1:
-                delta = tryChangeShift( weekday, nurse, shift, skill );
-                if (delta < MAX_OBJ_VALUE) {
-                    objValue += delta;
-                    changeShift( weekday, nurse, shift, skill );
-                }
-                break;
-            case 2:
-                delta = tryRemoveShift( weekday, nurse );
-                if (delta < MAX_OBJ_VALUE) {
-                    objValue += delta;
-                    removeShift( weekday, nurse );
-                }
-                break;
+    while (!timer.isTimeOut() && (failCount < 3)) {
+        Move bestMove;
+        while (!timer.isTimeOut() && findBestAddShift( bestMove )) {
+            addShift( bestMove.weekday, bestMove.nurse, bestMove.shift, bestMove.skill );
+            objValue += bestMove.delta;
+            if (objValue < optima.objVal) {
+                optima = genOutput();
+            }
+            ++iterCount;
+            failCount = 0;
         }
+        ++failCount;
 
-        if (objValue < optima.objVal) {
-            optima = genOutput();
+        while (!timer.isTimeOut() && findBestChangeShift( bestMove )) {
+            changeShift( bestMove.weekday, bestMove.nurse, bestMove.shift, bestMove.skill );
+            objValue += bestMove.delta;
+            if (objValue < optima.objVal) {
+                optima = genOutput();
+            }
+            ++iterCount;
+            failCount = 0;
         }
+        ++failCount;
+
+        while (!timer.isTimeOut() && findBestRemoveShift( bestMove )) {
+            removeShift( bestMove.weekday, bestMove.nurse );
+            objValue += bestMove.delta;
+            if (objValue < optima.objVal) {
+                optima = genOutput();
+            }
+            ++iterCount;
+            failCount = 0;
+        }
+        ++failCount;
 
 #ifdef INRC2_DEBUG
         //if (delta < MAX_OBJ_VALUE) {
-        //    incrementalVal = objValue;
+        //    ObjValue incrementalVal = objValue;
         //    evaluateObjValue();
         //    if (!solver.checkFeasibility( assign )) {
         //        cerr << "infeasible solution." << endl;
@@ -621,8 +621,74 @@ void NurseRostering::TabuSolver::Solution::localSearch( const Timer &timer, Outp
     clock_t duration = clock() - startTime;
     cerr << "iter: " << iterCount << ' '
         << "time: " << duration << ' '
-        << "speed: " << iterCount / (duration + 1) << endl;
+        << "speed: " << iterCount * static_cast<double>(CLOCKS_PER_SEC) / (duration + 1) << endl;
 #endif
+}
+
+bool NurseRostering::TabuSolver::Solution::findBestAddShift( Move &bestMove ) const
+{
+    RandSelect<ObjValue> rs;
+    bestMove.delta = MAX_OBJ_VALUE;
+
+    // search for best addShift
+    for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
+        for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
+            if (!assign.isWorking( nurse, weekday )) {
+                for (ShiftID shift = 0; shift < solver.problem.scenario.shiftTypeNum; ++shift) {
+                    for (SkillID skill = 0; skill < solver.problem.scenario.skillTypeNum; ++skill) {
+                        ObjValue delta = tryAddShift( weekday, nurse, shift, skill );
+                        if (rs.isMinimal( delta, bestMove.delta )) {
+                            bestMove = Move( delta, nurse, weekday, shift, skill );
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return (bestMove.delta < 0);
+}
+
+bool NurseRostering::TabuSolver::Solution::findBestChangeShift( Move &bestMove ) const
+{
+    RandSelect<ObjValue> rs;
+    bestMove.delta = MAX_OBJ_VALUE;
+
+    for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
+        for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
+            if (assign.isWorking( nurse, weekday )) {
+                for (ShiftID shift = 0; shift < solver.problem.scenario.shiftTypeNum; ++shift) {
+                    for (SkillID skill = 0; skill < solver.problem.scenario.skillTypeNum; ++skill) {
+                        ObjValue delta = tryChangeShift( weekday, nurse, shift, skill );
+                        if (rs.isMinimal( delta, bestMove.delta )) {
+                            bestMove = Move( delta, nurse, weekday, shift, skill );
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return (bestMove.delta < 0);
+}
+
+bool NurseRostering::TabuSolver::Solution::findBestRemoveShift( Move &bestMove ) const
+{
+    RandSelect<ObjValue> rs;
+    bestMove.delta = MAX_OBJ_VALUE;
+
+    for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
+        for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
+            if (assign.isWorking( nurse, weekday )) {
+                ObjValue delta = tryRemoveShift( weekday, nurse );
+                if (rs.isMinimal( delta, bestMove.delta )) {
+                    bestMove = Move( delta, nurse, weekday );
+                }
+            }
+        }
+    }
+
+    return (bestMove.delta < 0);
 }
 
 bool NurseRostering::TabuSolver::Solution::isValidSuccession( NurseID nurse, ShiftID shift, int weekday ) const
@@ -637,7 +703,7 @@ bool NurseRostering::TabuSolver::Solution::isValidPrior( NurseID nurse, ShiftID 
         || solver.problem.scenario.shifts[shift].legalNextShifts[assign[nurse][weekday + 1].shift]);
 }
 
-NurseRostering::ObjValue NurseRostering::TabuSolver::Solution::tryAddShift( int weekday, NurseID nurse, ShiftID shiftID, SkillID skillID )
+NurseRostering::ObjValue NurseRostering::TabuSolver::Solution::tryAddShift( int weekday, NurseID nurse, ShiftID shiftID, SkillID skillID ) const
 {
     ShiftID oldShiftID = assign[nurse][weekday].shift;
     // TODO : make sure they won't be the same and leave out this
@@ -853,7 +919,7 @@ NurseRostering::ObjValue NurseRostering::TabuSolver::Solution::tryAddShift( int 
     return delta;
 }
 
-NurseRostering::ObjValue NurseRostering::TabuSolver::Solution::tryChangeShift( int weekday, NurseID nurse, ShiftID shiftID, SkillID skillID )
+NurseRostering::ObjValue NurseRostering::TabuSolver::Solution::tryChangeShift( int weekday, NurseID nurse, ShiftID shiftID, SkillID skillID ) const
 {
     ShiftID oldShiftID = assign[nurse][weekday].shift;
     SkillID oldSkillID = assign[nurse][weekday].skill;
@@ -1013,7 +1079,7 @@ NurseRostering::ObjValue NurseRostering::TabuSolver::Solution::tryChangeShift( i
     return delta;
 }
 
-NurseRostering::ObjValue NurseRostering::TabuSolver::Solution::tryRemoveShift( int weekday, NurseID nurse )
+NurseRostering::ObjValue NurseRostering::TabuSolver::Solution::tryRemoveShift( int weekday, NurseID nurse ) const
 {
     ShiftID oldShiftID = assign[nurse][weekday].shift;
     SkillID oldSkillID = assign[nurse][weekday].skill;

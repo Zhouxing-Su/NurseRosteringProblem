@@ -3,20 +3,20 @@ SOLUTION
 
 ASSIGNMENTS = 26
 Patrick Mon Night HeadNurse
-Patrick Wed Night HeadNurse
+Patrick Wed Night Nurse
 Patrick Thu Night Nurse
 Patrick Fri Night HeadNurse
 Patrick Sun Early HeadNurse
-Andrea Mon Late Nurse
-Andrea Tue Late Nurse
+Andrea Mon Early HeadNurse
 Andrea Thu Late HeadNurse
 Andrea Fri Late Nurse
 Andrea Sat Late Nurse
-Andrea Sun Late HeadNurse
-Stefaan Mon Early HeadNurse
+Andrea Sun Late Nurse
 Stefaan Tue Early Nurse
-Stefaan Sat Late HeadNurse
-Stefaan Sun Late Nurse
+Stefaan Wed Night HeadNurse
+Stefaan Sun Late HeadNurse
+Sara Mon Late Nurse
+Sara Tue Late Nurse
 Sara Wed Late Nurse
 Sara Thu Late Nurse
 Sara Fri Night Nurse

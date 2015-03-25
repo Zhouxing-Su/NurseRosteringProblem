@@ -3,6 +3,7 @@
 
 
 #include <ctime>
+#include <cstdlib>
 
 
 //
@@ -73,6 +74,43 @@ public:
 
 private:
     clock_t endTime;
+};
+
+//
+template <typename T>
+class RandSelect
+{
+public:
+    // sometimes the first element is pre-selected with the possibility of 1,
+    // so you can pass 1 into the constructor in this condition to leave out a isSelected() call.
+    RandSelect( int startCount = 1 ) : count( startCount ) {}
+
+    // start a new selection on another N elements
+    void reset( int startCount = 1 )
+    {
+        count = startCount;
+    }
+
+    // call this for each of the N elements (N times in total) to judge whether each of them is selected.
+    bool isSelected()
+    {   // only the last returned "true" means that element is selected finally.
+        return ((rand() % (++count)) == 0);
+    }
+
+    bool isMinimal( const T& target, const T& min )
+    {
+        if (target < min) {
+            reset();
+            return true;
+        } else if (target == min) {
+            return isSelected();
+        } else {
+            return false;
+        }
+    }
+
+private:
+    int count;
 };
 
 

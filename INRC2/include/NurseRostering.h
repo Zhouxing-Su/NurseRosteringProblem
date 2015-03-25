@@ -262,6 +262,9 @@ public:
 
         std::string algorithmName;
         clock_t startTime;
+
+    private:    // forbidden operators
+        Solver& operator=(const Solver &) {}
     };
 
     class TabuSolver : public Solver
@@ -356,6 +359,9 @@ public:
                 unsigned minSkillNum;
                 std::vector<int> validNurseNum_CurShift;
                 std::vector<int> validNurseNum_CurDay;
+
+            private:    // forbidden operators
+                AvailableNurses& operator=(const AvailableNurses &) {}
             };
 
             // consecutive information for a nurse
@@ -432,8 +438,30 @@ public:
                 int dayHigh[Weekday::SIZE];
                 int shiftLow[Weekday::SIZE];
                 int shiftHigh[Weekday::SIZE];
+
+            private:    // forbidden operators
             };
 
+            // single move in neighborhood search
+            class Move
+            {
+            public:
+                Move() : delta( MAX_OBJ_VALUE ) {}
+                Move( ObjValue d, NurseID n, int w )
+                    : delta( d ), nurse( n ), weekday( w )
+                {
+                }
+                Move( ObjValue d, NurseID n, int w, ShiftID sh, SkillID sk )
+                    : delta( d ), nurse( n ), weekday( w ), shift( sh ), skill( sk )
+                {
+                }
+
+                ObjValue delta;
+                NurseID nurse;
+                int weekday;
+                ShiftID shift;
+                SkillID skill;
+            };
 
             // find day number to be punished for a single block
             // work for shift, day and day-off
@@ -445,11 +473,11 @@ public:
             }
 
             // evaluate cost of adding a shift to nurse without shift in weekday
-            ObjValue tryAddShift( int weekday, NurseID nurse, ShiftID shift, SkillID skill );
+            ObjValue tryAddShift( int weekday, NurseID nurse, ShiftID shift, SkillID skill ) const;
             // evaluate cost of assigning another shift or skill to nurse already assigned in weekday
-            ObjValue tryChangeShift( int weekday, NurseID nurse, ShiftID shift, SkillID skill );
+            ObjValue tryChangeShift( int weekday, NurseID nurse, ShiftID shift, SkillID skill ) const;
             // evaluate cost of removing the shift from nurse already assigned in weekday
-            ObjValue tryRemoveShift( int weekday, NurseID nurse );
+            ObjValue tryRemoveShift( int weekday, NurseID nurse ) const;
             // apply assigning a shift to nurse without shift in weekday
             void addShift( int weekday, NurseID nurse, ShiftID shift, SkillID skill );
             // apply assigning another shift or skill to nurse already assigned in weekday
@@ -466,6 +494,11 @@ public:
             void assignMiddle( int weekday, int high[Weekday::SIZE], int low[Weekday::SIZE] );
             // the assignment is on a consecutive block with single slot
             void assignSingle( int weekday, int high[Weekday::SIZE], int low[Weekday::SIZE], bool affectRight, bool affectLeft );
+
+            // return true if the solution will be improved (delta <= 0)
+            bool findBestAddShift( Move &bestMove ) const;
+            bool findBestChangeShift( Move &bestMove ) const;
+            bool findBestRemoveShift( Move &bestMove ) const;
 
             void evaluateInsufficientStaff();
             void evaluateConsecutiveShift();
@@ -496,6 +529,9 @@ public:
             ObjValue objCompleteWeekend;
             ObjValue objTotalAssign;
             ObjValue objTotalWorkingWeekend;
+
+        private:    // forbidden operators
+            Solution& operator=(const Solution &) {}
         };
 
 
@@ -504,6 +540,9 @@ public:
         // nurseNumOfSkill[skill] is the number of nurses with that skill
         std::vector<SkillID> nurseNumOfSkill;
         NurseWithSkill nurseWithSkill;
+
+    private:    // forbidden operators
+        TabuSolver& operator=(const TabuSolver &) {}
     };
 
 
