@@ -271,7 +271,10 @@ public:
 
         virtual void init();
         virtual void solve();
-        virtual History genHistory() const { return sln.genHistory(); }
+        virtual History genHistory() const
+        {
+            return Solution( *this, optima.assign ).genHistory();
+        }
 
         // initialize data about nurse-skill relation
         void initAssistData();  // initialize nurseWithSkill, nurseNumOfSkill
@@ -298,12 +301,13 @@ public:
             bool isValidSuccession( NurseID nurse, ShiftID shift, int weekday ) const;
             bool isValidPrior( NurseID nurse, ShiftID shift, int weekday ) const;
 
-            Solution( TabuSolver &solver );
-            History genHistory() const; // history for next week
-            operator Output() const
+            Solution( const TabuSolver &solver );
+            Solution( const TabuSolver &solver, const Assign &assign );
+            Output genOutput() const
             {
                 return Output( objValue, assign );
             }
+            History genHistory() const; // history for next week
 
         private:
             // available nurses for a single assignment
@@ -442,13 +446,13 @@ public:
 
             // evaluate cost of adding a shift to nurse without shift in weekday
             ObjValue tryAddShift( int weekday, NurseID nurse, ShiftID shift, SkillID skill );
-            // evaluate cost of assigning another shift to nurse already assigned in weekday
+            // evaluate cost of assigning another shift or skill to nurse already assigned in weekday
             ObjValue tryChangeShift( int weekday, NurseID nurse, ShiftID shift, SkillID skill );
             // evaluate cost of removing the shift from nurse already assigned in weekday
             ObjValue tryRemoveShift( int weekday, NurseID nurse );
             // apply assigning a shift to nurse without shift in weekday
             void addShift( int weekday, NurseID nurse, ShiftID shift, SkillID skill );
-            // apply assigning another shift to nurse already assigned in weekday
+            // apply assigning another shift or skill to nurse already assigned in weekday
             void changeShift( int weekday, NurseID nurse, ShiftID shift, SkillID skill );
             // apply removing a shift to nurse in weekday
             void removeShift( int weekday, NurseID nurse );
@@ -472,7 +476,7 @@ public:
             void evaluateTotalAssign();
             void evaluateTotalWorkingWeekend();
 
-            TabuSolver &solver;
+            const TabuSolver &solver;
 
             // total assignments for each nurse
             std::vector<int> totalAssignNums;

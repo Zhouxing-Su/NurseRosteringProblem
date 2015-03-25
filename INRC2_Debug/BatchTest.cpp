@@ -13,7 +13,7 @@ void makeSureDirExist( const string &dir )
     system( (mkdir_unixshell + dir).c_str() );
 }
 
-void test( const char *outputDir, int instIndex, char initHis, const char *weeks, int timeoutInSec )
+void test( const char *outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec )
 {
     makeSureDirExist( outputDir );
     ostringstream t;
@@ -32,7 +32,7 @@ void test( const char *outputDir, int instIndex, char initHis, const char *weeks
     }
 }
 
-void test( const char *outputDir, int instIndex, char initHis, const char *weeks, int timeoutInSec, int randSeed )
+void test( const char *outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec, int randSeed )
 {
     makeSureDirExist( outputDir );
     ostringstream t, r;
@@ -52,7 +52,7 @@ void test( const char *outputDir, int instIndex, char initHis, const char *weeks
     }
 }
 
-void test_customIO( const char *outputDir, int instIndex, char initHis, const char *weeks, int timeoutInSec )
+void test_customIO( const char *outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec )
 {
     makeSureDirExist( outputDir );
     ostringstream t;
@@ -81,7 +81,7 @@ void test_customIO( const char *outputDir, int instIndex, char initHis, const ch
     run( argc, argv );
 }
 
-void test_customIO( const char *outputDir, int instIndex, char initHis, const char *weeks, int timeoutInSec, int randSeed )
+void test_customIO( const char *outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec, int randSeed )
 {
     makeSureDirExist( outputDir );
     ostringstream t, r;

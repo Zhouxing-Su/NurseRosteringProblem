@@ -1,23 +1,25 @@
 SOLUTION
 1 n005w4
 
-ASSIGNMENTS = 24
+ASSIGNMENTS = 26
 Patrick Mon Night HeadNurse
+Patrick Wed Night HeadNurse
 Patrick Thu Night Nurse
 Patrick Fri Night HeadNurse
 Patrick Sun Early HeadNurse
-Andrea Mon Early HeadNurse
+Andrea Mon Late Nurse
+Andrea Tue Late Nurse
 Andrea Thu Late HeadNurse
-Andrea Sun Late Nurse
+Andrea Fri Late Nurse
+Andrea Sat Late Nurse
+Andrea Sun Late HeadNurse
+Stefaan Mon Early HeadNurse
 Stefaan Tue Early Nurse
-Stefaan Wed Night HeadNurse
-Stefaan Fri Night Nurse
-Stefaan Sun Late HeadNurse
-Sara Mon Late Nurse
-Sara Tue Late Nurse
+Stefaan Sat Late HeadNurse
+Stefaan Sun Late Nurse
 Sara Wed Late Nurse
 Sara Thu Late Nurse
-Sara Fri Late Nurse
+Sara Fri Night Nurse
 Sara Sat Night Nurse
 Sara Sun Night Nurse
 Nguyen Mon Night Nurse

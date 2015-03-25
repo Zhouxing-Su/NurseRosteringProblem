@@ -49,6 +49,7 @@ namespace INRC2
         { weekdayNames[NurseRostering::Weekday::Sun], NurseRostering::Weekday::Sun }
     };
 
+
     void run( int argc, char *argv[] );
 
     void readScenario( const std::string &scenarioFileName, NurseRostering &input );
