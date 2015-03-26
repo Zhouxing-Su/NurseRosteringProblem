@@ -349,14 +349,21 @@ void NurseRostering::Solver::checkConsecutiveViolation( int &objValue,
 
 
 
+NurseRostering::TabuSolver::TabuSolver( const NurseRostering &i, clock_t st )
+    :Solver( i, Name, st ), sln( *this ),
+    nurseNumOfSkill( vector<int>( i.scenario.skillTypeNum, 0 ) ),
+    nurseWithSkill( vector< vector< vector<NurseID> > >( problem.scenario.skillTypeNum ) )
+{
+}
+
 void NurseRostering::TabuSolver::init()
 {
     srand( problem.randSeed );
 
-    Timer timer( REPAIR_TIMEOUT_IN_INIT, startTime );
     initAssistData();
 
     if (sln.genInitAssign() == false) {
+        Timer timer( REPAIR_TIMEOUT_IN_INIT, startTime );
         sln.repair( timer );
     }
 
@@ -369,14 +376,6 @@ void NurseRostering::TabuSolver::solve()
 {
     Timer timer( problem.timeout, startTime );
     sln.localSearch( timer, optima );
-}
-
-NurseRostering::TabuSolver::TabuSolver( const NurseRostering &i, clock_t st )
-    :Solver( i, Name, st ), sln( *this ),
-    nurseNumOfSkill( vector<int>( i.scenario.skillTypeNum, 0 ) ),
-    nurseWithSkill( vector< vector< vector<NurseID> > >( problem.scenario.skillTypeNum ) )
-{
-
 }
 
 void NurseRostering::TabuSolver::initAssistData()
@@ -394,8 +393,6 @@ void NurseRostering::TabuSolver::initAssistData()
         }
     }
 }
-
-
 
 
 
