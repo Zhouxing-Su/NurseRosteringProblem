@@ -40,6 +40,8 @@ enum ArgvIndex
 };
 
 static const int MAX_ARGV_LEN = 256;
+static const int INIT_HIS_NUM = 3;
+static const int WEEKDATA_NUM = 10;
 
 extern char *fullArgv[ArgcVal::full];
 
@@ -57,6 +59,9 @@ extern const std::string cusPrefix;
 
 extern const std::vector<double> instTimeout;
 
+
+char genInitHisIndex();
+void genWeekdataSequence( int instIndex, char *weekdata );
 
 void makeSureDirExist( const std::string &dir );
 
