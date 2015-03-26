@@ -1,1 +1,1 @@
-30457
+optima.objVal: 4862

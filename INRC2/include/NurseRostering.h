@@ -236,7 +236,7 @@ public:
 
 
         Solver( const NurseRostering &input, const std::string &name, clock_t startTime );
-        virtual ~Solver();
+        virtual ~Solver() {}
 
 
         const NurseRostering &problem;
@@ -282,7 +282,7 @@ public:
         // initialize data about nurse-skill relation
         void initAssistData();  // initialize nurseWithSkill, nurseNumOfSkill
         TabuSolver( const NurseRostering &input, clock_t startTime = clock() );
-        virtual ~TabuSolver();
+        virtual ~TabuSolver() {}
 
     private:
         // NurseWithSkill[skill][skillNum-1] is a set of nurses 
@@ -296,8 +296,13 @@ public:
             void resetAssign();     // reset all shift to Shift::ID_NONE
             void evaluateObjValue();    // using assist data structure
             void repair();  // make infeasible solution feasible
-            // run until time out and return iteration count
+
+            // try add shift until there is no improvement , then try change shift,
+            // then try remove shift, then try add shift again. if all of them
+            // can't improve or time is out, return.
             void localSearch( const Timer &timer, Output &optima );
+            // randomly select add, change or remove shift until timeout
+            void randomWalk( const Timer &timer, Output &optima );
 
             const Assign& getAssign() const { return assign; }
             // shift must not be none shift

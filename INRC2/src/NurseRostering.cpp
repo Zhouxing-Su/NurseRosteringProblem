@@ -33,11 +33,6 @@ NurseRostering::Solver::Solver( const NurseRostering &input, const std::string &
 {
 }
 
-NurseRostering::Solver::~Solver()
-{
-
-}
-
 bool NurseRostering::Solver::check() const
 {
     return (checkFeasibility() && (checkObjValue() == optima.objVal));
@@ -401,11 +396,6 @@ NurseRostering::TabuSolver::TabuSolver( const NurseRostering &i, clock_t st )
 
 }
 
-NurseRostering::TabuSolver::~TabuSolver()
-{
-
-}
-
 void NurseRostering::TabuSolver::initAssistData()
 {
     for (NurseID n = 0; n < problem.scenario.nurseNum; ++n) {
@@ -599,6 +589,79 @@ void NurseRostering::TabuSolver::Solution::localSearch( const Timer &timer, Outp
 #ifdef INRC2_DEBUG
         //if (delta < MAX_OBJ_VALUE) {
         //    ObjValue incrementalVal = objValue;
+        //    evaluateObjValue();
+        //    if (!solver.checkFeasibility( assign )) {
+        //        cerr << "infeasible solution." << endl;
+        //        return;
+        //    }
+        //    ObjValue checkResult = solver.checkObjValue( assign );
+        //    if (checkResult != objValue) {
+        //        cerr << "check conflict with evaluate." << endl;
+        //        return;
+        //    }
+        //    if (objValue != incrementalVal) {
+        //        cerr << "evaluate conflict with incremental update." << endl;
+        //        return;
+        //    }
+        //}
+#endif
+    }
+
+#ifdef INRC2_DEBUG
+    clock_t duration = clock() - startTime;
+    cerr << "iter: " << iterCount << ' '
+        << "time: " << duration << ' '
+        << "speed: " << iterCount * static_cast<double>(CLOCKS_PER_SEC) / (duration + 1) << endl;
+#endif
+}
+
+void NurseRostering::TabuSolver::Solution::randomWalk( const Timer &timer, Output &optima )
+{
+#ifdef INRC2_DEBUG
+    clock_t startTime = clock();
+    ObjValue incrementalVal;
+#endif
+
+    long long iterCount = 0;
+
+    ObjValue delta;
+    for (; !timer.isTimeOut(); ++iterCount) {
+        int select = rand() % 3;
+        int weekday = (rand() % Weekday::NUM) + 1;
+        NurseID nurse = rand() % solver.problem.scenario.nurseNum;
+        ShiftID shift = rand() % solver.problem.scenario.shiftTypeNum;
+        SkillID skill = rand() % solver.problem.scenario.skillTypeNum;
+        switch (select) {
+            case 0:
+                delta = tryAddShift( weekday, nurse, shift, skill );
+                if (delta < MAX_OBJ_VALUE) {
+                    objValue += delta;
+                    addShift( weekday, nurse, shift, skill );
+                }
+                break;
+            case 1:
+                delta = tryChangeShift( weekday, nurse, shift, skill );
+                if (delta < MAX_OBJ_VALUE) {
+                    objValue += delta;
+                    changeShift( weekday, nurse, shift, skill );
+                }
+                break;
+            case 2:
+                delta = tryRemoveShift( weekday, nurse );
+                if (delta < MAX_OBJ_VALUE) {
+                    objValue += delta;
+                    removeShift( weekday, nurse );
+                }
+                break;
+        }
+
+        if (objValue < optima.objVal) {
+            optima = genOutput();
+        }
+
+#ifdef INRC2_DEBUG
+        //if (delta < MAX_OBJ_VALUE) {
+        //    incrementalVal = objValue;
         //    evaluateObjValue();
         //    if (!solver.checkFeasibility( assign )) {
         //        cerr << "infeasible solution." << endl;

@@ -48,13 +48,13 @@ int main()
     //test( testOutputDir, instIndex, '0', "1233", 0, 10 );
     //test( testOutputDir, instIndex, '0', "1233", instTimeout[instIndex], 10 );
 
-    int instIndex = 0;
-    test_customIO( testOutputDir, instIndex, '1', "0248", 0, 10 );
-    test_customIO( testOutputDir, instIndex, '1', "0248", instTimeout[instIndex], 10 );
+    //int instIndex = 0;
+    //test_customIO( testOutputDir, instIndex, '1', "0248", 0, 10 );
+    //test_customIO( testOutputDir, instIndex, '1', "0248", instTimeout[instIndex], 10 );
 
-    //int instIndex = 16;
-    //test_customIO( testOutputDir, instIndex, '0', "28346179", 0, 10 );
-    //test_customIO( testOutputDir, instIndex, '0', "28346179", instTimeout[instIndex], 10 );
+    int instIndex = 16;
+    test_customIO( testOutputDir, instIndex, '0', "28346179", 0, 10 );
+    test_customIO( testOutputDir, instIndex, '0', "28346179", instTimeout[instIndex], 10 );
 
     //system( "pause" );
     return 0;
