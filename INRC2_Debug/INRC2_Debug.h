@@ -8,13 +8,14 @@
 #define INRC2_DEBUG_H
 
 
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <vector>
+#include <string>
 #include <cstring>
 #include <cstdlib>
 #include <ctime>
-#include <vector>
-#include <string>
-#include <sstream>
-#include <fstream>
 
 #include "DebugFlag.h"
 #include "INRC2.h"
