@@ -146,7 +146,7 @@ private:
             std::vector<int> validNurseNum_CurDay;
 
         private:    // forbidden operators
-            AvailableNurses& operator=(const AvailableNurses &) {}
+            AvailableNurses& operator=(const AvailableNurses &) { return *this; }
         };
 
         // consecutive information for a nurse
@@ -323,7 +323,7 @@ private:
         ObjValue objTotalWorkingWeekend;
 
     private:    // forbidden operators
-        Solution& operator=(const Solution &) {}
+        Solution& operator=(const Solution &) { return *this; }
     };
 
 
@@ -334,7 +334,7 @@ private:
     NurseWithSkill nurseWithSkill;
 
 private:    // forbidden operators
-    TabuSolver& operator=(const TabuSolver &) {}
+    TabuSolver& operator=(const TabuSolver &) { return *this; }
 };
 
 

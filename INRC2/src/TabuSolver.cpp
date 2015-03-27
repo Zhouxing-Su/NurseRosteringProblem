@@ -118,7 +118,7 @@ bool NurseRostering::TabuSolver::Solution::genInitAssign()
             vector<double> &dailyRequire;
 
         private:    // forbidden operators
-            CmpDailyRequire& operator=(const CmpDailyRequire &) {}
+            CmpDailyRequire& operator=(const CmpDailyRequire &) { return *this; }
         }cmpDailyRequire( dailyRequire );
         sort( skillRank.begin(), skillRank.end(), cmpDailyRequire );
 
@@ -253,9 +253,9 @@ bool NurseRostering::TabuSolver::Solution::repair( const Timer &timer )
 
 void NurseRostering::TabuSolver::Solution::iterativeLocalSearch( const Timer &timer, Output &optima )
 {
-    // make loopCount a prime so there will always be some time 
-    // for localSearch by truncation error
-    for (int loopCount = 1; !timer.isTimeOut() && loopCount > 0; --loopCount) {
+    const int timeForEachLoop = CLOCKS_PER_SEC * 1;
+    int loopCount = timer.restTime() / timeForEachLoop;
+    for (; !timer.isTimeOut() && loopCount > 0; --loopCount) {
         Timer t( timer.restTime() / loopCount, clock() );
         randomWalk( t, optima );
         if (rand() % 2) {
@@ -381,7 +381,7 @@ void NurseRostering::TabuSolver::Solution::randomWalk( const Timer &timer, Outpu
     ObjValue delta;
     for (; !timer.isTimeOut(); ++iterCount) {
         int select = rand() % 3;
-        int weekday = (rand() % Weekday::NUM) + 1;
+        int weekday = (rand() % Weekday::NUM) + Weekday::Mon;
         NurseID nurse = rand() % solver.problem.scenario.nurseNum;
         ShiftID shift = rand() % solver.problem.scenario.shiftTypeNum;
         SkillID skill = rand() % solver.problem.scenario.skillTypeNum;

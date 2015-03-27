@@ -250,7 +250,7 @@ public:
         clock_t startTime;
 
     private:    // forbidden operators
-        Solver& operator=(const Solver &) {}
+        Solver& operator=(const Solver &) { return *this; }
     };
 
     class TabuSolver;

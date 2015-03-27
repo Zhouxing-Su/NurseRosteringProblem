@@ -17,7 +17,7 @@ char *fullArgv[ArgcVal::full] = {
     "--cusOut", ""
 };
 
-const char *testOutputDir = "output/";
+const char *testOutputDir = "output";
 const std::string dir( "../INRC2/instance/" );
 const std::vector<std::string> instance = {
     "n005w4", "n012w8", "n021w4", // 0 1 2
@@ -44,10 +44,10 @@ const std::vector<double> instTimeout = {
 const std::string scePrefix( "/Sc-" );
 const std::string weekPrefix( "/WD-" );
 const std::string initHisPrefix( "/H0-" );
-const std::string hisPrefix( "history-week" );
-const std::string solPrefix( "sol-week" );
+const std::string hisPrefix( "/history-week" );
+const std::string solPrefix( "/sol-week" );
 const std::string fileSuffix( ".txt" );
-const std::string cusPrefix( "custom-week" );
+const std::string cusPrefix( "/custom-week" );
 
 
 char genInitHisIndex()
@@ -65,10 +65,13 @@ void genWeekdataSequence( int instIndex, char *weekdata )
 
 void makeSureDirExist( const string &dir )
 {
+#ifdef WIN32
     static const std::string mkdir_win32cmd( "mkdir " );
-    static const std::string mkdir_unixshell( "mkdir -p " );
     system( (mkdir_win32cmd + dir).c_str() );
+#else
+    static const std::string mkdir_unixshell( "mkdir -p " );
     system( (mkdir_unixshell + dir).c_str() );
+#endif
 }
 
 void test( const char *outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec )
