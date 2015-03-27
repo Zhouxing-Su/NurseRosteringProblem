@@ -1,1 +1,1 @@
-optima.objVal: 3925
+31130

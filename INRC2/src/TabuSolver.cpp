@@ -1,4 +1,4 @@
-#include "Solver.h"
+#include "TabuSolver.h"
 
 
 using namespace std;
@@ -21,6 +21,7 @@ void NurseRostering::TabuSolver::init()
 
     initAssistData();
 
+    //sln.genInitAssign_BranchAndBound();
     if (sln.genInitAssign() == false) {
         Timer timer( REPAIR_TIMEOUT_IN_INIT, startTime );
         sln.repair( timer );
@@ -33,22 +34,24 @@ void NurseRostering::TabuSolver::init()
 
 void NurseRostering::TabuSolver::solve()
 {
+    // TODO
     Timer timer( problem.timeout, startTime );
-    sln.localSearch( timer, optima );
+    sln.iterativeLocalSearch( timer, optima );
 }
 
 void NurseRostering::TabuSolver::initAssistData()
 {
     for (NurseID n = 0; n < problem.scenario.nurseNum; ++n) {
-        const vector<SkillID> &skills = problem.scenario.nurses[n].skills;
-        unsigned skillNum = skills.size();
-        for (unsigned s = 0; s < skillNum; ++s) {
-            SkillID skill = skills[s];
-            ++nurseNumOfSkill[skill];
-            if (skillNum > nurseWithSkill[skill].size()) {
-                nurseWithSkill[skill].resize( skillNum );
+        const vector<bool> &skills = problem.scenario.nurses[n].skills;
+        unsigned skillNum = problem.scenario.nurses[n].skillNum;
+        for (int skill = 0; skill < problem.scenario.skillTypeNum; ++skill) {
+            if (skills[skill]) {
+                ++nurseNumOfSkill[skill];
+                if (skillNum > nurseWithSkill[skill].size()) {
+                    nurseWithSkill[skill].resize( skillNum );
+                }
+                nurseWithSkill[skill][skillNum - 1].push_back( n );
             }
-            nurseWithSkill[skill][skillNum - 1].push_back( n );
         }
     }
 }
@@ -56,23 +59,31 @@ void NurseRostering::TabuSolver::initAssistData()
 
 
 NurseRostering::TabuSolver::Solution::Solution( const TabuSolver &s )
-    : solver( s ), assign( s.problem.scenario.nurseNum, Weekday::SIZE ),
-    missingNurseNums( s.problem.weekData.optNurseNums ),
-    totalAssignNums( s.problem.history.totalAssignNums ),
-    consecutives( s.problem.scenario.nurseNum )
+    : solver( s )
 {
-    for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
-        consecutives[nurse] = Consecutive( solver.problem.history, nurse );
-        assign[nurse][Weekday::HIS] = SingleAssign( s.problem.history.lastShifts[nurse] );
-    }
+    resetAssign();
 }
 
 NurseRostering::TabuSolver::Solution::Solution( const TabuSolver &s, const Assign &a )
-    : Solution( s )
+    : solver( s )
 {
+    rebuildAssistData( a );
+}
+
+void NurseRostering::TabuSolver::Solution::rebuildAssistData( const Assign &a )
+{
+#ifdef INRC2_DEBUG
+    if (&a == &assign) {
+        cerr << "self assignment is not allowed!" << endl;
+    }
+#endif
+
+    resetAssign();
     for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
         for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
-            addShift( weekday, nurse, a[nurse][weekday].shift, a[nurse][weekday].skill );
+            if (Assign::isWorking( a[nurse][weekday].shift )) {
+                addShift( weekday, nurse, a[nurse][weekday].shift, a[nurse][weekday].skill );
+            }
         }
     }
 }
@@ -135,11 +146,69 @@ bool NurseRostering::TabuSolver::Solution::genInitAssign()
     return true;
 }
 
+bool NurseRostering::TabuSolver::Solution::genInitAssign_BranchAndCut()
+{
+    bool feasible = fillAssign( Weekday::Mon, 0, 0, 0, 0 );
+    Assign a( assign );
+    rebuildAssistData( a );
+    return feasible;
+}
+
+bool NurseRostering::TabuSolver::Solution::fillAssign( int weekday, ShiftID shift, SkillID skill, NurseID nurse, int nurseNum )
+{
+    if (nurse >= solver.problem.scenario.nurseNum) {
+        if (nurseNum < solver.problem.weekData.minNurseNums[weekday][shift][skill]) {
+            return false;
+        } else {
+            return fillAssign( weekday, shift, skill + 1, 0, 0 );
+        }
+    } else if (skill >= solver.problem.scenario.skillTypeNum) {
+        return fillAssign( weekday, shift + 1, 0, 0, 0 );
+    } else if (shift >= solver.problem.scenario.shiftTypeNum) {
+        return fillAssign( weekday + 1, 0, 0, 0, 0 );
+    } else if (weekday > Weekday::Sun) {
+        return true;
+    }
+
+    SingleAssign firstAssign( shift, skill );
+    SingleAssign secondAssign;
+    NurseID firstNurseNum = nurseNum + 1;
+    NurseID secondNurseNum = nurseNum;
+    bool isNotAssignedBefore = !assign.isWorking( nurse, weekday );
+
+    if (isNotAssignedBefore) {
+        if (solver.problem.scenario.nurses[nurse].skills[skill]
+            && isValidSuccession( nurse, shift, weekday )) {
+            if (rand() % 2) {
+                swap( firstAssign, secondAssign );
+                swap( firstNurseNum, secondNurseNum );
+            }
+
+            assign[nurse][weekday] = firstAssign;
+            if (fillAssign( weekday, shift, skill, nurse + 1, firstNurseNum )) {
+                return true;
+            }
+        }
+
+        assign[nurse][weekday] = secondAssign;
+    }
+
+    if (fillAssign( weekday, shift, skill, nurse + 1, secondNurseNum )) {
+        return true;
+    } else if (isNotAssignedBefore) {
+        assign[nurse][weekday] = SingleAssign();
+    }
+
+    return false;
+}
+
+
 void NurseRostering::TabuSolver::Solution::resetAssign()
 {
     assign = Assign( solver.problem.scenario.nurseNum, Weekday::SIZE );
     missingNurseNums = solver.problem.weekData.optNurseNums;
     totalAssignNums = solver.problem.history.totalAssignNums;
+    consecutives = vector<Consecutive>( solver.problem.scenario.nurseNum );
     for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
         consecutives[nurse] = Consecutive( solver.problem.history, nurse );
         assign[nurse][Weekday::HIS] = SingleAssign( solver.problem.history.lastShifts[nurse] );
@@ -182,9 +251,24 @@ bool NurseRostering::TabuSolver::Solution::repair( const Timer &timer )
     return feasible;
 }
 
+void NurseRostering::TabuSolver::Solution::iterativeLocalSearch( const Timer &timer, Output &optima )
+{
+    // make loopCount a prime so there will always be some time 
+    // for localSearch by truncation error
+    for (int loopCount = 1; !timer.isTimeOut() && loopCount > 0; --loopCount) {
+        Timer t( timer.restTime() / loopCount, clock() );
+        randomWalk( t, optima );
+        if (rand() % 2) {
+            localSearch( timer, optima );
+        } else {
+            localSearchOnConsecutiveBorder( timer, optima );
+        }
+    }
+}
+
 void NurseRostering::TabuSolver::Solution::localSearch( const Timer &timer, Output &optima )
 {
-#ifdef INRC2_DEBUG
+#ifdef INRC2_PERFORMANCE_TEST
     clock_t startTime = clock();
 #endif
 
@@ -225,29 +309,60 @@ void NurseRostering::TabuSolver::Solution::localSearch( const Timer &timer, Outp
             failCount = 0;
         }
         ++failCount;
-
-#ifdef INRC2_DEBUG
-        //if (delta < MAX_OBJ_VALUE) {
-        //    ObjValue incrementalVal = objValue;
-        //    evaluateObjValue();
-        //    if (!solver.checkFeasibility( assign )) {
-        //        cerr << "infeasible solution." << endl;
-        //        return;
-        //    }
-        //    ObjValue checkResult = solver.checkObjValue( assign );
-        //    if (checkResult != objValue) {
-        //        cerr << "check conflict with evaluate." << endl;
-        //        return;
-        //    }
-        //    if (objValue != incrementalVal) {
-        //        cerr << "evaluate conflict with incremental update." << endl;
-        //        return;
-        //    }
-        //}
-#endif
     }
+#ifdef INRC2_PERFORMANCE_TEST
+    clock_t duration = clock() - startTime;
+    cerr << "iter: " << iterCount << ' '
+        << "time: " << duration << ' '
+        << "speed: " << iterCount * static_cast<double>(CLOCKS_PER_SEC) / (duration + 1) << endl;
+#endif
+}
 
-#ifdef INRC2_DEBUG
+void NurseRostering::TabuSolver::Solution::localSearchOnConsecutiveBorder( const Timer &timer, Output &optima )
+{
+#ifdef INRC2_PERFORMANCE_TEST
+    clock_t startTime = clock();
+#endif
+
+    long long iterCount = 0;
+    int failCount = 0;
+
+    while (!timer.isTimeOut() && (failCount < 3)) {
+        Move bestMove;
+        while (!timer.isTimeOut() && findBestAddShiftOnConsecutiveBorder( bestMove )) {
+            addShift( bestMove.weekday, bestMove.nurse, bestMove.shift, bestMove.skill );
+            objValue += bestMove.delta;
+            if (objValue < optima.objVal) {
+                optima = genOutput();
+            }
+            ++iterCount;
+            failCount = 0;
+        }
+        ++failCount;
+
+        while (!timer.isTimeOut() && findBestChangeShiftOnConsecutiveBorder( bestMove )) {
+            changeShift( bestMove.weekday, bestMove.nurse, bestMove.shift, bestMove.skill );
+            objValue += bestMove.delta;
+            if (objValue < optima.objVal) {
+                optima = genOutput();
+            }
+            ++iterCount;
+            failCount = 0;
+        }
+        ++failCount;
+
+        while (!timer.isTimeOut() && findBestRemoveShiftOnConsecutiveBorder( bestMove )) {
+            removeShift( bestMove.weekday, bestMove.nurse );
+            objValue += bestMove.delta;
+            if (objValue < optima.objVal) {
+                optima = genOutput();
+            }
+            ++iterCount;
+            failCount = 0;
+        }
+        ++failCount;
+    }
+#ifdef INRC2_PERFORMANCE_TEST
     clock_t duration = clock() - startTime;
     cerr << "iter: " << iterCount << ' '
         << "time: " << duration << ' '
@@ -257,7 +372,7 @@ void NurseRostering::TabuSolver::Solution::localSearch( const Timer &timer, Outp
 
 void NurseRostering::TabuSolver::Solution::randomWalk( const Timer &timer, Output &optima )
 {
-#ifdef INRC2_DEBUG
+#ifdef INRC2_PERFORMANCE_TEST
     clock_t startTime = clock();
 #endif
 
@@ -297,29 +412,8 @@ void NurseRostering::TabuSolver::Solution::randomWalk( const Timer &timer, Outpu
         if (objValue < optima.objVal) {
             optima = genOutput();
         }
-
-#ifdef INRC2_DEBUG
-        //if (delta < MAX_OBJ_VALUE) {
-        //    ObjValue incrementalVal = objValue;
-        //    evaluateObjValue();
-        //    if (!solver.checkFeasibility( assign )) {
-        //        cerr << "infeasible solution." << endl;
-        //        return;
-        //    }
-        //    ObjValue checkResult = solver.checkObjValue( assign );
-        //    if (checkResult != objValue) {
-        //        cerr << "check conflict with evaluate." << endl;
-        //        return;
-        //    }
-        //    if (objValue != incrementalVal) {
-        //        cerr << "evaluate conflict with incremental update." << endl;
-        //        return;
-        //    }
-        //}
-#endif
     }
-
-#ifdef INRC2_DEBUG
+#ifdef INRC2_PERFORMANCE_TEST
     clock_t duration = clock() - startTime;
     cerr << "iter: " << iterCount << ' '
         << "time: " << duration << ' '
@@ -393,6 +487,84 @@ bool NurseRostering::TabuSolver::Solution::findBestRemoveShift( Move &bestMove )
     return (bestMove.delta < 0);
 }
 
+bool NurseRostering::TabuSolver::Solution::findBestAddShiftOnConsecutiveBorder( Move &bestMove ) const
+{
+    RandSelect<ObjValue> rs;
+    bestMove.delta = MAX_OBJ_VALUE;
+
+    // search for best addShift
+    for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
+        const Consecutive &c( consecutives[nurse] );
+        for (int weekday = Weekday::Mon; weekday < Weekday::SIZE;) {
+            if (!assign.isWorking( nurse, weekday )) {
+                for (ShiftID shift = 0; shift < solver.problem.scenario.shiftTypeNum; ++shift) {
+                    for (SkillID skill = 0; skill < solver.problem.scenario.skillTypeNum; ++skill) {
+                        ObjValue delta = tryAddShift( weekday, nurse, shift, skill );
+                        if (rs.isMinimal( delta, bestMove.delta )) {
+                            bestMove = Move( delta, nurse, weekday, shift, skill );
+                        }
+                    }
+                }
+                weekday = (weekday != c.dayHigh[weekday]) ? c.dayHigh[weekday] : (weekday + 1);
+            } else {
+                weekday = c.dayHigh[weekday] + 1;
+            }
+        }
+    }
+
+    return (bestMove.delta < 0);
+}
+
+bool NurseRostering::TabuSolver::Solution::findBestChangeShiftOnConsecutiveBorder( Move &bestMove ) const
+{
+    RandSelect<ObjValue> rs;
+    bestMove.delta = MAX_OBJ_VALUE;
+
+    for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
+        const Consecutive &c( consecutives[nurse] );
+        for (int weekday = Weekday::Mon; weekday < Weekday::SIZE;) {
+            if (assign.isWorking( nurse, weekday )) {
+                for (ShiftID shift = 0; shift < solver.problem.scenario.shiftTypeNum; ++shift) {
+                    for (SkillID skill = 0; skill < solver.problem.scenario.skillTypeNum; ++skill) {
+                        ObjValue delta = tryChangeShift( weekday, nurse, shift, skill );
+                        if (rs.isMinimal( delta, bestMove.delta )) {
+                            bestMove = Move( delta, nurse, weekday, shift, skill );
+                        }
+                    }
+                }
+                weekday = (weekday != c.shiftHigh[weekday]) ? c.shiftHigh[weekday] : (weekday + 1);
+            } else {
+                weekday = c.shiftHigh[weekday] + 1;
+            }
+        }
+    }
+
+    return (bestMove.delta < 0);
+}
+
+bool NurseRostering::TabuSolver::Solution::findBestRemoveShiftOnConsecutiveBorder( Move &bestMove ) const
+{
+    RandSelect<ObjValue> rs;
+    bestMove.delta = MAX_OBJ_VALUE;
+
+    for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
+        const Consecutive &c( consecutives[nurse] );
+        for (int weekday = Weekday::Mon; weekday < Weekday::SIZE;) {
+            if (assign.isWorking( nurse, weekday )) {
+                ObjValue delta = tryRemoveShift( weekday, nurse );
+                if (rs.isMinimal( delta, bestMove.delta )) {
+                    bestMove = Move( delta, nurse, weekday );
+                }
+                weekday = (weekday != c.dayHigh[weekday]) ? c.dayHigh[weekday] : (weekday + 1);
+            } else {
+                weekday = c.dayHigh[weekday] + 1;
+            }
+        }
+    }
+
+    return (bestMove.delta < 0);
+}
+
 bool NurseRostering::TabuSolver::Solution::isValidSuccession( NurseID nurse, ShiftID shift, int weekday ) const
 {
     return (!assign.isWorking( nurse, weekday - 1 )
@@ -414,8 +586,7 @@ NurseRostering::ObjValue NurseRostering::TabuSolver::Solution::tryAddShift( int 
         return MAX_OBJ_VALUE;
     }
 
-    const vector<SkillID> &skills( solver.problem.scenario.nurses[nurse].skills );
-    if (find( skills.begin(), skills.end(), skillID ) == skills.end()) {
+    if (!solver.problem.scenario.nurses[nurse].skills[skillID]) {
         return MAX_OBJ_VALUE;
     }
 
@@ -631,8 +802,7 @@ NurseRostering::ObjValue NurseRostering::TabuSolver::Solution::tryChangeShift( i
         return MAX_OBJ_VALUE;
     }
 
-    const vector<SkillID> &skills( solver.problem.scenario.nurses[nurse].skills );
-    if (find( skills.begin(), skills.end(), skillID ) == skills.end()) {
+    if (!solver.problem.scenario.nurses[nurse].skills[skillID]) {
         return MAX_OBJ_VALUE;
     }
 
@@ -684,12 +854,10 @@ NurseRostering::ObjValue NurseRostering::TabuSolver::Solution::tryChangeShift( i
                         exceedCount( 1, shift.maxConsecutiveShiftNum );
                 }
             } else {    // block length over 1
-                int consecutiveDayOfThisBlock = Weekday::Sun - c.shiftLow[Weekday::Sun] + 1;
-                if (consecutiveDayOfThisBlock > oldShift.maxConsecutiveShiftNum) {
-                    delta -= Penalty::ConsecutiveShift;
-                } else if (consecutiveDayOfThisBlock <= oldShift.minConsecutiveShiftNum) {
-                    delta += Penalty::ConsecutiveShift;
-                }
+                delta -= Penalty::ConsecutiveShift * exceedCount(
+                    Weekday::Sun - c.shiftLow[Weekday::Sun] + 1, oldShift.maxConsecutiveShiftNum );
+                delta += Penalty::ConsecutiveShift * distanceToRange( Weekday::Sun - c.shiftLow[Weekday::Sun],
+                    oldShift.minConsecutiveShiftNum, oldShift.maxConsecutiveShiftNum );
                 delta += Penalty::ConsecutiveShift *
                     exceedCount( 1, shift.maxConsecutiveShiftNum );
             }
@@ -968,12 +1136,6 @@ NurseRostering::ObjValue NurseRostering::TabuSolver::Solution::tryRemoveShift( i
 
 void NurseRostering::TabuSolver::Solution::addShift( int weekday, NurseID nurse, ShiftID shift, SkillID skill )
 {
-    // TODO : make sure they won't be the same and leave out this
-    if (!Assign::isWorking( shift )
-        || (shift == assign[nurse][weekday].shift)) {
-        return;
-    }
-
     updateConsecutive( weekday, nurse, shift );
 
     --missingNurseNums[weekday][shift][skill];
@@ -985,11 +1147,6 @@ void NurseRostering::TabuSolver::Solution::addShift( int weekday, NurseID nurse,
 
 void NurseRostering::TabuSolver::Solution::changeShift( int weekday, NurseID nurse, ShiftID shift, SkillID skill )
 {
-    // TODO : make sure they won't be the same and leave out this
-    if (!Assign::isWorking( shift )) {
-        return;
-    }
-
     if (shift != assign[nurse][weekday].shift) {
         updateConsecutive( weekday, nurse, shift );
     }
@@ -1002,11 +1159,6 @@ void NurseRostering::TabuSolver::Solution::changeShift( int weekday, NurseID nur
 
 void NurseRostering::TabuSolver::Solution::removeShift( int weekday, NurseID nurse )
 {
-    // TODO : make sure they won't be the same and leave out this
-    if (!assign.isWorking( nurse, weekday )) {
-        return;
-    }
-
     updateConsecutive( weekday, nurse, NurseRostering::Scenario::Shift::ID_NONE );
 
     ++missingNurseNums[weekday][assign[nurse][weekday].shift][assign[nurse][weekday].skill];
@@ -1123,6 +1275,27 @@ void NurseRostering::TabuSolver::Solution::assignSingle( int weekday, int high[W
         }
         low[weekday] = l;
     }
+}
+
+bool NurseRostering::TabuSolver::Solution::checkIncrementalUpdate()
+{
+    ObjValue incrementalVal = objValue;
+    evaluateObjValue();
+    if (!solver.checkFeasibility( assign )) {
+        cerr << "infeasible solution." << endl;
+        return false;
+    }
+    ObjValue checkResult = solver.checkObjValue( assign );
+    if (checkResult != objValue) {
+        cerr << "check conflict with evaluate." << endl;
+        return false;
+    }
+    if (objValue != incrementalVal) {
+        cerr << "evaluate conflict with incremental update." << endl;
+        return false;
+    }
+
+    return true;
 }
 
 void NurseRostering::TabuSolver::Solution::evaluateInsufficientStaff()

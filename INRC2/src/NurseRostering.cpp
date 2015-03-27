@@ -80,9 +80,7 @@ bool NurseRostering::Solver::checkFeasibility( const Assign &assign ) const
     for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
         for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
             if (assign.isWorking( nurse, weekday )) {
-                const vector<SkillID> &skills( problem.scenario.nurses[nurse].skills );
-                if (find( skills.begin(), skills.end(),
-                    assign[nurse][weekday].skill ) == skills.end()) {
+                if (!problem.scenario.nurses[nurse].skills[assign[nurse][weekday].skill]) {
                     return false;
                 }
             }
@@ -258,10 +256,8 @@ void NurseRostering::Solver::record( const std::string logFileName, const std::s
 
     for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
         for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
-            if (optima.assign.isWorking( nurse, weekday )) {
-                csvFile << optima.assign[nurse][weekday].shift << ' '
-                    << optima.assign[nurse][weekday].skill << ' ';
-            }
+            csvFile << optima.assign[nurse][weekday].shift << ' '
+                << optima.assign[nurse][weekday].skill << ' ';
         }
     }
 

@@ -74,6 +74,11 @@ public:
         return (clock() >= endTime);
     }
 
+    clock_t restTime() const
+    {
+        return (endTime - clock());
+    }
+
 private:
     clock_t endTime;
 };

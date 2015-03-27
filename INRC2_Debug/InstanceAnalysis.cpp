@@ -43,11 +43,12 @@ void analyzeInstance()
             minNurseNum += p.scenario.contracts[p.scenario.nurses[n].contract].minShiftNum;
             maxNurseNum += p.scenario.contracts[p.scenario.nurses[n].contract].maxShiftNum;
             maxNurseOnWeekend += p.scenario.contracts[p.scenario.nurses[n].contract].maxWorkingWeekendNum;
-            const vector<NurseRostering::SkillID> &skills = p.scenario.nurses[n].skills;
-            for (unsigned sk = 0; sk < skills.size(); sk++) {
-                int skill = skills[sk];
-                nurseNumPerSkill[skill]++;
-                averageNurseNumPerSkill[skill] += (1.0 / skills.size());
+            const vector<bool> &skills = p.scenario.nurses[n].skills;
+            for (int skill = 0; skill < p.scenario.skillTypeNum; skill++) {
+                if (skills[skill]) {
+                    nurseNumPerSkill[skill]++;
+                    averageNurseNumPerSkill[skill] += (1.0 / skills.size());
+                }
             }
         }
         // print scenario info

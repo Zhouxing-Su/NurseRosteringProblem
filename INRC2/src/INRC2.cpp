@@ -182,10 +182,11 @@ namespace INRC2
             ifs >> input.names.nurseNames[i] >> contractName >> skillNum;
             input.names.nurseMap[input.names.nurseNames[i]] = i;
             nurse.contract = input.names.contractMap[contractName];
-            nurse.skills.resize( skillNum );
+            nurse.skillNum = skillNum;
+            nurse.skills = vector<bool>( scenario.skillTypeNum, false );
             for (int j = 0; j < skillNum; ++j) {
                 ifs >> skillName;
-                nurse.skills[j] = input.names.skillMap[skillName];
+                nurse.skills[input.names.skillMap[skillName]] = true;
             }
         }
 

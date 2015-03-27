@@ -68,7 +68,7 @@ public:
 
             int minConsecutiveShiftNum;
             int maxConsecutiveShiftNum;
-            // (illegalNextShift[nextShift] == true) means nextShift 
+            // (legalNextShift[nextShift] == true) means nextShift 
             // is available to be succession of this shift
             std::vector<bool> legalNextShifts;
         };
@@ -94,7 +94,9 @@ public:
             static const NurseID ID_NONE;
 
             ContractID contract;
-            std::vector<SkillID> skills;
+            int skillNum;
+            // (skills[skill] == true) means the nurse have that skill
+            std::vector<bool> skills;
         };
         std::vector<Nurse> nurses;
     };

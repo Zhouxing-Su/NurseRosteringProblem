@@ -19,8 +19,8 @@
 *               makes clock_t can only count to about 4000 seconds.
 */
 
-#ifndef SOLVER_H
-#define SOLVER_H
+#ifndef TABUSOLVER_H
+#define TABUSOLVER_H
 
 
 #include <iostream>
@@ -64,14 +64,18 @@ private:
     {
     public:
         bool genInitAssign();   // assign must be default value( call resetAssign() )
+        bool genInitAssign_BranchAndCut();
         void resetAssign();     // reset all shift to Shift::ID_NONE
         void evaluateObjValue();    // using assist data structure
         bool repair( const Timer &timer );  // make infeasible solution feasible
 
+        // iteratively run local search and perturb
+        void iterativeLocalSearch( const Timer &timer, Output &optima );
         // try add shift until there is no improvement , then try change shift,
         // then try remove shift, then try add shift again. if all of them
         // can't improve or time is out, return.
         void localSearch( const Timer &timer, Output &optima );
+        void localSearchOnConsecutiveBorder( const Timer &timer, Output &optima );
         // randomly select add, change or remove shift until timeout
         void randomWalk( const Timer &timer, Output &optima );
 
@@ -80,8 +84,13 @@ private:
         bool isValidSuccession( NurseID nurse, ShiftID shift, int weekday ) const;
         bool isValidPrior( NurseID nurse, ShiftID shift, int weekday ) const;
 
+        // check if the result of incremental update, evaluate and checkObjValue is the same
+        bool checkIncrementalUpdate();
+
         Solution( const TabuSolver &solver );
         Solution( const TabuSolver &solver, const Assign &assign );
+        // there must not be self assignment and assign must be build from same problem
+        void rebuildAssistData( const Assign &assign );
         Output genOutput() const
         {
             return Output( objValue, assign );
@@ -239,6 +248,10 @@ private:
             SkillID skill;
         };
 
+
+        // depth first search to fill assign
+        bool fillAssign( int weekday, ShiftID shift, SkillID skill, NurseID nurse, int nurseNum );
+
         // find day number to be punished for a single block
         // work for shift, day and day-off
         static ObjValue penaltyDayNum( int len, int end, int min, int max )
@@ -271,10 +284,13 @@ private:
         // the assignment is on a consecutive block with single slot
         void assignSingle( int weekday, int high[Weekday::SIZE], int low[Weekday::SIZE], bool affectRight, bool affectLeft );
 
-        // return true if the solution will be improved (delta <= 0)
+        // return true if the solution will be improved (delta < 0)
         bool findBestAddShift( Move &bestMove ) const;
         bool findBestChangeShift( Move &bestMove ) const;
         bool findBestRemoveShift( Move &bestMove ) const;
+        bool findBestAddShiftOnConsecutiveBorder( Move &bestMove ) const;
+        bool findBestChangeShiftOnConsecutiveBorder( Move &bestMove ) const;
+        bool findBestRemoveShiftOnConsecutiveBorder( Move &bestMove ) const;
 
         void evaluateInsufficientStaff();
         void evaluateConsecutiveShift();
