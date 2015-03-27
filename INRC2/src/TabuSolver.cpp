@@ -21,11 +21,20 @@ void NurseRostering::TabuSolver::init()
 
     initAssistData();
 
-    //sln.genInitAssign_BranchAndBound();
-    if (sln.genInitAssign() == false) {
-        Timer timer( REPAIR_TIMEOUT_IN_INIT, startTime );
-        sln.repair( timer );
+    if (sln.genInitAssign_BranchAndCut() == false) {
+#ifdef INRC2_DEBUG
+        cerr << "no feasible solution!" << endl;
+#endif
     }
+
+    //    if (sln.genInitAssign() == false) {
+    //        Timer timer( REPAIR_TIMEOUT_IN_INIT, startTime );
+    //        if (sln.repair( timer ) == false) {
+    //#ifdef INRC2_DEBUG
+    //            cerr << "fail to generate feasible solution." << endl;
+    //#endif
+    //        }
+    //    }
 
     sln.evaluateObjValue();
 
@@ -133,9 +142,6 @@ bool NurseRostering::TabuSolver::Solution::genInitAssign()
                     if (nurse != NurseRostering::Scenario::Nurse::ID_NONE) {
                         addShift( weekday, nurse, shift, skill );
                     } else {
-#ifdef INRC2_DEBUG
-                        cerr << "fail to generate feasible solution." << endl;
-#endif
                         return false;
                     }
                 }

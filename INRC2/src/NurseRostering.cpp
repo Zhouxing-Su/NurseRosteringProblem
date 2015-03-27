@@ -35,7 +35,19 @@ NurseRostering::Solver::Solver( const NurseRostering &input, const std::string &
 
 bool NurseRostering::Solver::check() const
 {
-    return (checkFeasibility() && (checkObjValue() == optima.objVal));
+    bool feasible = checkFeasibility();
+    bool objValMatch = (checkObjValue() == optima.objVal);
+
+#ifdef INRC2_DEBUG
+    if (feasible) {
+        cerr << "infeasible optima solution." << endl;
+    }
+    if (objValMatch) {
+        cerr << "obj value does not match in optima solution." << endl;
+    }
+#endif
+
+    return (feasible && objValMatch);
 }
 
 bool NurseRostering::Solver::checkFeasibility( const Assign &assign ) const

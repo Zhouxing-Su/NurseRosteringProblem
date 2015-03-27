@@ -10,10 +10,10 @@ int main()
     srand( static_cast<int>(time( NULL ) + clock()) );
     //analyzeInstance();
 
-    unsigned instIndex = 11;
-    char initHis = '1';
-    char weekdata[10] = "7002";
-    int randSeed = 26888;
+    unsigned instIndex = 0;
+    char initHis = '0';
+    char weekdata[10] = "2608";
+    int randSeed = 19934;
 
     test_customIO( testOutputDir, instIndex, initHis, weekdata, 0, randSeed );
     test_customIO( testOutputDir, instIndex, initHis, weekdata, instTimeout[instIndex], randSeed );
