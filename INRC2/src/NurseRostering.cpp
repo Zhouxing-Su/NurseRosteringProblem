@@ -39,10 +39,10 @@ bool NurseRostering::Solver::check() const
     bool objValMatch = (checkObjValue() == optima.objVal);
 
 #ifdef INRC2_DEBUG
-    if (feasible) {
+    if (!feasible) {
         cerr << "infeasible optima solution." << endl;
     }
-    if (objValMatch) {
+    if (!objValMatch) {
         cerr << "obj value does not match in optima solution." << endl;
     }
 #endif
