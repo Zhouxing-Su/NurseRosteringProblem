@@ -10,19 +10,17 @@ int main()
     srand( static_cast<int>(time( NULL ) + clock()) );
     //analyzeInstance();
 
-    unsigned instIndex = 0;
-    char initHis = '0';
-    char weekdata[10] = "2608";
-    int randSeed = 19934;
+    unsigned instIndex = 2;
+    char initHis = '2';
+    char weekdata[10] = "7655";
+    int randSeed = 22489;
 
-    test_customIO( testOutputDir, instIndex, initHis, weekdata, 0, randSeed );
     test_customIO( testOutputDir, instIndex, initHis, weekdata, instTimeout[instIndex], randSeed );
 
     //for (instIndex = 0; instIndex < instance.size(); ++instIndex) {
     //    initHis = genInitHisIndex();
     //    genWeekdataSequence( instIndex, weekdata );
     //    randSeed = rand();
-    //    test_customIO( testOutputDir, instIndex, initHis, weekdata, 0, randSeed );
     //    test_customIO( testOutputDir, instIndex, initHis, weekdata, instTimeout[instIndex], randSeed );
     //}
 

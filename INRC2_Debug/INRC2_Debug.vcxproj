@@ -87,6 +87,7 @@
     <ClCompile Include="..\INRC2\src\INRC2.cpp" />
     <ClCompile Include="..\INRC2\src\NurseRostering.cpp" />
     <ClCompile Include="..\INRC2\src\TabuSolver.cpp" />
+    <ClCompile Include="..\INRC2\src\utility.cpp" />
     <ClCompile Include="BatchTest.cpp" />
     <ClCompile Include="InstanceAnalysis.cpp" />
     <ClCompile Include="main.cpp" />

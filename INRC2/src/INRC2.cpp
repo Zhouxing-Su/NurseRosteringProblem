@@ -23,7 +23,7 @@ namespace INRC2
             readScenario( argvMap[ARGV_SCENARIO], input );
         } else {
 #ifdef INRC2_DEBUG
-            cerr << "missing obligate argument(scenario)" << endl;
+            cerr << getTime() << " : missing obligate argument(scenario)" << endl;
 #endif
             return;
         }
@@ -33,7 +33,7 @@ namespace INRC2
             readHistory( argvMap[ARGV_HISTORY], input );
         } else {
 #ifdef INRC2_DEBUG
-            cerr << "missing obligate argument(history)" << endl;
+            cerr << getTime() << " : missing obligate argument(history)" << endl;
 #endif
             return;
         }
@@ -41,7 +41,7 @@ namespace INRC2
             readWeekData( argvMap[ARGV_WEEKDATA], input );
         } else {
 #ifdef INRC2_DEBUG
-            cerr << "missing obligate argument(week data)" << endl;
+            cerr << getTime() << " : missing obligate argument(week data)" << endl;
 #endif
             return;
         }
@@ -71,7 +71,7 @@ namespace INRC2
             writeSolution( argvMap[ARGV_SOLUTION], solver );
         } else {
 #ifdef INRC2_DEBUG
-            cerr << "missing obligate argument(solution file name)" << endl;
+            cerr << getTime() << " : missing obligate argument(solution file name)" << endl;
 #endif
             return;
         }
@@ -80,9 +80,7 @@ namespace INRC2
         }
 
 #ifdef INRC2_DEBUG
-        if (!solver.check()) {
-            cerr << "logic error in optima solution." << endl;
-        }
+        solver.check();
         solver.print();
         ostringstream oss;
         int historyFileNameIndex = argvMap[ARGV_HISTORY].find_last_of( "/\\" ) + 1;
@@ -199,6 +197,7 @@ namespace INRC2
         char buf[MAX_BUF_SIZE];
         ifstream ifs( historyFileName );
 
+        history.accObjValue = 0;
         ifs.getline( buf, MAX_BUF_LEN );    // HISTORY
         ifs >> history.pastWeekCount;         // X
         history.currentWeek = history.pastWeekCount + 1;
@@ -286,6 +285,7 @@ namespace INRC2
         int *consecutiveDayNums = new int[nurseNum];
         int *consecutiveDayoffNums = new int[nurseNum];
 
+        ifs.read( reinterpret_cast<char *>(&input.history.accObjValue), sizeof( input.history.accObjValue ) );
         ifs.read( reinterpret_cast<char *>(&input.history.pastWeekCount), sizeof( input.history.pastWeekCount ) );
         ifs.read( reinterpret_cast<char *>(&input.history.currentWeek), sizeof( input.history.currentWeek ) );
         ifs.read( reinterpret_cast<char *>(totalAssignNums), nurseNum * sizeof( int ) );
@@ -344,6 +344,7 @@ namespace INRC2
         NurseRostering::History history( solver.genHistory() );
 
         ofstream ofs( customOutputFileName, ios::binary );
+        ofs.write( reinterpret_cast<const char *>(&history.accObjValue), sizeof( history.accObjValue ) );
         ofs.write( reinterpret_cast<const char *>(&history.pastWeekCount), sizeof( history.pastWeekCount ) );
         ofs.write( reinterpret_cast<const char *>(&history.currentWeek), sizeof( history.currentWeek ) );
         ofs.write( reinterpret_cast<const char *>(history.totalAssignNums.data()), history.totalAssignNums.size() * sizeof( int ) );

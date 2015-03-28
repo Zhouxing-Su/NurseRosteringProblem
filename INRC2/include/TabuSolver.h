@@ -6,7 +6,7 @@
 *           3. use a priority queue to manage available nurse when assigning?
 *           v4. record 8 day which the first day is last day of last week to unify
 *              the succession judgment.
-*           5. [optimizable] put evaluateObjValue() in initAssign() or call it in init() ?
+*           x5. [optimizable] put evaluateObjValue() in initAssign() or call it in init() ?
 *           6. [optimizable] evaluateConsecutiveDay() and evaluateConsecutiveDayOff() can
 *               be put together and not consider if there is an assignment. but there is
 *               a difficult problem with consecutive state on the beginning of the week.

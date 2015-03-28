@@ -2,6 +2,9 @@
 #define UTILITY_H
 
 
+#include <iostream>
+#include <fstream>
+#include <string>
 #include <ctime>
 #include <cstdlib>
 
@@ -119,6 +122,12 @@ public:
 private:
     int count;
 };
+
+//
+std::string getLastNoneEmptyLine( const std::string &filename );
+
+//
+std::string getTime();
 
 
 #endif

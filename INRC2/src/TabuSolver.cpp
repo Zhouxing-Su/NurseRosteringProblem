@@ -21,22 +21,20 @@ void NurseRostering::TabuSolver::init()
 
     initAssistData();
 
-    if (sln.genInitAssign_BranchAndCut() == false) {
-#ifdef INRC2_DEBUG
-        cerr << "no feasible solution!" << endl;
-#endif
-    }
-
-    //    if (sln.genInitAssign() == false) {
-    //        Timer timer( REPAIR_TIMEOUT_IN_INIT, startTime );
-    //        if (sln.repair( timer ) == false) {
+    //    if (sln.genInitAssign_BranchAndCut() == false) {
     //#ifdef INRC2_DEBUG
-    //            cerr << "fail to generate feasible solution." << endl;
+    //        cerr << getTime() << " : no feasible solution!" << endl;
     //#endif
-    //        }
     //    }
 
-    sln.evaluateObjValue();
+    if (sln.genInitAssign() == false) {
+        Timer timer( REPAIR_TIMEOUT_IN_INIT, startTime );
+        if (sln.repair( timer ) == false) {
+#ifdef INRC2_DEBUG
+            cerr << getTime() << " : fail to generate feasible init solution." << endl;
+#endif
+        }
+    }
 
     optima = sln.genOutput();
 }
@@ -83,7 +81,7 @@ void NurseRostering::TabuSolver::Solution::rebuildAssistData( const Assign &a )
 {
 #ifdef INRC2_DEBUG
     if (&a == &assign) {
-        cerr << "self assignment is not allowed!" << endl;
+        cerr << getTime() << " : self assignment is not allowed!" << endl;
     }
 #endif
 
@@ -95,6 +93,7 @@ void NurseRostering::TabuSolver::Solution::rebuildAssistData( const Assign &a )
             }
         }
     }
+    evaluateObjValue();
 }
 
 bool NurseRostering::TabuSolver::Solution::genInitAssign()
@@ -149,6 +148,7 @@ bool NurseRostering::TabuSolver::Solution::genInitAssign()
         }
     }
 
+    evaluateObjValue();
     return true;
 }
 
@@ -254,7 +254,7 @@ bool NurseRostering::TabuSolver::Solution::repair( const Timer &timer )
         feasible = genInitAssign();
     } while (!feasible && !timer.isTimeOut());
 
-    return feasible;
+    return genInitAssign_BranchAndCut();
 }
 
 void NurseRostering::TabuSolver::Solution::iterativeLocalSearch( const Timer &timer, Output &optima )
@@ -318,7 +318,7 @@ void NurseRostering::TabuSolver::Solution::localSearch( const Timer &timer, Outp
     }
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t duration = clock() - startTime;
-    cerr << "iter: " << iterCount << ' '
+    cout << "iter: " << iterCount << ' '
         << "time: " << duration << ' '
         << "speed: " << iterCount * static_cast<double>(CLOCKS_PER_SEC) / (duration + 1) << endl;
 #endif
@@ -370,7 +370,7 @@ void NurseRostering::TabuSolver::Solution::localSearchOnConsecutiveBorder( const
     }
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t duration = clock() - startTime;
-    cerr << "iter: " << iterCount << ' '
+    cout << "iter: " << iterCount << ' '
         << "time: " << duration << ' '
         << "speed: " << iterCount * static_cast<double>(CLOCKS_PER_SEC) / (duration + 1) << endl;
 #endif
@@ -421,7 +421,7 @@ void NurseRostering::TabuSolver::Solution::randomWalk( const Timer &timer, Outpu
     }
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t duration = clock() - startTime;
-    cerr << "iter: " << iterCount << ' '
+    cout << "iter: " << iterCount << ' '
         << "time: " << duration << ' '
         << "speed: " << iterCount * static_cast<double>(CLOCKS_PER_SEC) / (duration + 1) << endl;
 #endif
@@ -1288,16 +1288,16 @@ bool NurseRostering::TabuSolver::Solution::checkIncrementalUpdate()
     ObjValue incrementalVal = objValue;
     evaluateObjValue();
     if (!solver.checkFeasibility( assign )) {
-        cerr << "infeasible solution." << endl;
+        cerr << getTime() << " : infeasible solution." << endl;
         return false;
     }
     ObjValue checkResult = solver.checkObjValue( assign );
     if (checkResult != objValue) {
-        cerr << "check conflict with evaluate." << endl;
+        cerr << getTime() << " : check conflict with evaluate." << endl;
         return false;
     }
     if (objValue != incrementalVal) {
-        cerr << "evaluate conflict with incremental update." << endl;
+        cerr << getTime() << " : evaluate conflict with incremental update." << endl;
         return false;
     }
 
@@ -1584,6 +1584,7 @@ NurseRostering::History NurseRostering::TabuSolver::Solution::genHistory() const
     newHistory.consecutiveDayNums.resize( solver.problem.scenario.nurseNum, 0 );
     newHistory.consecutiveDayoffNums.resize( solver.problem.scenario.nurseNum, 0 );
 
+    newHistory.accObjValue = history.accObjValue + (objValue / Penalty::AMP);
     newHistory.pastWeekCount = history.currentWeek;
     newHistory.currentWeek = history.currentWeek + 1;
     newHistory.totalAssignNums = totalAssignNums;

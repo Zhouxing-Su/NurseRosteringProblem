@@ -40,10 +40,10 @@ bool NurseRostering::Solver::check() const
 
 #ifdef INRC2_DEBUG
     if (!feasible) {
-        cerr << "infeasible optima solution." << endl;
+        cerr << getTime() << " : infeasible optima solution." << endl;
     }
     if (!objValMatch) {
-        cerr << "obj value does not match in optima solution." << endl;
+        cerr << getTime() << " : obj value does not match in optima solution." << endl;
     }
 #endif
 
@@ -237,7 +237,7 @@ void NurseRostering::Solver::print() const
 
 void NurseRostering::Solver::initResultSheet( std::ofstream &csvFile )
 {
-    csvFile << "Time, Instance, Algorithm, RandSeed, Duration, ObjValue, Solution" << std::endl;
+    csvFile << "Time, Instance, Algorithm, RandSeed, Duration, ObjValue, AccObjValue, Solution" << std::endl;
 }
 
 void NurseRostering::Solver::record( const std::string logFileName, const std::string &instanceName ) const
@@ -250,21 +250,21 @@ void NurseRostering::Solver::record( const std::string logFileName, const std::s
         initResultSheet( csvFile );
     }
 
-    if (!check()) {
+    if (!checkFeasibility()) {
+        csvFile << "[Infeasible] ";
+    }
+    if (!checkObjValue()) {
         csvFile << "[LogicError] ";
     }
 
-    char timeBuf[64];
-    time_t t = time( NULL );
-    tm *date = localtime( &t );
-    strftime( timeBuf, 64, "%Y-%m-%d %a %H:%M:%S", date );
+    ObjValue obj = static_cast<ObjValue>(optima.objVal / static_cast<double>(Penalty::AMP));
 
-    csvFile << timeBuf << ","
+    csvFile << getTime() << ","
         << instanceName << ","
         << algorithmName << ","
         << problem.randSeed << ","
         << (optima.findTime - startTime) / static_cast<double>(CLOCKS_PER_SEC) << "s,"
-        << (optima.objVal / static_cast<double>(Penalty::AMP)) << ",";
+        << obj << "," << obj + problem.history.accObjValue << ",";
 
     for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
         for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
@@ -272,7 +272,6 @@ void NurseRostering::Solver::record( const std::string logFileName, const std::s
                 << optima.assign[nurse][weekday].skill << ' ';
         }
     }
-
 
     csvFile << endl;
     csvFile.close();

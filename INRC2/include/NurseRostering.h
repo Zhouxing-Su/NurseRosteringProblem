@@ -116,6 +116,7 @@ public:
     class History
     {
     public:
+        ObjValue accObjValue;   // accumulated objective value
         int pastWeekCount;  // count from 0 (the number in history file)
         int currentWeek;    // count from 1
 
