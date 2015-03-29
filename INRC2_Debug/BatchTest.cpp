@@ -66,11 +66,9 @@ void genWeekdataSequence( int instIndex, char *weekdata )
 void makeSureDirExist( const string &dir )
 {
 #ifdef WIN32
-    static const std::string mkdir_win32cmd( "mkdir " );
-    system( (mkdir_win32cmd + dir).c_str() );
+    system( ("mkdir \"" + dir + "\" 2> nul").c_str() );
 #else
-    static const std::string mkdir_unixshell( "mkdir -p " );
-    system( (mkdir_unixshell + dir).c_str() );
+    system( ("mkdir -p \"" + dir + "\" 2> /dev/null").c_str() );
 #endif
 }
 
