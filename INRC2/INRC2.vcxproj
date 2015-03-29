@@ -88,14 +88,16 @@
     <ClCompile Include="src\INRC2.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\NurseRostering.cpp" />
-    <ClCompile Include="src\TabuSolver.cpp" />
+    <ClCompile Include="src\Solution.cpp" />
+    <ClCompile Include="src\Solver.cpp" />
     <ClCompile Include="src\utility.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\DebugFlag.h" />
     <ClInclude Include="include\INRC2.h" />
     <ClInclude Include="include\NurseRostering.h" />
-    <ClInclude Include="include\TabuSolver.h" />
+    <ClInclude Include="include\Solution.h" />
+    <ClInclude Include="include\Solver.h" />
     <ClInclude Include="include\utility.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

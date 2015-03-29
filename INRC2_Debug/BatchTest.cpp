@@ -18,7 +18,7 @@ char *fullArgv[ArgcVal::full] = {
 };
 
 const char *testOutputDir = "output";
-const std::string dir( "../INRC2/instance/" );
+const std::string instanceDir( "../INRC2/instance/" );
 const std::vector<std::string> instance = {
     "n005w4", "n012w8", "n021w4", // 0 1 2
     "n030w4", "n030w8", // 3 4
@@ -172,9 +172,9 @@ void test_customIO( const char *outputDir, int instIndex, char initHis, const ch
 
 void prepareArgv_FirstWeek( const char *outputDir, char *argv[], char argvBuf[][MAX_ARGV_LEN], int i, char h, char w, string t, string r, string co )
 {
-    string sce = dir + instance[i] + scePrefix + instance[i] + fileSuffix;
-    string his = dir + instance[i] + initHisPrefix + instance[i] + '-' + h + fileSuffix;
-    string week = dir + instance[i] + weekPrefix + instance[i] + '-' + w + fileSuffix;
+    string sce = instanceDir + instance[i] + scePrefix + instance[i] + fileSuffix;
+    string his = instanceDir + instance[i] + initHisPrefix + instance[i] + '-' + h + fileSuffix;
+    string week = instanceDir + instance[i] + weekPrefix + instance[i] + '-' + w + fileSuffix;
     string sol = outputDir + solPrefix + "0" + fileSuffix;
     i = 0;
     argv[i] = fullArgv[ArgvIndex::program];
@@ -207,8 +207,8 @@ void prepareArgv_FirstWeek( const char *outputDir, char *argv[], char argvBuf[][
 
 void prepareArgv( const char *outputDir, char *argv[], char argvBuf[][MAX_ARGV_LEN], int i, const char *weeks, char w, string t, string r, string ci, string co )
 {
-    string sce = dir + instance[i] + scePrefix + instance[i] + fileSuffix;
-    string week = dir + instance[i] + weekPrefix + instance[i] + '-' + weeks[w - '0'] + fileSuffix;
+    string sce = instanceDir + instance[i] + scePrefix + instance[i] + fileSuffix;
+    string week = instanceDir + instance[i] + weekPrefix + instance[i] + '-' + weeks[w - '0'] + fileSuffix;
     string sol = outputDir + solPrefix + w + fileSuffix;
     string his = outputDir + hisPrefix + (--w) + fileSuffix;
     i = 0;

@@ -9,15 +9,12 @@
 #define NURSE_ROSTERING_H
 
 
-#include <iostream>
-#include <fstream>
 #include <map>
 #include <vector>
 #include <string>
 #include <ctime>
 
 #include "DebugFlag.h"
-#include "utility.h"
 
 
 class NurseRostering
@@ -176,85 +173,18 @@ public:
 
     };
 
+    class Output;
+    class Solution;
 
-    class Solver
-    {
-    public:
-        static const int ILLEGAL_SOLUTION = -1;
-        static const int CHECK_TIME_INTERVAL_MASK_IN_ITER = ((1 << 10) - 1);
-        static const clock_t SAVE_SOLUTION_TIME;    // 0.5 seconds
-        static const clock_t REPAIR_TIMEOUT_IN_INIT;// 2 seconds
-
-        class Output
-        {
-        public:
-            Output() :objVal( -1 ) {}
-            Output( int objValue, const Assign &assignment )
-                :objVal( objValue ), assign( assignment ), findTime( clock() )
-            {
-            }
-
-            Assign assign;
-            ObjValue objVal;
-            clock_t findTime;
-        };
-
-        // set algorithm name, set parameters, generate initial solution
-        virtual void init() = 0;
-        // search for optima
-        virtual void solve() = 0;
-        // generate history for next week
-        virtual History genHistory() const = 0;
-        // return const reference of the optima
-        const Output& getOptima() const { return optima; }
-        // print simple information of the solution to console
-        void print() const;
-        // record solution to specified file and create custom file if required
-        void record( const std::string logFileName, const std::string &instanceName ) const;  // contain check()
-        // return true if the optima solution is feasible and objValue is the same
-        bool check() const;
-
-        // calculate objective of optima with original input instead of auxiliary data structure
-        // return objective value if solution is legal, else ILLEGAL_SOLUTION
-        bool checkFeasibility( const Assign &assgin ) const;
-        bool checkFeasibility() const;  // check optima assign
-        ObjValue checkObjValue( const Assign &assign ) const;
-        ObjValue checkObjValue() const;  // check optima assign
-
-
-        Solver( const NurseRostering &input, const std::string &name, clock_t startTime );
-        virtual ~Solver() {}
-
-
-        const NurseRostering &problem;
-
-    protected:
-        // create header of the table ( require ios::app flag or "a" mode )
-        static void initResultSheet( std::ofstream &csvFile );
-        // solver can check termination condition every certain number of iterations
-        // this determines if it is the right iteration to check time
-        static bool isIterForTimeCheck( int iterCount ) // currently no use
-        {
-            return (!(iterCount & CHECK_TIME_INTERVAL_MASK_IN_ITER));
-        }
-
-        NurseNumsOnSingleAssign countNurseNums( const Assign &assign ) const;
-        void checkConsecutiveViolation( int &objValue,
-            const Assign &assign, NurseID nurse, int weekday, ShiftID lastShiftID,
-            int &consecutiveShift, int &consecutiveDay, int &consecutiveDayOff,
-            bool &shiftBegin, bool &dayBegin, bool &dayoffBegin ) const;
-
-
-        Output optima;
-
-        std::string algorithmName;
-        clock_t startTime;
-
-    private:    // forbidden operators
-        Solver& operator=(const Solver &) { return *this; }
-    };
-
+    class Solver;
     class TabuSolver;
+
+
+    // nurseNumOfSkill[skill] is the number of nurses with that skill
+    typedef std::vector<SkillID> NurseNumOfSkill;
+    // NurseWithSkill[skill][skillNum-1] is a set of nurses 
+    // who have that skill and have skillNum skills in total
+    typedef std::vector< std::vector<std::vector<NurseID> > > NurseWithSkill;
 
 
     static const ObjValue MAX_OBJ_VALUE;
@@ -272,8 +202,8 @@ public:
     History history;
     Names names;
 
-private:
-
+private:    // forbidden operators
+    NurseRostering& operator=(const NurseRostering&) { return *this; }
 };
 
 

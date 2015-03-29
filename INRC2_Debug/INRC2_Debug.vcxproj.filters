@@ -30,10 +30,13 @@
     <ClCompile Include="BatchTest.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="..\INRC2\src\TabuSolver.cpp">
+    <ClCompile Include="..\INRC2\src\utility.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="..\INRC2\src\utility.cpp">
+    <ClCompile Include="..\INRC2\src\Solver.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\INRC2\src\Solution.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
@@ -53,7 +56,10 @@
     <ClInclude Include="..\INRC2\include\DebugFlag.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\INRC2\include\TabuSolver.h">
+    <ClInclude Include="..\INRC2\include\Solver.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\INRC2\include\Solution.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

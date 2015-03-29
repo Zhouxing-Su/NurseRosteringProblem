@@ -86,7 +86,8 @@
   <ItemGroup>
     <ClCompile Include="..\INRC2\src\INRC2.cpp" />
     <ClCompile Include="..\INRC2\src\NurseRostering.cpp" />
-    <ClCompile Include="..\INRC2\src\TabuSolver.cpp" />
+    <ClCompile Include="..\INRC2\src\Solution.cpp" />
+    <ClCompile Include="..\INRC2\src\Solver.cpp" />
     <ClCompile Include="..\INRC2\src\utility.cpp" />
     <ClCompile Include="BatchTest.cpp" />
     <ClCompile Include="InstanceAnalysis.cpp" />
@@ -96,7 +97,8 @@
     <ClInclude Include="..\INRC2\include\DebugFlag.h" />
     <ClInclude Include="..\INRC2\include\INRC2.h" />
     <ClInclude Include="..\INRC2\include\NurseRostering.h" />
-    <ClInclude Include="..\INRC2\include\TabuSolver.h" />
+    <ClInclude Include="..\INRC2\include\Solution.h" />
+    <ClInclude Include="..\INRC2\include\Solver.h" />
     <ClInclude Include="..\INRC2\include\utility.h" />
     <ClInclude Include="INRC2_Debug.h" />
   </ItemGroup>

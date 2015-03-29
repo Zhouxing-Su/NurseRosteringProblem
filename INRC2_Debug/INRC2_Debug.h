@@ -47,7 +47,7 @@ static const int WEEKDATA_NUM = 10;
 extern char *fullArgv[ArgcVal::full];
 
 extern const char *testOutputDir;
-extern const std::string dir;
+extern const std::string instanceDir;
 extern const std::vector<std::string> instance;
 
 extern const std::string scePrefix;

@@ -24,10 +24,13 @@
     <ClCompile Include="src\INRC2.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="src\TabuSolver.cpp">
+    <ClCompile Include="src\utility.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="src\utility.cpp">
+    <ClCompile Include="src\Solver.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Solution.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
@@ -44,7 +47,10 @@
     <ClInclude Include="include\DebugFlag.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="include\TabuSolver.h">
+    <ClInclude Include="include\Solver.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Solution.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

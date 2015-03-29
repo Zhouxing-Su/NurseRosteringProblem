@@ -18,7 +18,8 @@
 
 #include "DebugFlag.h"
 #include "NurseRostering.h"
-#include "TabuSolver.h"
+#include "Solution.h"
+#include "Solver.h"
 
 
 namespace INRC2

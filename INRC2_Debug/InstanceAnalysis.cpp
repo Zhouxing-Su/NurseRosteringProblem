@@ -21,7 +21,7 @@ void analyzeInstance()
         NurseRostering p;
 
         // print scenario header
-        string scenarioName( dir + instance[i] + scePrefix + instance[i] + fileSuffix );
+        string scenarioName( instanceDir + instance[i] + scePrefix + instance[i] + fileSuffix );
         readScenario( scenarioName, p );
         csv << header1_prefix0;
         for (int sk = 0; sk < p.scenario.skillTypeNum; sk++) {
@@ -74,7 +74,7 @@ void analyzeInstance()
         // analyze weekdata info
         for (int w = 0; w < weekdataNum; w++) {
             ostringstream weekdataName;
-            weekdataName << dir << instance[i] << weekPrefix << instance[i]
+            weekdataName << instanceDir << instance[i] << weekPrefix << instance[i]
                 << '-' << w << fileSuffix;
             readWeekData( weekdataName.str(), p );
 
