@@ -24,7 +24,7 @@ public:
     enum Weekday { HIS = 0, Mon, Tue, Wed, Thu, Fri, Sat, Sun, NUM = Sun, SIZE };
     enum Penalty
     {
-        AMP = 1000,
+        AMP = 2 * 2 * 2 * 5 * 5,
         InsufficientStaff = (AMP * 30),
         ConsecutiveShift = (AMP * 15),
         ConsecutiveDay = (AMP * 30),
