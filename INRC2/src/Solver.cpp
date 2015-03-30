@@ -24,14 +24,12 @@ bool NurseRostering::Solver::check() const
     bool feasible = checkFeasibility();
     bool objValMatch = (checkObjValue() == optima.objVal);
 
-#ifdef INRC2_DEBUG
     if (!feasible) {
-        cerr << getTime() << " : infeasible optima solution." << endl;
+        errorLog( "infeasible optima solution." );
     }
     if (!objValMatch) {
-        cerr << getTime() << " : obj value does not match in optima solution." << endl;
+        errorLog( "obj value does not match in optima solution." );
     }
-#endif
 
     return (feasible && objValMatch);
 }
@@ -223,12 +221,21 @@ void NurseRostering::Solver::print() const
 
 void NurseRostering::Solver::initResultSheet( std::ofstream &csvFile )
 {
-    csvFile << "Time, Instance, Algorithm, RandSeed, Duration, ObjValue, AccObjValue, Solution" << std::endl;
+    csvFile << "Time, ID, Instance, Algorithm, RandSeed, Duration, Feasible, ObjCheck, ObjValue, AccObjValue, Solution" << std::endl;
 }
 
 void NurseRostering::Solver::record( const std::string logFileName, const std::string &instanceName ) const
 {
+    // create the log file if it does not exist
     ofstream csvFile( logFileName, ios::app );
+    csvFile.close();
+
+    // wait if others are writing to log file
+    while (0 != rename( logFileName.c_str(), logFileName.c_str() )) {
+        this_thread::sleep_for( chrono::milliseconds( RECORD_RETRY_INTERVAL ) );
+    }
+
+    csvFile.open( logFileName, ios::app );
     csvFile.seekp( 0, ios::beg );
     ios::pos_type begin = csvFile.tellp();
     csvFile.seekp( 0, ios::end );
@@ -236,21 +243,16 @@ void NurseRostering::Solver::record( const std::string logFileName, const std::s
         initResultSheet( csvFile );
     }
 
-    if (!checkFeasibility()) {
-        csvFile << "[Infeasible] ";
-    }
-    if (!checkObjValue()) {
-        csvFile << "[LogicError] ";
-    }
-
-    ObjValue obj = static_cast<ObjValue>(optima.objVal / static_cast<double>(DefaultPenalty::AMP));
-
     csvFile << getTime() << ","
+        << runID << ","
         << instanceName << ","
         << algorithmName << ","
         << problem.randSeed << ","
         << (optima.findTime - startTime) / static_cast<double>(CLOCKS_PER_SEC) << "s,"
-        << obj << "," << obj + problem.history.accObjValue << ",";
+        << checkFeasibility() << ","
+        << checkObjValue() / static_cast<double>(DefaultPenalty::AMP) << ","
+        << optima.objVal / static_cast<double>(DefaultPenalty::AMP) << ","
+        << (optima.objVal + problem.history.accObjValue) / static_cast<double>(DefaultPenalty::AMP) << ",";
 
     for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
         for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
@@ -262,6 +264,14 @@ void NurseRostering::Solver::record( const std::string logFileName, const std::s
     csvFile << endl;
     csvFile.close();
 }
+
+void NurseRostering::Solver::errorLog( const std::string &msg ) const
+{
+#ifdef INRC2_DEBUG
+    cerr << "[" << getTime() << "][" << runID << "] : " << msg << endl;
+#endif
+}
+
 
 NurseRostering::NurseNumsOnSingleAssign NurseRostering::Solver::countNurseNums( const AssignTable &assign ) const
 {
@@ -384,8 +394,9 @@ NurseRostering::TabuSolver::TabuSolver( const NurseRostering &input, clock_t st 
 {
 }
 
-void NurseRostering::TabuSolver::init()
+void NurseRostering::TabuSolver::init( const string &id )
 {
+    runID = id;
     srand( problem.randSeed );
 
     discoverNurseSkillRelation();
@@ -407,12 +418,10 @@ void NurseRostering::TabuSolver::greedyInit()
 {
     algorithmName = "Tabu[GreedyInit]";
 
-    if (sln.genInitAssign() == false) {
+    if (sln.genInitAssign_Greedy() == false) {
         Timer timer( REPAIR_TIMEOUT_IN_INIT, startTime );
         if (sln.repair( timer ) == false) {
-#ifdef INRC2_DEBUG
-            cerr << getTime() << " : fail to generate feasible init solution." << endl;
-#endif
+            errorLog( "fail to generate feasible init solution." );
         }
     }
 }
@@ -422,8 +431,6 @@ void NurseRostering::TabuSolver::exactInit()
     algorithmName = "Tabu[ExactInit]";
 
     if (sln.genInitAssign_BranchAndCut() == false) {
-#ifdef INRC2_DEBUG
-        cerr << getTime() << " : no feasible solution!" << endl;
-#endif
+        errorLog( "no feasible solution!" );
     }
 }

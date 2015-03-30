@@ -202,37 +202,37 @@ public:
             ObjValue WeightOnSuccesion = DefaultPenalty::Succession_Repair );
 
         // hard constraint
-        ObjValue getUnderStaff() const { return UnderStaff; }
-        ObjValue getSingleAssign() const { return SingleAssign; }
-        ObjValue getSuccession() const { return Succession; };
-        ObjValue getMissSkill() const { return MissSkill; }
+        ObjValue UnderStaff() const { return underStaff; }
+        ObjValue SingleAssign() const { return singleAssign; }
+        ObjValue Succession() const { return succession; };
+        ObjValue MissSkill() const { return missSkill; }
 
         // soft constraint
-        ObjValue getInsufficientStaff() const { return InsufficientStaff; }
-        ObjValue getConsecutiveShift() const { return ConsecutiveShift; }
-        ObjValue getConsecutiveDay() const { return ConsecutiveDay; }
-        ObjValue getConsecutiveDayOff() const { return ConsecutiveDayOff; }
-        ObjValue getPreference() const { return Preference; }
-        ObjValue getCompleteWeekend() const { return CompleteWeekend; }
-        ObjValue getTotalAssign() const { return TotalAssign; }
-        ObjValue getTotalWorkingWeekend() const { return TotalWorkingWeekend; }
+        ObjValue InsufficientStaff() const { return insufficientStaff; }
+        ObjValue ConsecutiveShift() const { return consecutiveShift; }
+        ObjValue ConsecutiveDay() const { return consecutiveDay; }
+        ObjValue ConsecutiveDayOff() const { return consecutiveDayOff; }
+        ObjValue Preference() const { return preference; }
+        ObjValue CompleteWeekend() const { return completeWeekend; }
+        ObjValue TotalAssign() const { return totalAssign; }
+        ObjValue TotalWorkingWeekend() const { return totalWorkingWeekend; }
 
     private:
         // hard constraint
-        ObjValue SingleAssign;
-        ObjValue UnderStaff;
-        ObjValue Succession;
-        ObjValue MissSkill;
+        ObjValue singleAssign;
+        ObjValue underStaff;
+        ObjValue succession;
+        ObjValue missSkill;
 
         // soft constraint
-        ObjValue InsufficientStaff;
-        ObjValue ConsecutiveShift;
-        ObjValue ConsecutiveDay;
-        ObjValue ConsecutiveDayOff;
-        ObjValue Preference;
-        ObjValue CompleteWeekend;
-        ObjValue TotalAssign;
-        ObjValue TotalWorkingWeekend;
+        ObjValue insufficientStaff;
+        ObjValue consecutiveShift;
+        ObjValue consecutiveDay;
+        ObjValue consecutiveDayOff;
+        ObjValue preference;
+        ObjValue completeWeekend;
+        ObjValue totalAssign;
+        ObjValue totalWorkingWeekend;
     };
 
     class Output;

@@ -23,53 +23,55 @@ NurseRostering::NurseRostering()
     names.shiftMap[NurseRostering::Scenario::Shift::NAME_NONE] = NurseRostering::Scenario::Shift::ID_NONE;
 }
 
+
 void NurseRostering::Penalty::setNormalMode()
 {
-    SingleAssign = DefaultPenalty::MAX_OBJ_VALUE;
-    UnderStaff = DefaultPenalty::MAX_OBJ_VALUE;
-    Succession = DefaultPenalty::MAX_OBJ_VALUE;
-    MissSkill = DefaultPenalty::MAX_OBJ_VALUE;
+    singleAssign = DefaultPenalty::MAX_OBJ_VALUE;
+    underStaff = DefaultPenalty::MAX_OBJ_VALUE;
+    succession = DefaultPenalty::MAX_OBJ_VALUE;
+    missSkill = DefaultPenalty::MAX_OBJ_VALUE;
 
-    InsufficientStaff = DefaultPenalty::InsufficientStaff;
-    ConsecutiveShift = DefaultPenalty::ConsecutiveShift;
-    ConsecutiveDay = DefaultPenalty::ConsecutiveDay;
-    ConsecutiveDayOff = DefaultPenalty::ConsecutiveDayOff;
-    Preference = DefaultPenalty::Preference;
-    CompleteWeekend = DefaultPenalty::CompleteWeekend;
-    TotalAssign = DefaultPenalty::TotalAssign;
-    TotalWorkingWeekend = DefaultPenalty::TotalWorkingWeekend;
+    insufficientStaff = DefaultPenalty::InsufficientStaff;
+    consecutiveShift = DefaultPenalty::ConsecutiveShift;
+    consecutiveDay = DefaultPenalty::ConsecutiveDay;
+    consecutiveDayOff = DefaultPenalty::ConsecutiveDayOff;
+    preference = DefaultPenalty::Preference;
+    completeWeekend = DefaultPenalty::CompleteWeekend;
+    totalAssign = DefaultPenalty::TotalAssign;
+    totalWorkingWeekend = DefaultPenalty::TotalWorkingWeekend;
 }
 
 void NurseRostering::Penalty::setSwapMode()
 {
-    SingleAssign = DefaultPenalty::MAX_OBJ_VALUE;
-    UnderStaff = 0;
-    Succession = DefaultPenalty::MAX_OBJ_VALUE;
-    MissSkill = DefaultPenalty::MAX_OBJ_VALUE;
+    singleAssign = DefaultPenalty::MAX_OBJ_VALUE;
+    underStaff = 0;
+    succession = DefaultPenalty::MAX_OBJ_VALUE;
+    missSkill = DefaultPenalty::MAX_OBJ_VALUE;
 
-    InsufficientStaff = 0;
-    ConsecutiveShift = DefaultPenalty::ConsecutiveShift;
-    ConsecutiveDay = DefaultPenalty::ConsecutiveDay;
-    ConsecutiveDayOff = DefaultPenalty::ConsecutiveDayOff;
-    Preference = DefaultPenalty::Preference;
-    CompleteWeekend = DefaultPenalty::CompleteWeekend;
-    TotalAssign = DefaultPenalty::TotalAssign;
-    TotalWorkingWeekend = DefaultPenalty::TotalWorkingWeekend;
+    insufficientStaff = 0;
+    consecutiveShift = DefaultPenalty::ConsecutiveShift;
+    consecutiveDay = DefaultPenalty::ConsecutiveDay;
+    consecutiveDayOff = DefaultPenalty::ConsecutiveDayOff;
+    preference = DefaultPenalty::Preference;
+    completeWeekend = DefaultPenalty::CompleteWeekend;
+    totalAssign = DefaultPenalty::TotalAssign;
+    totalWorkingWeekend = DefaultPenalty::TotalWorkingWeekend;
 }
 
 void NurseRostering::Penalty::setRepairMode( ObjValue softConstraintDecay, ObjValue WeightOnUnderStaff, ObjValue WeightOnSuccesion )
 {
-    SingleAssign = DefaultPenalty::MAX_OBJ_VALUE;
-    UnderStaff = WeightOnUnderStaff;
-    Succession = WeightOnSuccesion;
-    MissSkill = DefaultPenalty::MAX_OBJ_VALUE;
+    singleAssign = DefaultPenalty::MAX_OBJ_VALUE;
+    underStaff = WeightOnUnderStaff;
+    succession = WeightOnSuccesion;
+    missSkill = DefaultPenalty::MAX_OBJ_VALUE;
 
-    InsufficientStaff = DefaultPenalty::InsufficientStaff / softConstraintDecay;
-    ConsecutiveShift = DefaultPenalty::ConsecutiveShift / softConstraintDecay;
-    ConsecutiveDay = DefaultPenalty::ConsecutiveDay / softConstraintDecay;
-    ConsecutiveDayOff = DefaultPenalty::ConsecutiveDayOff / softConstraintDecay;
-    Preference = DefaultPenalty::Preference / softConstraintDecay;
-    CompleteWeekend = DefaultPenalty::CompleteWeekend / softConstraintDecay;
-    TotalAssign = DefaultPenalty::TotalAssign / softConstraintDecay;
-    TotalWorkingWeekend = DefaultPenalty::TotalWorkingWeekend / softConstraintDecay;
+    insufficientStaff = DefaultPenalty::InsufficientStaff / softConstraintDecay;
+    consecutiveShift = DefaultPenalty::ConsecutiveShift / softConstraintDecay;
+    consecutiveDay = DefaultPenalty::ConsecutiveDay / softConstraintDecay;
+    consecutiveDayOff = DefaultPenalty::ConsecutiveDayOff / softConstraintDecay;
+    preference = DefaultPenalty::Preference / softConstraintDecay;
+    completeWeekend = DefaultPenalty::CompleteWeekend / softConstraintDecay;
+    totalAssign = DefaultPenalty::TotalAssign / softConstraintDecay;
+    totalWorkingWeekend = DefaultPenalty::TotalWorkingWeekend / softConstraintDecay;
 }
+

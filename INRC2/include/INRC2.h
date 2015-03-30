@@ -1,5 +1,15 @@
 /**
-*   usage : 1. invoke solver interface to solve problem.
+*   usage : 1.  invoke solver interface to solve problem.
+*           2.  command line arguments:
+*               [id]        -   identifier of the run which will be recorded in log file.
+*               sce         -   scenario file path.
+*               his         -   history file path.
+*               week        -   weekdata file path.
+*               sol         -   solution file path.
+*               [cusIn]     -   custom input file path.
+*               [cusOut]    -   custom output file path.
+*               [rand]      -   rand seed for the solver.
+*               [timeout]   -   max running time of the solver.
 *
 *   note :  1.
 */
@@ -27,8 +37,9 @@ namespace INRC2
     const int MAX_BUF_SIZE = 1000;   // max size for char array buf
     const int MAX_BUF_LEN = MAX_BUF_SIZE - 1;   // max length for char array buf
 
-    const std::string LOG_FILE( "log.csv" );
+    const std::string LOG_FILE_NAME( "log.csv" );
 
+    const std::string ARGV_ID( "id" );
     const std::string ARGV_SCENARIO( "sce" );
     const std::string ARGV_HISTORY( "his" );
     const std::string ARGV_WEEKDATA( "week" );

@@ -43,7 +43,7 @@ public:
     Output genOutput() const { return Output( objValue, assign ); }
     History genHistory() const; // history for next week
 
-    bool genInitAssign();   // assign must be default value( call resetAssign() )
+    bool genInitAssign_Greedy();   // assign must be default value( call resetAssign() )
     bool genInitAssign_BranchAndCut();
     void resetAssign();     // reset all shift to Shift::ID_NONE
     void evaluateObjValue();    // using assist data structure
@@ -206,21 +206,24 @@ private:
             : delta( d ), nurse( n ), weekday( w )
         {
         }
+        Move( ObjValue d, NurseID n, int w, const Assign &a )
+            : delta( d ), nurse( n ), weekday( w ), assign( a )
+        {
+        }
         Move( ObjValue d, NurseID n, int w, ShiftID sh, SkillID sk )
-            : delta( d ), nurse( n ), weekday( w ), shift( sh ), skill( sk )
+            : delta( d ), nurse( n ), weekday( w ), assign( sh, sk )
         {
         }
 
         ObjValue delta;
         NurseID nurse;
         int weekday;
-        ShiftID shift;
-        SkillID skill;
+        Assign assign;
     };
 
 
     // depth first search to fill assign
-    bool fillAssign( int weekday, ShiftID shift, SkillID skill, NurseID nurse, int nurseNum );
+    bool fillAssign( const Timer &timer, int weekday, ShiftID shift, SkillID skill, NurseID nurse, int nurseNum );
 
     // find day number to be punished for a single block
     // work for shift, day and day-off
@@ -232,17 +235,24 @@ private:
     }
 
     // evaluate cost of adding a shift to nurse without shift in weekday
-    ObjValue tryAddShift( int weekday, NurseID nurse, ShiftID shift, SkillID skill ) const;
+    ObjValue tryAddAssign( int weekday, NurseID nurse, const Assign &a ) const;
     // evaluate cost of assigning another shift or skill to nurse already assigned in weekday
-    ObjValue tryChangeShift( int weekday, NurseID nurse, ShiftID shift, SkillID skill ) const;
+    ObjValue tryChangeAssign( int weekday, NurseID nurse, const Assign &a ) const;
     // evaluate cost of removing the shift from nurse already assigned in weekday
-    ObjValue tryRemoveShift( int weekday, NurseID nurse ) const;
+    ObjValue tryRemoveAssign( int weekday, NurseID nurse ) const;
+    // evaluate cost of swapping Assign of two nurses
+    ObjValue trySwapNurse( int weekday, NurseID nurse1, NurseID nurse2 ) const;
     // apply assigning a shift to nurse without shift in weekday
-    void addShift( int weekday, NurseID nurse, ShiftID shift, SkillID skill );
+    void addAssign( int weekday, NurseID nurse, const Assign &a );
+    void addAssign( const Move &move );
     // apply assigning another shift or skill to nurse already assigned in weekday
-    void changeShift( int weekday, NurseID nurse, ShiftID shift, SkillID skill );
+    void changeAssign( int weekday, NurseID nurse, const Assign &a );
+    void changeAssign( const Move &move );
     // apply removing a shift to nurse in weekday
-    void removeShift( int weekday, NurseID nurse );
+    void removeAssign( int weekday, NurseID nurse );
+    void removeAssign( const Move &move );
+    // apply swapping Assign of two nurses
+    void swapNurse( int weekday, NurseID nurse1, NurseID nurse2 );
 
     void updateConsecutive( int weekday, NurseID nurse, ShiftID shift );
     // the assignment is on the right side of a consecutive block
@@ -272,6 +282,8 @@ private:
     void evaluateTotalWorkingWeekend();
 
     const Solver &solver;
+
+    mutable Penalty penalty;
 
     // total assignments for each nurse
     std::vector<int> totalAssignNums;

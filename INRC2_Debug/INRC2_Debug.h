@@ -13,9 +13,17 @@
 #include <sstream>
 #include <vector>
 #include <string>
+#include <ctime>
+#include <thread>
+#include <chrono>
 #include <cstring>
 #include <cstdlib>
-#include <ctime>
+
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x601  // Win7
+#endif
+
+#include <boost/asio.hpp>
 
 #include "DebugFlag.h"
 #include "INRC2.h"
@@ -24,7 +32,7 @@
 enum ArgcVal
 {
     single = 2,
-    full = 17,
+    full = 19,
     noRand = full - single,
     noCusIn = full - single,
     noCusOut = full - single,
@@ -36,19 +44,23 @@ enum ArgcVal
 
 enum ArgvIndex
 {
-    program = 0, __sce, sce, __his, his, __week, week, __sol, sol,
+    program = 0, __id, id, __sce, sce, __his, his, __week, week, __sol, sol,
     __timout, timeout, __randSeed, randSeed, __cusIn, cusIn, __cusOut, cusOut
 };
 
 static const int MAX_ARGV_LEN = 256;
 static const int INIT_HIS_NUM = 3;
 static const int WEEKDATA_NUM = 10;
+static const int MAX_WEEK_NUM = 8;
+static const int WEEKDATA_SEQ_SIZE = (MAX_WEEK_NUM + 1);
 
 extern char *fullArgv[ArgcVal::full];
 
-extern const char *testOutputDir;
+extern const std::string testOutputDir;
 extern const std::string instanceDir;
 extern const std::vector<std::string> instance;
+
+extern const std::vector<double> instTimeout;
 
 extern const std::string scePrefix;
 extern const std::string weekPrefix;
@@ -58,24 +70,30 @@ extern const std::string solPrefix;
 extern const std::string fileSuffix;
 extern const std::string cusPrefix;
 
-extern const std::vector<double> instTimeout;
+extern const char *FeasibleCheckerHost;
 
 
+// this functions do not guarantee the sequence is feasible
 char genInitHisIndex();
-void genWeekdataSequence( int instIndex, char *weekdata );
+void genWeekdataSequence( int instIndex, char weekdata[WEEKDATA_SEQ_SIZE] );
+// this function will make sure the sequence is feasible
+void genInstanceSequence( int instIndex, char &initHis, char weekdata[WEEKDATA_SEQ_SIZE] );
 
 void makeSureDirExist( const std::string &dir );
 
 void analyzeInstance();
+void rebuildSolution( const std::string &filename, int lineNum );
 
-void test( const char *outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec );
-void test( const char *outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec, int randSeed );
-void test_customIO( const char *outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec );
-void test_customIO( const char *outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec, int randSeed );
-void prepareArgv_FirstWeek( const char *outputDir, char *argv[], char argvBuf[][MAX_ARGV_LEN], int instIndex, char initHis,
-    char week, std::string timeoutInSec, std::string randSeed = "", std::string cusOut = "" );
-void prepareArgv( const char *outputDir, char *argv[], char argvBuf[][MAX_ARGV_LEN], int instIndex, const char *weeks, char week,
-    std::string timeoutInSec, std::string randSeed = "", std::string cusIn = "", std::string cusOut = "" );
+void testAllInstances( const std::string &id, int runCount );
+void test( const std::string &id, const std::string &outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec );
+void test( const std::string &id, const std::string &outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec, int randSeed );
+void test_customIO( const std::string &id, const std::string &outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec );
+void test_customIO( const std::string &id, const std::string &outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec, int randSeed );
+void prepareArgv_FirstWeek( const std::string &id, const std::string &outputDir, char *argv[], char argvBuf[][MAX_ARGV_LEN], int instIndex, char initHis,
+    char week, const std::string &timeoutInSec, const std::string &randSeed = "", const std::string &cusOut = "" );
+void prepareArgv( const std::string &id, const std::string &outputDir, char *argv[], char argvBuf[][MAX_ARGV_LEN], int instIndex, const char *weeks, char week,
+    const std::string &timeoutInSec, const std::string &randSeed = "", const std::string &cusIn = "", const std::string &cusOut = "" );
 
+void httpget( std::ostream &os, const char *host, const char *file );
 
 #endif

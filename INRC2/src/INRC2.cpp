@@ -69,7 +69,7 @@ namespace INRC2
 
         // start computation
         NurseRostering::TabuSolver solver( input, startTime );
-        solver.init();
+        solver.init( argvMap[ARGV_ID] );
         solver.solve();
 
         // write output
@@ -87,7 +87,7 @@ namespace INRC2
         oss << input.names.scenarioName
             << '[' << argvMap[ARGV_HISTORY].substr( historyFileNameIndex ) << ']'
             << '[' << argvMap[ARGV_WEEKDATA].substr( weekdataFileNameIndex ) << ']';
-        solver.record( LOG_FILE, oss.str() );
+        solver.record( LOG_FILE_NAME, oss.str() );
 #endif
     }
 

@@ -39,6 +39,9 @@
     <ClCompile Include="..\INRC2\src\Solution.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="RebuildSolution.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\INRC2\include\NurseRostering.h">

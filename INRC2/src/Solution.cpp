@@ -5,39 +5,35 @@
 using namespace std;
 
 
-NurseRostering::Solution::Solution( const Solver &s )
-    : solver( s )
-{
-    resetAssign();
-}
+NurseRostering::Solution::Solution( const Solver &s ) : solver( s ) {}
 
 NurseRostering::Solution::Solution( const Solver &s, const AssignTable &a )
     : solver( s )
 {
+    resetAssign();
     rebuildAssistData( a );
 }
 
 void NurseRostering::Solution::rebuildAssistData( const AssignTable &a )
 {
-#ifdef INRC2_DEBUG
     if (&a == &assign) {
-        cerr << getTime() << " : self assignment is not allowed!" << endl;
+        solver.errorLog( "self assignment is not allowed!" );
     }
-#endif
 
-    resetAssign();
     for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
         for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
             if (AssignTable::isWorking( a[nurse][weekday].shift )) {
-                addShift( weekday, nurse, a[nurse][weekday].shift, a[nurse][weekday].skill );
+                addAssign( weekday, nurse, a[nurse][weekday] );
             }
         }
     }
     evaluateObjValue();
 }
 
-bool NurseRostering::Solution::genInitAssign()
+bool NurseRostering::Solution::genInitAssign_Greedy()
 {
+    resetAssign();
+
     AvailableNurses availableNurse( *this );
     const NurseNumOfSkill &nurseNumOfSkill( solver.getNurseNumOfSkill() );
 
@@ -80,7 +76,7 @@ bool NurseRostering::Solution::genInitAssign()
                 for (int i = 0; i < solver.problem.weekData.minNurseNums[weekday][shift][skill]; ++i) {
                     int nurse = availableNurse.getNurse();
                     if (nurse != NurseRostering::Scenario::Nurse::ID_NONE) {
-                        addShift( weekday, nurse, shift, skill );
+                        addAssign( weekday, nurse, Assign( shift, skill ) );
                     } else {
                         return false;
                     }
@@ -95,26 +91,33 @@ bool NurseRostering::Solution::genInitAssign()
 
 bool NurseRostering::Solution::genInitAssign_BranchAndCut()
 {
-    bool feasible = fillAssign( Weekday::Mon, 0, 0, 0, 0 );
+    resetAssign();
+
+    Timer timer( solver.problem.timeout, solver.startTime );
+    bool feasible = fillAssign( timer, Weekday::Mon, 0, 0, 0, 0 );
     AssignTable a( assign );
     rebuildAssistData( a );
     return feasible;
 }
 
-bool NurseRostering::Solution::fillAssign( int weekday, ShiftID shift, SkillID skill, NurseID nurse, int nurseNum )
+bool NurseRostering::Solution::fillAssign( const Timer &timer, int weekday, ShiftID shift, SkillID skill, NurseID nurse, int nurseNum )
 {
     if (nurse >= solver.problem.scenario.nurseNum) {
         if (nurseNum < solver.problem.weekData.minNurseNums[weekday][shift][skill]) {
             return false;
         } else {
-            return fillAssign( weekday, shift, skill + 1, 0, 0 );
+            return fillAssign( timer, weekday, shift, skill + 1, 0, 0 );
         }
     } else if (skill >= solver.problem.scenario.skillTypeNum) {
-        return fillAssign( weekday, shift + 1, 0, 0, 0 );
+        return fillAssign( timer, weekday, shift + 1, 0, 0, 0 );
     } else if (shift >= solver.problem.scenario.shiftTypeNum) {
-        return fillAssign( weekday + 1, 0, 0, 0, 0 );
+        return fillAssign( timer, weekday + 1, 0, 0, 0, 0 );
     } else if (weekday > Weekday::Sun) {
         return true;
+    }
+
+    if (timer.isTimeOut()) {
+        return false;
     }
 
     Assign firstAssign( shift, skill );
@@ -132,7 +135,7 @@ bool NurseRostering::Solution::fillAssign( int weekday, ShiftID shift, SkillID s
             }
 
             assign[nurse][weekday] = firstAssign;
-            if (fillAssign( weekday, shift, skill, nurse + 1, firstNurseNum )) {
+            if (fillAssign( timer, weekday, shift, skill, nurse + 1, firstNurseNum )) {
                 return true;
             }
         }
@@ -140,7 +143,7 @@ bool NurseRostering::Solution::fillAssign( int weekday, ShiftID shift, SkillID s
         assign[nurse][weekday] = secondAssign;
     }
 
-    if (fillAssign( weekday, shift, skill, nurse + 1, secondNurseNum )) {
+    if (fillAssign( timer, weekday, shift, skill, nurse + 1, secondNurseNum )) {
         return true;
     } else if (isNotAssignedBefore) {
         assign[nurse][weekday] = Assign();
@@ -191,8 +194,7 @@ bool NurseRostering::Solution::repair( const Timer &timer )
     // TODO
     bool feasible;
     do {
-        resetAssign();
-        feasible = genInitAssign();
+        feasible = genInitAssign_Greedy();
     } while (!feasible && !timer.isTimeOut());
 
     return (feasible || genInitAssign_BranchAndCut());
@@ -225,7 +227,7 @@ void NurseRostering::Solution::localSearch( const Timer &timer, Output &optima )
     while (!timer.isTimeOut() && (failCount < 3)) {
         Move bestMove;
         while (!timer.isTimeOut() && findBestAddShift( bestMove )) {
-            addShift( bestMove.weekday, bestMove.nurse, bestMove.shift, bestMove.skill );
+            addAssign( bestMove );
             objValue += bestMove.delta;
             if (objValue < optima.objVal) {
                 optima = genOutput();
@@ -236,7 +238,7 @@ void NurseRostering::Solution::localSearch( const Timer &timer, Output &optima )
         ++failCount;
 
         while (!timer.isTimeOut() && findBestChangeShift( bestMove )) {
-            changeShift( bestMove.weekday, bestMove.nurse, bestMove.shift, bestMove.skill );
+            changeAssign( bestMove );
             objValue += bestMove.delta;
             if (objValue < optima.objVal) {
                 optima = genOutput();
@@ -247,7 +249,7 @@ void NurseRostering::Solution::localSearch( const Timer &timer, Output &optima )
         ++failCount;
 
         while (!timer.isTimeOut() && findBestRemoveShift( bestMove )) {
-            removeShift( bestMove.weekday, bestMove.nurse );
+            removeAssign( bestMove );
             objValue += bestMove.delta;
             if (objValue < optima.objVal) {
                 optima = genOutput();
@@ -277,7 +279,7 @@ void NurseRostering::Solution::localSearchOnConsecutiveBorder( const Timer &time
     while (!timer.isTimeOut() && (failCount < 3)) {
         Move bestMove;
         while (!timer.isTimeOut() && findBestAddShiftOnConsecutiveBorder( bestMove )) {
-            addShift( bestMove.weekday, bestMove.nurse, bestMove.shift, bestMove.skill );
+            addAssign( bestMove );
             objValue += bestMove.delta;
             if (objValue < optima.objVal) {
                 optima = genOutput();
@@ -288,7 +290,7 @@ void NurseRostering::Solution::localSearchOnConsecutiveBorder( const Timer &time
         ++failCount;
 
         while (!timer.isTimeOut() && findBestChangeShiftOnConsecutiveBorder( bestMove )) {
-            changeShift( bestMove.weekday, bestMove.nurse, bestMove.shift, bestMove.skill );
+            changeAssign( bestMove );
             objValue += bestMove.delta;
             if (objValue < optima.objVal) {
                 optima = genOutput();
@@ -299,7 +301,7 @@ void NurseRostering::Solution::localSearchOnConsecutiveBorder( const Timer &time
         ++failCount;
 
         while (!timer.isTimeOut() && findBestRemoveShiftOnConsecutiveBorder( bestMove )) {
-            removeShift( bestMove.weekday, bestMove.nurse );
+            removeAssign( bestMove );
             objValue += bestMove.delta;
             if (objValue < optima.objVal) {
                 optima = genOutput();
@@ -330,28 +332,28 @@ void NurseRostering::Solution::randomWalk( const Timer &timer, Output &optima )
         int select = rand() % 3;
         int weekday = (rand() % Weekday::NUM) + Weekday::Mon;
         NurseID nurse = rand() % solver.problem.scenario.nurseNum;
-        ShiftID shift = rand() % solver.problem.scenario.shiftTypeNum;
-        SkillID skill = rand() % solver.problem.scenario.skillTypeNum;
+        Assign a( rand() % solver.problem.scenario.shiftTypeNum,
+            rand() % solver.problem.scenario.skillTypeNum );
         switch (select) {
             case 0:
-                delta = tryAddShift( weekday, nurse, shift, skill );
+                delta = tryAddAssign( weekday, nurse, a );
                 if (delta < DefaultPenalty::MAX_OBJ_VALUE) {
                     objValue += delta;
-                    addShift( weekday, nurse, shift, skill );
+                    addAssign( weekday, nurse, a );
                 }
                 break;
             case 1:
-                delta = tryChangeShift( weekday, nurse, shift, skill );
+                delta = tryChangeAssign( weekday, nurse, a );
                 if (delta < DefaultPenalty::MAX_OBJ_VALUE) {
                     objValue += delta;
-                    changeShift( weekday, nurse, shift, skill );
+                    changeAssign( weekday, nurse, a );
                 }
                 break;
             case 2:
-                delta = tryRemoveShift( weekday, nurse );
+                delta = tryRemoveAssign( weekday, nurse );
                 if (delta < DefaultPenalty::MAX_OBJ_VALUE) {
                     objValue += delta;
-                    removeShift( weekday, nurse );
+                    removeAssign( weekday, nurse );
                 }
                 break;
         }
@@ -377,11 +379,12 @@ bool NurseRostering::Solution::findBestAddShift( Move &bestMove ) const
     for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
         for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
             if (!assign.isWorking( nurse, weekday )) {
-                for (ShiftID shift = 0; shift < solver.problem.scenario.shiftTypeNum; ++shift) {
-                    for (SkillID skill = 0; skill < solver.problem.scenario.skillTypeNum; ++skill) {
-                        ObjValue delta = tryAddShift( weekday, nurse, shift, skill );
+                Assign a;
+                for (a.shift = 0; a.shift < solver.problem.scenario.shiftTypeNum; ++a.shift) {
+                    for (a.skill = 0; a.skill < solver.problem.scenario.skillTypeNum; ++a.skill) {
+                        ObjValue delta = tryAddAssign( weekday, nurse, a );
                         if (rs.isMinimal( delta, bestMove.delta )) {
-                            bestMove = Move( delta, nurse, weekday, shift, skill );
+                            bestMove = Move( delta, nurse, weekday, a );
                         }
                     }
                 }
@@ -400,11 +403,12 @@ bool NurseRostering::Solution::findBestChangeShift( Move &bestMove ) const
     for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
         for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
             if (assign.isWorking( nurse, weekday )) {
-                for (ShiftID shift = 0; shift < solver.problem.scenario.shiftTypeNum; ++shift) {
-                    for (SkillID skill = 0; skill < solver.problem.scenario.skillTypeNum; ++skill) {
-                        ObjValue delta = tryChangeShift( weekday, nurse, shift, skill );
+                Assign a;
+                for (a.shift = 0; a.shift < solver.problem.scenario.shiftTypeNum; ++a.shift) {
+                    for (a.skill = 0; a.skill < solver.problem.scenario.skillTypeNum; ++a.skill) {
+                        ObjValue delta = tryChangeAssign( weekday, nurse, a );
                         if (rs.isMinimal( delta, bestMove.delta )) {
-                            bestMove = Move( delta, nurse, weekday, shift, skill );
+                            bestMove = Move( delta, nurse, weekday, a );
                         }
                     }
                 }
@@ -423,7 +427,7 @@ bool NurseRostering::Solution::findBestRemoveShift( Move &bestMove ) const
     for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
         for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
             if (assign.isWorking( nurse, weekday )) {
-                ObjValue delta = tryRemoveShift( weekday, nurse );
+                ObjValue delta = tryRemoveAssign( weekday, nurse );
                 if (rs.isMinimal( delta, bestMove.delta )) {
                     bestMove = Move( delta, nurse, weekday );
                 }
@@ -444,11 +448,12 @@ bool NurseRostering::Solution::findBestAddShiftOnConsecutiveBorder( Move &bestMo
         const Consecutive &c( consecutives[nurse] );
         for (int weekday = Weekday::Mon; weekday < Weekday::SIZE;) {
             if (!assign.isWorking( nurse, weekday )) {
-                for (ShiftID shift = 0; shift < solver.problem.scenario.shiftTypeNum; ++shift) {
-                    for (SkillID skill = 0; skill < solver.problem.scenario.skillTypeNum; ++skill) {
-                        ObjValue delta = tryAddShift( weekday, nurse, shift, skill );
+                Assign a;
+                for (a.shift = 0; a.shift < solver.problem.scenario.shiftTypeNum; ++a.shift) {
+                    for (a.skill = 0; a.skill < solver.problem.scenario.skillTypeNum; ++a.skill) {
+                        ObjValue delta = tryAddAssign( weekday, nurse, a );
                         if (rs.isMinimal( delta, bestMove.delta )) {
-                            bestMove = Move( delta, nurse, weekday, shift, skill );
+                            bestMove = Move( delta, nurse, weekday, a );
                         }
                     }
                 }
@@ -471,11 +476,12 @@ bool NurseRostering::Solution::findBestChangeShiftOnConsecutiveBorder( Move &bes
         const Consecutive &c( consecutives[nurse] );
         for (int weekday = Weekday::Mon; weekday < Weekday::SIZE;) {
             if (assign.isWorking( nurse, weekday )) {
-                for (ShiftID shift = 0; shift < solver.problem.scenario.shiftTypeNum; ++shift) {
-                    for (SkillID skill = 0; skill < solver.problem.scenario.skillTypeNum; ++skill) {
-                        ObjValue delta = tryChangeShift( weekday, nurse, shift, skill );
+                Assign a;
+                for (a.shift = 0; a.shift < solver.problem.scenario.shiftTypeNum; ++a.shift) {
+                    for (a.skill = 0; a.skill < solver.problem.scenario.skillTypeNum; ++a.skill) {
+                        ObjValue delta = tryChangeAssign( weekday, nurse, a );
                         if (rs.isMinimal( delta, bestMove.delta )) {
-                            bestMove = Move( delta, nurse, weekday, shift, skill );
+                            bestMove = Move( delta, nurse, weekday, a );
                         }
                     }
                 }
@@ -498,7 +504,7 @@ bool NurseRostering::Solution::findBestRemoveShiftOnConsecutiveBorder( Move &bes
         const Consecutive &c( consecutives[nurse] );
         for (int weekday = Weekday::Mon; weekday < Weekday::SIZE;) {
             if (assign.isWorking( nurse, weekday )) {
-                ObjValue delta = tryRemoveShift( weekday, nurse );
+                ObjValue delta = tryRemoveAssign( weekday, nurse );
                 if (rs.isMinimal( delta, bestMove.delta )) {
                     bestMove = Move( delta, nurse, weekday );
                 }
@@ -524,27 +530,33 @@ bool NurseRostering::Solution::isValidPrior( NurseID nurse, ShiftID shift, int w
         || solver.problem.scenario.shifts[shift].legalNextShifts[assign[nurse][weekday + 1].shift]);
 }
 
-NurseRostering::ObjValue NurseRostering::Solution::tryAddShift( int weekday, NurseID nurse, ShiftID shiftID, SkillID skillID ) const
+NurseRostering::ObjValue NurseRostering::Solution::tryAddAssign( int weekday, NurseID nurse, const Assign &a ) const
 {
+    ObjValue delta = 0;
+
     ShiftID oldShiftID = assign[nurse][weekday].shift;
     // TODO : make sure they won't be the same and leave out this
-    if (!AssignTable::isWorking( shiftID ) || (shiftID == oldShiftID)
+    if (!AssignTable::isWorking( a.shift ) || (a.shift == oldShiftID)
         || AssignTable::isWorking( oldShiftID )) {
         return DefaultPenalty::MAX_OBJ_VALUE;
     }
 
-    if (!solver.problem.scenario.nurses[nurse].skills[skillID]) {
-        return DefaultPenalty::MAX_OBJ_VALUE;
+    // hard constraint check
+    if (!solver.problem.scenario.nurses[nurse].skills[a.skill]) {
+        delta += penalty.MissSkill();
     }
 
-    if (!(isValidSuccession( nurse, shiftID, weekday )
-        && isValidPrior( nurse, shiftID, weekday ))) {
-        return DefaultPenalty::MAX_OBJ_VALUE;
+    if (!(isValidSuccession( nurse, a.shift, weekday )
+        && isValidPrior( nurse, a.shift, weekday ))) {
+        delta += penalty.Succession();
+    }
+
+    if (delta >= DefaultPenalty::MAX_OBJ_VALUE) {
+        return delta;
     }
 
     int prevDay = weekday - 1;
     int nextDay = weekday + 1;
-    ObjValue delta = 0;
     ContractID contractID = solver.problem.scenario.nurses[nurse].contract;
     const Scenario::Contract &contract( solver.problem.scenario.contracts[contractID] );
     int totalWeekNum = solver.problem.scenario.totalWeekNum;
@@ -552,25 +564,25 @@ NurseRostering::ObjValue NurseRostering::Solution::tryAddShift( int weekday, Nur
     const Consecutive &c( consecutives[nurse] );
 
     // insufficient staff
-    delta -= DefaultPenalty::InsufficientStaff *
-        (missingNurseNums[weekday][shiftID][skillID] > 0);
+    delta -= penalty.InsufficientStaff() *
+        (missingNurseNums[weekday][a.shift][a.skill] > 0);
 
     // consecutive shift
     const vector<Scenario::Shift> &shifts( solver.problem.scenario.shifts );
-    const Scenario::Shift &shift( shifts[shiftID] );
+    const Scenario::Shift &shift( shifts[a.shift] );
     ShiftID prevShiftID = assign[nurse][prevDay].shift;
     if (weekday == Weekday::Sun) {  // there is no blocks on the right
         // shiftHigh[weekday] will always be equal to Weekday::Sun
         if ((Weekday::Sun == c.shiftLow[weekday])
-            && (shiftID == prevShiftID)) {
+            && (a.shift == prevShiftID)) {
             const Scenario::Shift &prevShift( shifts[prevShiftID] );
-            delta -= DefaultPenalty::ConsecutiveShift *
+            delta -= penalty.ConsecutiveShift() *
                 distanceToRange( Weekday::Sun - c.shiftLow[Weekday::Sat],
                 prevShift.minConsecutiveShiftNum, prevShift.maxConsecutiveShiftNum );
-            delta += DefaultPenalty::ConsecutiveShift * exceedCount(
+            delta += penalty.ConsecutiveShift() * exceedCount(
                 Weekday::Sun - c.shiftLow[Weekday::Sat] + 1, shift.maxConsecutiveShiftNum );
         } else {    // have nothing to do with previous block
-            delta += DefaultPenalty::ConsecutiveShift *    // penalty on day off is counted later
+            delta += penalty.ConsecutiveShift() *    // penalty on day off is counted later
                 exceedCount( 1, shift.maxConsecutiveShiftNum );
         }
     } else {
@@ -578,51 +590,51 @@ NurseRostering::ObjValue NurseRostering::Solution::tryAddShift( int weekday, Nur
         if (c.shiftHigh[weekday] == c.shiftLow[weekday]) {
             int high = weekday;
             int low = weekday;
-            if (prevShiftID == shiftID) {
+            if (prevShiftID == a.shift) {
                 const Scenario::Shift &prevShift( shifts[prevShiftID] );
                 low = c.shiftLow[prevDay];
-                delta -= DefaultPenalty::ConsecutiveShift *
+                delta -= penalty.ConsecutiveShift() *
                     distanceToRange( weekday - c.shiftLow[prevDay],
                     prevShift.minConsecutiveShiftNum, prevShift.maxConsecutiveShiftNum );
             }
-            if (nextShiftID == shiftID) {
+            if (nextShiftID == a.shift) {
                 const Scenario::Shift &nextShift( shifts[nextShiftID] );
                 high = c.shiftHigh[nextDay];
-                delta -= DefaultPenalty::ConsecutiveShift * penaltyDayNum(
+                delta -= penalty.ConsecutiveShift() * penaltyDayNum(
                     c.shiftHigh[nextDay] - weekday, c.shiftHigh[nextDay],
                     nextShift.minConsecutiveShiftNum, nextShift.maxConsecutiveShiftNum );
             }
-            delta += DefaultPenalty::ConsecutiveShift * penaltyDayNum( high - low + 1, high,
+            delta += penalty.ConsecutiveShift() * penaltyDayNum( high - low + 1, high,
                 shift.minConsecutiveShiftNum, shift.maxConsecutiveShiftNum );
         } else if (weekday == c.shiftHigh[weekday]) {
-            if (shiftID == nextShiftID) {
+            if (a.shift == nextShiftID) {
                 const Scenario::Shift &nextShift( shifts[nextShiftID] );
                 int consecutiveShiftOfNextBlock = c.shiftHigh[nextDay] - weekday;
                 if (consecutiveShiftOfNextBlock >= nextShift.maxConsecutiveShiftNum) {
-                    delta += DefaultPenalty::ConsecutiveShift;
+                    delta += penalty.ConsecutiveShift();
                 } else if ((c.shiftHigh[nextDay] < Weekday::Sun)
                     && (consecutiveShiftOfNextBlock < nextShift.minConsecutiveShiftNum)) {
-                    delta -= DefaultPenalty::ConsecutiveShift;
+                    delta -= penalty.ConsecutiveShift();
                 }
             } else {
-                delta += DefaultPenalty::ConsecutiveShift * distanceToRange( 1,
+                delta += penalty.ConsecutiveShift() * distanceToRange( 1,
                     shift.minConsecutiveShiftNum, shift.maxConsecutiveShiftNum );
             }
         } else if (weekday == c.shiftLow[weekday]) {
-            if (shiftID == prevShiftID) {
+            if (a.shift == prevShiftID) {
                 const Scenario::Shift &prevShift( shifts[prevShiftID] );
                 int consecutiveShiftOfPrevBlock = weekday - c.shiftLow[prevDay];
                 if (consecutiveShiftOfPrevBlock >= prevShift.maxConsecutiveShiftNum) {
-                    delta += DefaultPenalty::ConsecutiveShift;
+                    delta += penalty.ConsecutiveShift();
                 } else if (consecutiveShiftOfPrevBlock < prevShift.minConsecutiveShiftNum) {
-                    delta -= DefaultPenalty::ConsecutiveShift;
+                    delta -= penalty.ConsecutiveShift();
                 }
             } else {
-                delta += DefaultPenalty::ConsecutiveShift * distanceToRange( 1,
+                delta += penalty.ConsecutiveShift() * distanceToRange( 1,
                     shift.minConsecutiveShiftNum, shift.maxConsecutiveShiftNum );
             }
         } else {
-            delta += DefaultPenalty::ConsecutiveShift * distanceToRange( 1,
+            delta += penalty.ConsecutiveShift() * distanceToRange( 1,
                 shift.minConsecutiveShiftNum, shift.maxConsecutiveShiftNum );
         }
     }
@@ -631,70 +643,70 @@ NurseRostering::ObjValue NurseRostering::Solution::tryAddShift( int weekday, Nur
     if (weekday == Weekday::Sun) {  // there is no block on the right
         // dayHigh[weekday] will always be equal to Weekday::Sun
         if (Weekday::Sun == c.dayLow[weekday]) {
-            delta -= DefaultPenalty::ConsecutiveDay *
+            delta -= penalty.ConsecutiveDay() *
                 distanceToRange( Weekday::Sun - c.dayLow[Weekday::Sat],
                 contract.minConsecutiveDayNum, contract.maxConsecutiveDayNum );
-            delta -= DefaultPenalty::ConsecutiveDayOff *
+            delta -= penalty.ConsecutiveDayOff() *
                 exceedCount( 1, contract.maxConsecutiveDayoffNum );
-            delta += DefaultPenalty::ConsecutiveDay * exceedCount(
+            delta += penalty.ConsecutiveDay() * exceedCount(
                 Weekday::Sun - c.dayLow[Weekday::Sat] + 1, contract.maxConsecutiveDayNum );
         } else {    // day off block length over 1
-            delta -= DefaultPenalty::ConsecutiveDayOff * exceedCount(
+            delta -= penalty.ConsecutiveDayOff() * exceedCount(
                 Weekday::Sun - c.dayLow[Weekday::Sun] + 1, contract.maxConsecutiveDayoffNum );
-            delta += DefaultPenalty::ConsecutiveDayOff * distanceToRange( Weekday::Sun - c.dayLow[Weekday::Sun],
+            delta += penalty.ConsecutiveDayOff() * distanceToRange( Weekday::Sun - c.dayLow[Weekday::Sun],
                 contract.minConsecutiveDayoffNum, contract.maxConsecutiveDayoffNum );
-            delta += DefaultPenalty::ConsecutiveDay * exceedCount( 1, contract.maxConsecutiveDayNum );
+            delta += penalty.ConsecutiveDay() * exceedCount( 1, contract.maxConsecutiveDayNum );
         }
     } else {
         if (c.dayHigh[weekday] == c.dayLow[weekday]) {
-            delta -= DefaultPenalty::ConsecutiveDay * distanceToRange( weekday - c.dayLow[prevDay],
+            delta -= penalty.ConsecutiveDay() * distanceToRange( weekday - c.dayLow[prevDay],
                 contract.minConsecutiveDayNum, contract.maxConsecutiveDayNum );
-            delta -= DefaultPenalty::ConsecutiveDayOff * distanceToRange( 1,
+            delta -= penalty.ConsecutiveDayOff() * distanceToRange( 1,
                 contract.minConsecutiveDayoffNum, contract.maxConsecutiveDayoffNum );
-            delta -= DefaultPenalty::ConsecutiveDay * penaltyDayNum(
+            delta -= penalty.ConsecutiveDay() * penaltyDayNum(
                 c.dayHigh[nextDay] - weekday, c.dayHigh[nextDay],
                 contract.minConsecutiveDayNum, contract.maxConsecutiveDayNum );
-            delta += DefaultPenalty::ConsecutiveDay * penaltyDayNum(
+            delta += penalty.ConsecutiveDay() * penaltyDayNum(
                 c.dayHigh[nextDay] - c.dayLow[prevDay] + 1, c.dayHigh[nextDay],
                 contract.minConsecutiveDayNum, contract.maxConsecutiveDayNum );
         } else if (weekday == c.dayHigh[weekday]) {
             int consecutiveDayOfNextBlock = c.dayHigh[nextDay] - weekday;
             if (consecutiveDayOfNextBlock >= contract.maxConsecutiveDayNum) {
-                delta += DefaultPenalty::ConsecutiveDay;
+                delta += penalty.ConsecutiveDay();
             } else if ((c.dayHigh[nextDay] < Weekday::Sun)
                 && (consecutiveDayOfNextBlock < contract.minConsecutiveDayNum)) {
-                delta -= DefaultPenalty::ConsecutiveDay;
+                delta -= penalty.ConsecutiveDay();
             }
             int consecutiveDayOfThisBlock = weekday - c.dayLow[weekday] + 1;
             if (consecutiveDayOfThisBlock > contract.maxConsecutiveDayoffNum) {
-                delta -= DefaultPenalty::ConsecutiveDayOff;
+                delta -= penalty.ConsecutiveDayOff();
             } else if (consecutiveDayOfThisBlock <= contract.minConsecutiveDayoffNum) {
-                delta += DefaultPenalty::ConsecutiveDayOff;
+                delta += penalty.ConsecutiveDayOff();
             }
         } else if (weekday == c.dayLow[weekday]) {
             int consecutiveDayOfPrevBlock = weekday - c.dayLow[prevDay];
             if (consecutiveDayOfPrevBlock >= contract.maxConsecutiveDayNum) {
-                delta += DefaultPenalty::ConsecutiveDay;
+                delta += penalty.ConsecutiveDay();
             } else if (consecutiveDayOfPrevBlock < contract.minConsecutiveDayNum) {
-                delta -= DefaultPenalty::ConsecutiveDay;
+                delta -= penalty.ConsecutiveDay();
             }
             int consecutiveDayOfThisBlock = c.dayHigh[weekday] - weekday + 1;
             if (consecutiveDayOfThisBlock > contract.maxConsecutiveDayoffNum) {
-                delta -= DefaultPenalty::ConsecutiveDayOff;
+                delta -= penalty.ConsecutiveDayOff();
             } else if ((c.dayHigh[weekday] < Weekday::Sun)
                 && (consecutiveDayOfThisBlock <= contract.minConsecutiveDayoffNum)) {
-                delta += DefaultPenalty::ConsecutiveDayOff;
+                delta += penalty.ConsecutiveDayOff();
             }
         } else {
-            delta -= DefaultPenalty::ConsecutiveDayOff * penaltyDayNum(
+            delta -= penalty.ConsecutiveDayOff() * penaltyDayNum(
                 c.dayHigh[weekday] - c.dayLow[weekday] + 1, c.dayHigh[weekday],
                 contract.minConsecutiveDayoffNum, contract.maxConsecutiveDayoffNum );
-            delta += DefaultPenalty::ConsecutiveDayOff *
+            delta += penalty.ConsecutiveDayOff() *
                 distanceToRange( weekday - c.dayLow[weekday],
                 contract.minConsecutiveDayoffNum, contract.maxConsecutiveDayoffNum );
-            delta += DefaultPenalty::ConsecutiveDay * distanceToRange( 1,
+            delta += penalty.ConsecutiveDay() * distanceToRange( 1,
                 contract.minConsecutiveDayNum, contract.maxConsecutiveDayNum );
-            delta += DefaultPenalty::ConsecutiveDayOff * penaltyDayNum(
+            delta += penalty.ConsecutiveDayOff() * penaltyDayNum(
                 c.dayHigh[weekday] - weekday, c.dayHigh[weekday],
                 contract.minConsecutiveDayoffNum, contract.maxConsecutiveDayoffNum );
         }
@@ -702,110 +714,116 @@ NurseRostering::ObjValue NurseRostering::Solution::tryAddShift( int weekday, Nur
 
     // preference
     const WeekData &weekData( solver.problem.weekData );
-    delta += DefaultPenalty::Preference *
-        weekData.shiftOffs[weekday][shiftID][nurse];
+    delta += penalty.Preference() *
+        weekData.shiftOffs[weekday][a.shift][nurse];
 
     if (weekday > Weekday::Fri) {
         int theOtherDay = Weekday::Sat + (weekday == Weekday::Sat);
         // complete weekend
         if (contract.completeWeekend) {
             if (assign.isWorking( nurse, theOtherDay )) {
-                delta -= DefaultPenalty::CompleteWeekend;
+                delta -= penalty.CompleteWeekend();
             } else {
-                delta += DefaultPenalty::CompleteWeekend;
+                delta += penalty.CompleteWeekend();
             }
         }
 
         // total working weekend
         if (!assign.isWorking( nurse, theOtherDay )) {
             const History &history( solver.problem.history );
-            delta -= DefaultPenalty::TotalWorkingWeekend * exceedCount(
+            delta -= penalty.TotalWorkingWeekend() * exceedCount(
                 history.totalWorkingWeekendNums[nurse] * totalWeekNum,
                 contract.maxWorkingWeekendNum * currentWeek ) / totalWeekNum;
-            delta += DefaultPenalty::TotalWorkingWeekend * exceedCount(
+            delta += penalty.TotalWorkingWeekend() * exceedCount(
                 (history.totalWorkingWeekendNums[nurse] + 1) * totalWeekNum,
                 contract.maxWorkingWeekendNum * currentWeek ) / totalWeekNum;
         }
     }
 
     // total assign
-    delta -= DefaultPenalty::TotalAssign * distanceToRange(
+    delta -= penalty.TotalAssign() * distanceToRange(
         totalAssignNums[nurse] * totalWeekNum, contract.minShiftNum * currentWeek,
         contract.maxShiftNum * currentWeek ) / totalWeekNum;
-    delta += DefaultPenalty::TotalAssign * distanceToRange(
+    delta += penalty.TotalAssign() * distanceToRange(
         (totalAssignNums[nurse] + 1) * totalWeekNum, contract.minShiftNum * currentWeek,
         contract.maxShiftNum * currentWeek ) / totalWeekNum;
 
     return delta;
 }
 
-NurseRostering::ObjValue NurseRostering::Solution::tryChangeShift( int weekday, NurseID nurse, ShiftID shiftID, SkillID skillID ) const
+NurseRostering::ObjValue NurseRostering::Solution::tryChangeAssign( int weekday, NurseID nurse, const Assign &a ) const
 {
+    ObjValue delta = 0;
+
     ShiftID oldShiftID = assign[nurse][weekday].shift;
     SkillID oldSkillID = assign[nurse][weekday].skill;
     // TODO : make sure they won't be the same and leave out this
-    if (!AssignTable::isWorking( shiftID ) || !AssignTable::isWorking( oldShiftID )
-        || ((shiftID == oldShiftID) && (skillID == oldSkillID))) {
+    if (!AssignTable::isWorking( a.shift ) || !AssignTable::isWorking( oldShiftID )
+        || ((a.shift == oldShiftID) && (a.skill == oldSkillID))) {
         return DefaultPenalty::MAX_OBJ_VALUE;
     }
 
-    if (!solver.problem.scenario.nurses[nurse].skills[skillID]) {
-        return DefaultPenalty::MAX_OBJ_VALUE;
+    if (!solver.problem.scenario.nurses[nurse].skills[a.skill]) {
+        delta += penalty.MissSkill();
     }
 
-    if (!(isValidSuccession( nurse, shiftID, weekday )
-        && isValidPrior( nurse, shiftID, weekday ))) {
-        return DefaultPenalty::MAX_OBJ_VALUE;
+    if (!(isValidSuccession( nurse, a.shift, weekday )
+        && isValidPrior( nurse, a.shift, weekday ))) {
+        delta += penalty.Succession();
     }
 
     const WeekData &weekData( solver.problem.weekData );
-    if ((weekData.optNurseNums[weekday][oldShiftID][oldSkillID] -
-        missingNurseNums[weekday][oldShiftID][oldSkillID])
-        <= weekData.minNurseNums[weekday][oldShiftID][oldSkillID]) {
-        return DefaultPenalty::MAX_OBJ_VALUE;
+    int lack = weekData.minNurseNums[weekday][oldShiftID][oldSkillID] -
+        (weekData.optNurseNums[weekday][oldShiftID][oldSkillID] -
+        missingNurseNums[weekday][oldShiftID][oldSkillID]);
+    if (lack >= 0) {
+        delta += penalty.UnderStaff() * lack;
+    }
+
+    if (delta >= DefaultPenalty::MAX_OBJ_VALUE) {
+        return delta;
     }
 
     int prevDay = weekday - 1;
     int nextDay = weekday + 1;
-    ObjValue delta = 0;
     const Consecutive &c( consecutives[nurse] );
 
     // insufficient staff
-    delta += DefaultPenalty::InsufficientStaff *
+    delta += penalty.InsufficientStaff() *
         (missingNurseNums[weekday][oldShiftID][oldSkillID] >= 0);
-    delta -= DefaultPenalty::InsufficientStaff *
-        (missingNurseNums[weekday][shiftID][skillID] > 0);
+    delta -= penalty.InsufficientStaff() *
+        (missingNurseNums[weekday][a.shift][a.skill] > 0);
 
-    if (shiftID != oldShiftID) {
+    if (a.shift != oldShiftID) {
         // consecutive shift
         const vector<Scenario::Shift> &shifts( solver.problem.scenario.shifts );
-        const Scenario::Shift &shift( shifts[shiftID] );
+        const Scenario::Shift &shift( shifts[a.shift] );
         const Scenario::Shift &oldShift( solver.problem.scenario.shifts[oldShiftID] );
         ShiftID prevShiftID = assign[nurse][prevDay].shift;
         if (weekday == Weekday::Sun) {  // there is no blocks on the right
             // shiftHigh[weekday] will always equal to Weekday::Sun
             if (Weekday::Sun == c.shiftLow[weekday]) {
-                if (shiftID == prevShiftID) {
+                if (a.shift == prevShiftID) {
                     const Scenario::Shift &prevShift( shifts[prevShiftID] );
-                    delta -= DefaultPenalty::ConsecutiveShift *
+                    delta -= penalty.ConsecutiveShift() *
                         distanceToRange( Weekday::Sun - c.shiftLow[Weekday::Sat],
                         prevShift.minConsecutiveShiftNum, prevShift.maxConsecutiveShiftNum );
-                    delta -= DefaultPenalty::ConsecutiveShift *
+                    delta -= penalty.ConsecutiveShift() *
                         exceedCount( 1, oldShift.maxConsecutiveShiftNum );
-                    delta += DefaultPenalty::ConsecutiveShift * exceedCount(
+                    delta += penalty.ConsecutiveShift() * exceedCount(
                         Weekday::Sun - c.shiftLow[Weekday::Sat] + 1, shift.maxConsecutiveShiftNum );
                 } else {
-                    delta -= DefaultPenalty::ConsecutiveShift *
+                    delta -= penalty.ConsecutiveShift() *
                         exceedCount( 1, oldShift.maxConsecutiveShiftNum );
-                    delta += DefaultPenalty::ConsecutiveShift *
+                    delta += penalty.ConsecutiveShift() *
                         exceedCount( 1, shift.maxConsecutiveShiftNum );
                 }
             } else {    // block length over 1
-                delta -= DefaultPenalty::ConsecutiveShift * exceedCount(
+                delta -= penalty.ConsecutiveShift() * exceedCount(
                     Weekday::Sun - c.shiftLow[Weekday::Sun] + 1, oldShift.maxConsecutiveShiftNum );
-                delta += DefaultPenalty::ConsecutiveShift * distanceToRange( Weekday::Sun - c.shiftLow[Weekday::Sun],
+                delta += penalty.ConsecutiveShift() * distanceToRange( Weekday::Sun - c.shiftLow[Weekday::Sun],
                     oldShift.minConsecutiveShiftNum, oldShift.maxConsecutiveShiftNum );
-                delta += DefaultPenalty::ConsecutiveShift *
+                delta += penalty.ConsecutiveShift() *
                     exceedCount( 1, shift.maxConsecutiveShiftNum );
             }
         } else {
@@ -813,91 +831,93 @@ NurseRostering::ObjValue NurseRostering::Solution::tryChangeShift( int weekday, 
             if (c.shiftHigh[weekday] == c.shiftLow[weekday]) {
                 int high = weekday;
                 int low = weekday;
-                if (prevShiftID == shiftID) {
+                if (prevShiftID == a.shift) {
                     const Scenario::Shift &prevShift( shifts[prevShiftID] );
                     low = c.shiftLow[prevDay];
-                    delta -= DefaultPenalty::ConsecutiveShift *
+                    delta -= penalty.ConsecutiveShift() *
                         distanceToRange( weekday - c.shiftLow[prevDay],
                         prevShift.minConsecutiveShiftNum, prevShift.maxConsecutiveShiftNum );
                 }
-                if (nextShiftID == shiftID) {
+                if (nextShiftID == a.shift) {
                     const Scenario::Shift &nextShift( shifts[nextShiftID] );
                     high = c.shiftHigh[nextDay];
-                    delta -= DefaultPenalty::ConsecutiveShift * penaltyDayNum(
+                    delta -= penalty.ConsecutiveShift() * penaltyDayNum(
                         c.shiftHigh[nextDay] - weekday, c.shiftHigh[nextDay],
                         nextShift.minConsecutiveShiftNum, nextShift.maxConsecutiveShiftNum );
                 }
-                delta -= DefaultPenalty::ConsecutiveShift * distanceToRange( 1,
+                delta -= penalty.ConsecutiveShift() * distanceToRange( 1,
                     oldShift.minConsecutiveShiftNum, oldShift.maxConsecutiveShiftNum );
-                delta += DefaultPenalty::ConsecutiveShift * penaltyDayNum( high - low + 1, high,
+                delta += penalty.ConsecutiveShift() * penaltyDayNum( high - low + 1, high,
                     shift.minConsecutiveShiftNum, shift.maxConsecutiveShiftNum );
             } else if (weekday == c.shiftHigh[weekday]) {
-                if (nextShiftID == shiftID) {
+                if (nextShiftID == a.shift) {
                     const Scenario::Shift &nextShift( shifts[nextShiftID] );
                     int consecutiveShiftOfNextBlock = c.shiftHigh[nextDay] - weekday;
                     if (consecutiveShiftOfNextBlock >= nextShift.maxConsecutiveShiftNum) {
-                        delta += DefaultPenalty::ConsecutiveShift;
+                        delta += penalty.ConsecutiveShift();
                     } else if ((c.shiftHigh[nextDay] < Weekday::Sun)
                         && (consecutiveShiftOfNextBlock < nextShift.minConsecutiveShiftNum)) {
-                        delta -= DefaultPenalty::ConsecutiveShift;
+                        delta -= penalty.ConsecutiveShift();
                     }
                 } else {
-                    delta += DefaultPenalty::ConsecutiveShift * distanceToRange( 1,
+                    delta += penalty.ConsecutiveShift() * distanceToRange( 1,
                         shift.minConsecutiveShiftNum, shift.maxConsecutiveShiftNum );
                 }
                 int consecutiveShiftOfThisBlock = weekday - c.shiftLow[weekday] + 1;
                 if (consecutiveShiftOfThisBlock > oldShift.maxConsecutiveShiftNum) {
-                    delta -= DefaultPenalty::ConsecutiveShift;
+                    delta -= penalty.ConsecutiveShift();
                 } else if (consecutiveShiftOfThisBlock <= oldShift.minConsecutiveShiftNum) {
-                    delta += DefaultPenalty::ConsecutiveShift;
+                    delta += penalty.ConsecutiveShift();
                 }
             } else if (weekday == c.shiftLow[weekday]) {
-                if (prevShiftID == shiftID) {
+                if (prevShiftID == a.shift) {
                     const Scenario::Shift &prevShift( shifts[prevShiftID] );
                     int consecutiveShiftOfPrevBlock = weekday - c.shiftLow[prevDay];
                     if (consecutiveShiftOfPrevBlock >= prevShift.maxConsecutiveShiftNum) {
-                        delta += DefaultPenalty::ConsecutiveShift;
+                        delta += penalty.ConsecutiveShift();
                     } else if (consecutiveShiftOfPrevBlock < prevShift.minConsecutiveShiftNum) {
-                        delta -= DefaultPenalty::ConsecutiveShift;
+                        delta -= penalty.ConsecutiveShift();
                     }
                 } else {
-                    delta += DefaultPenalty::ConsecutiveShift * distanceToRange( 1,
+                    delta += penalty.ConsecutiveShift() * distanceToRange( 1,
                         shift.minConsecutiveShiftNum, shift.maxConsecutiveShiftNum );
                 }
                 int consecutiveShiftOfThisBlock = c.shiftHigh[weekday] - weekday + 1;
                 if (consecutiveShiftOfThisBlock > oldShift.maxConsecutiveShiftNum) {
-                    delta -= DefaultPenalty::ConsecutiveShift;
+                    delta -= penalty.ConsecutiveShift();
                 } else if ((c.shiftHigh[weekday] < Weekday::Sun)
                     && (consecutiveShiftOfThisBlock <= oldShift.minConsecutiveShiftNum)) {
-                    delta += DefaultPenalty::ConsecutiveShift;
+                    delta += penalty.ConsecutiveShift();
                 }
             } else {
-                delta -= DefaultPenalty::ConsecutiveShift * penaltyDayNum(
+                delta -= penalty.ConsecutiveShift() * penaltyDayNum(
                     c.shiftHigh[weekday] - c.shiftLow[weekday] + 1, c.shiftHigh[weekday],
                     oldShift.minConsecutiveShiftNum, oldShift.maxConsecutiveShiftNum );
-                delta += DefaultPenalty::ConsecutiveShift *
+                delta += penalty.ConsecutiveShift() *
                     distanceToRange( weekday - c.shiftLow[weekday],
                     oldShift.minConsecutiveShiftNum, oldShift.maxConsecutiveShiftNum );
-                delta += DefaultPenalty::ConsecutiveShift * distanceToRange( 1,
+                delta += penalty.ConsecutiveShift() * distanceToRange( 1,
                     shift.minConsecutiveShiftNum, shift.maxConsecutiveShiftNum );
-                delta += DefaultPenalty::ConsecutiveShift *
+                delta += penalty.ConsecutiveShift() *
                     penaltyDayNum( c.shiftHigh[weekday] - weekday, c.shiftHigh[weekday],
                     oldShift.minConsecutiveShiftNum, oldShift.maxConsecutiveShiftNum );
             }
         }
 
         // preference
-        delta += DefaultPenalty::Preference *
-            weekData.shiftOffs[weekday][shiftID][nurse];
-        delta -= DefaultPenalty::Preference *
+        delta += penalty.Preference() *
+            weekData.shiftOffs[weekday][a.shift][nurse];
+        delta -= penalty.Preference() *
             weekData.shiftOffs[weekday][oldShiftID][nurse];
     }
 
     return delta;
 }
 
-NurseRostering::ObjValue NurseRostering::Solution::tryRemoveShift( int weekday, NurseID nurse ) const
+NurseRostering::ObjValue NurseRostering::Solution::tryRemoveAssign( int weekday, NurseID nurse ) const
 {
+    ObjValue delta = 0;
+
     ShiftID oldShiftID = assign[nurse][weekday].shift;
     SkillID oldSkillID = assign[nurse][weekday].skill;
     // TODO : make sure they won't be the same and leave out this
@@ -906,15 +926,19 @@ NurseRostering::ObjValue NurseRostering::Solution::tryRemoveShift( int weekday, 
     }
 
     const WeekData &weekData( solver.problem.weekData );
-    if (((weekData.optNurseNums[weekday][oldShiftID][oldSkillID] -
-        missingNurseNums[weekday][oldShiftID][oldSkillID])
-        <= weekData.minNurseNums[weekday][oldShiftID][oldSkillID])) {
-        return DefaultPenalty::MAX_OBJ_VALUE;
+    int lack = weekData.minNurseNums[weekday][oldShiftID][oldSkillID] -
+        (weekData.optNurseNums[weekday][oldShiftID][oldSkillID] -
+        missingNurseNums[weekday][oldShiftID][oldSkillID]);
+    if (lack >= 0) {
+        delta += penalty.UnderStaff() * lack;
+    }
+
+    if (delta >= DefaultPenalty::MAX_OBJ_VALUE) {
+        return delta;
     }
 
     int prevDay = weekday - 1;
     int nextDay = weekday + 1;
-    ObjValue delta = 0;
     ContractID contractID = solver.problem.scenario.nurses[nurse].contract;
     const Scenario::Contract &contract( solver.problem.scenario.contracts[contractID] );
     int totalWeekNum = solver.problem.scenario.totalWeekNum;
@@ -922,7 +946,7 @@ NurseRostering::ObjValue NurseRostering::Solution::tryRemoveShift( int weekday, 
     const Consecutive &c( consecutives[nurse] );
 
     // insufficient staff
-    delta += DefaultPenalty::InsufficientStaff *
+    delta += penalty.InsufficientStaff() *
         (missingNurseNums[weekday][oldShiftID][oldSkillID] >= 0);
 
     // consecutive shift
@@ -930,39 +954,39 @@ NurseRostering::ObjValue NurseRostering::Solution::tryRemoveShift( int weekday, 
     const Scenario::Shift &oldShift( shifts[oldShiftID] );
     if (weekday == Weekday::Sun) {  // there is no block on the right
         if (Weekday::Sun == c.shiftLow[weekday]) {
-            delta -= DefaultPenalty::ConsecutiveShift * exceedCount( 1, oldShift.maxConsecutiveShiftNum );
+            delta -= penalty.ConsecutiveShift() * exceedCount( 1, oldShift.maxConsecutiveShiftNum );
         } else {
-            delta -= DefaultPenalty::ConsecutiveShift * exceedCount(
+            delta -= penalty.ConsecutiveShift() * exceedCount(
                 Weekday::Sun - c.shiftLow[weekday] + 1, oldShift.maxConsecutiveShiftNum );
-            delta += DefaultPenalty::ConsecutiveShift * distanceToRange( Weekday::Sun - c.shiftLow[weekday],
+            delta += penalty.ConsecutiveShift() * distanceToRange( Weekday::Sun - c.shiftLow[weekday],
                 oldShift.minConsecutiveShiftNum, oldShift.maxConsecutiveShiftNum );
         }
     } else {
         if (c.shiftHigh[weekday] == c.shiftLow[weekday]) {
-            delta -= DefaultPenalty::ConsecutiveShift * distanceToRange( 1,
+            delta -= penalty.ConsecutiveShift() * distanceToRange( 1,
                 oldShift.minConsecutiveShiftNum, oldShift.maxConsecutiveShiftNum );
         } else if (weekday == c.shiftHigh[weekday]) {
             int consecutiveShiftOfThisBlock = weekday - c.shiftLow[weekday] + 1;
             if (consecutiveShiftOfThisBlock > oldShift.maxConsecutiveShiftNum) {
-                delta -= DefaultPenalty::ConsecutiveShift;
+                delta -= penalty.ConsecutiveShift();
             } else if (consecutiveShiftOfThisBlock <= oldShift.minConsecutiveShiftNum) {
-                delta += DefaultPenalty::ConsecutiveShift;
+                delta += penalty.ConsecutiveShift();
             }
         } else if (weekday == c.shiftLow[weekday]) {
             int consecutiveShiftOfThisBlock = c.shiftHigh[weekday] - weekday + 1;
             if (consecutiveShiftOfThisBlock > oldShift.maxConsecutiveShiftNum) {
-                delta -= DefaultPenalty::ConsecutiveShift;
+                delta -= penalty.ConsecutiveShift();
             } else if ((c.shiftHigh[weekday] < Weekday::Sun)
                 && (consecutiveShiftOfThisBlock <= oldShift.minConsecutiveShiftNum)) {
-                delta += DefaultPenalty::ConsecutiveShift;
+                delta += penalty.ConsecutiveShift();
             }
         } else {
-            delta -= DefaultPenalty::ConsecutiveShift * penaltyDayNum(
+            delta -= penalty.ConsecutiveShift() * penaltyDayNum(
                 c.shiftHigh[weekday] - c.shiftLow[weekday] + 1, c.shiftHigh[weekday],
                 oldShift.minConsecutiveShiftNum, oldShift.maxConsecutiveShiftNum );
-            delta += DefaultPenalty::ConsecutiveShift * distanceToRange( weekday - c.shiftLow[weekday],
+            delta += penalty.ConsecutiveShift() * distanceToRange( weekday - c.shiftLow[weekday],
                 oldShift.minConsecutiveShiftNum, oldShift.maxConsecutiveShiftNum );
-            delta += DefaultPenalty::ConsecutiveShift * penaltyDayNum(
+            delta += penalty.ConsecutiveShift() * penaltyDayNum(
                 c.shiftHigh[weekday] - weekday, c.shiftHigh[weekday],
                 oldShift.minConsecutiveShiftNum, oldShift.maxConsecutiveShiftNum );
         }
@@ -972,79 +996,79 @@ NurseRostering::ObjValue NurseRostering::Solution::tryRemoveShift( int weekday, 
     if (weekday == Weekday::Sun) {  // there is no blocks on the right
         // dayHigh[weekday] will always be equal to Weekday::Sun
         if (Weekday::Sun == c.dayLow[weekday]) {
-            delta -= DefaultPenalty::ConsecutiveDayOff *
+            delta -= penalty.ConsecutiveDayOff() *
                 distanceToRange( Weekday::Sun - c.dayLow[Weekday::Sat],
                 contract.minConsecutiveDayoffNum, contract.maxConsecutiveDayoffNum );
-            delta -= DefaultPenalty::ConsecutiveDay *
+            delta -= penalty.ConsecutiveDay() *
                 exceedCount( 1, contract.maxConsecutiveDayNum );
-            delta += DefaultPenalty::ConsecutiveDayOff * exceedCount(
+            delta += penalty.ConsecutiveDayOff() * exceedCount(
                 Weekday::Sun - c.dayLow[Weekday::Sat] + 1, contract.maxConsecutiveDayoffNum );
         } else {    // day off block length over 1
-            delta -= DefaultPenalty::ConsecutiveDay * exceedCount(
+            delta -= penalty.ConsecutiveDay() * exceedCount(
                 Weekday::Sun - c.dayLow[Weekday::Sun] + 1, contract.maxConsecutiveDayNum );
-            delta += DefaultPenalty::ConsecutiveDay * distanceToRange( Weekday::Sun - c.dayLow[Weekday::Sun],
+            delta += penalty.ConsecutiveDay() * distanceToRange( Weekday::Sun - c.dayLow[Weekday::Sun],
                 contract.minConsecutiveDayNum, contract.maxConsecutiveDayNum );
-            delta += DefaultPenalty::ConsecutiveDayOff * exceedCount( 1, contract.maxConsecutiveDayoffNum );
+            delta += penalty.ConsecutiveDayOff() * exceedCount( 1, contract.maxConsecutiveDayoffNum );
         }
     } else {
         if (c.dayHigh[weekday] == c.dayLow[weekday]) {
-            delta -= DefaultPenalty::ConsecutiveDayOff *
+            delta -= penalty.ConsecutiveDayOff() *
                 distanceToRange( weekday - c.dayLow[prevDay],
                 contract.minConsecutiveDayoffNum, contract.maxConsecutiveDayoffNum );
-            delta -= DefaultPenalty::ConsecutiveDay *
+            delta -= penalty.ConsecutiveDay() *
                 distanceToRange( 1,
                 contract.minConsecutiveDayNum, contract.maxConsecutiveDayNum );
-            delta -= DefaultPenalty::ConsecutiveDayOff * penaltyDayNum(
+            delta -= penalty.ConsecutiveDayOff() * penaltyDayNum(
                 c.dayHigh[nextDay] - weekday, c.dayHigh[nextDay],
                 contract.minConsecutiveDayoffNum, contract.maxConsecutiveDayoffNum );
-            delta += DefaultPenalty::ConsecutiveDayOff * penaltyDayNum(
+            delta += penalty.ConsecutiveDayOff() * penaltyDayNum(
                 c.dayHigh[nextDay] - c.dayLow[prevDay] + 1, c.dayHigh[nextDay],
                 contract.minConsecutiveDayoffNum, contract.maxConsecutiveDayoffNum );
         } else if (weekday == c.dayHigh[weekday]) {
             int consecutiveDayOfNextBlock = c.dayHigh[nextDay] - weekday;
             if (consecutiveDayOfNextBlock >= contract.maxConsecutiveDayoffNum) {
-                delta += DefaultPenalty::ConsecutiveDayOff;
+                delta += penalty.ConsecutiveDayOff();
             } else if ((c.dayHigh[nextDay] < Weekday::Sun)
                 && (consecutiveDayOfNextBlock < contract.minConsecutiveDayoffNum)) {
-                delta -= DefaultPenalty::ConsecutiveDayOff;
+                delta -= penalty.ConsecutiveDayOff();
             }
             int consecutiveDayOfThisBlock = weekday - c.dayLow[weekday] + 1;
             if (consecutiveDayOfThisBlock > contract.maxConsecutiveDayNum) {
-                delta -= DefaultPenalty::ConsecutiveDay;
+                delta -= penalty.ConsecutiveDay();
             } else if (consecutiveDayOfThisBlock <= contract.minConsecutiveDayNum) {
-                delta += DefaultPenalty::ConsecutiveDay;
+                delta += penalty.ConsecutiveDay();
             }
         } else if (weekday == c.dayLow[weekday]) {
             int consecutiveDayOfPrevBlock = weekday - c.dayLow[prevDay];
             if (consecutiveDayOfPrevBlock >= contract.maxConsecutiveDayoffNum) {
-                delta += DefaultPenalty::ConsecutiveDayOff;
+                delta += penalty.ConsecutiveDayOff();
             } else if (consecutiveDayOfPrevBlock < contract.minConsecutiveDayoffNum) {
-                delta -= DefaultPenalty::ConsecutiveDayOff;
+                delta -= penalty.ConsecutiveDayOff();
             }
             int consecutiveDayOfThisBlock = c.dayHigh[weekday] - weekday + 1;
             if (consecutiveDayOfThisBlock > contract.maxConsecutiveDayNum) {
-                delta -= DefaultPenalty::ConsecutiveDay;
+                delta -= penalty.ConsecutiveDay();
             } else if ((c.dayHigh[weekday] < Weekday::Sun)
                 && (consecutiveDayOfThisBlock <= contract.minConsecutiveDayNum)) {
-                delta += DefaultPenalty::ConsecutiveDay;
+                delta += penalty.ConsecutiveDay();
             }
         } else {
-            delta -= DefaultPenalty::ConsecutiveDay * penaltyDayNum(
+            delta -= penalty.ConsecutiveDay() * penaltyDayNum(
                 c.dayHigh[weekday] - c.dayLow[weekday] + 1, c.dayHigh[weekday],
                 contract.minConsecutiveDayNum, contract.maxConsecutiveDayNum );
-            delta += DefaultPenalty::ConsecutiveDay *
+            delta += penalty.ConsecutiveDay() *
                 distanceToRange( weekday - c.dayLow[weekday],
                 contract.minConsecutiveDayNum, contract.maxConsecutiveDayNum );
-            delta += DefaultPenalty::ConsecutiveDayOff * distanceToRange( 1,
+            delta += penalty.ConsecutiveDayOff() * distanceToRange( 1,
                 contract.minConsecutiveDayoffNum, contract.maxConsecutiveDayoffNum );
-            delta += DefaultPenalty::ConsecutiveDay *
+            delta += penalty.ConsecutiveDay() *
                 penaltyDayNum( c.dayHigh[weekday] - weekday, c.dayHigh[weekday],
                 contract.minConsecutiveDayNum, contract.maxConsecutiveDayNum );
         }
     }
 
     // preference
-    delta -= DefaultPenalty::Preference *
+    delta -= penalty.Preference() *
         weekData.shiftOffs[weekday][oldShiftID][nurse];
 
     if (weekday > Weekday::Fri) {
@@ -1052,59 +1076,95 @@ NurseRostering::ObjValue NurseRostering::Solution::tryRemoveShift( int weekday, 
         // complete weekend
         if (contract.completeWeekend) {
             if (assign.isWorking( nurse, theOtherDay )) {
-                delta += DefaultPenalty::CompleteWeekend;
+                delta += penalty.CompleteWeekend();
             } else {
-                delta -= DefaultPenalty::CompleteWeekend;
+                delta -= penalty.CompleteWeekend();
             }
         }
 
         // total working weekend
         if (!assign.isWorking( nurse, theOtherDay )) {
             const History &history( solver.problem.history );
-            delta -= DefaultPenalty::TotalWorkingWeekend * exceedCount(
+            delta -= penalty.TotalWorkingWeekend() * exceedCount(
                 (history.totalWorkingWeekendNums[nurse] + 1) * totalWeekNum,
                 contract.maxWorkingWeekendNum * currentWeek ) / totalWeekNum;
-            delta += DefaultPenalty::TotalWorkingWeekend * exceedCount(
+            delta += penalty.TotalWorkingWeekend() * exceedCount(
                 history.totalWorkingWeekendNums[nurse] * totalWeekNum,
                 contract.maxWorkingWeekendNum * currentWeek ) / totalWeekNum;
         }
     }
 
     // total assign
-    delta -= DefaultPenalty::TotalAssign * distanceToRange(
+    delta -= penalty.TotalAssign() * distanceToRange(
         totalAssignNums[nurse] * totalWeekNum, contract.minShiftNum * currentWeek,
         contract.maxShiftNum * currentWeek ) / totalWeekNum;
-    delta += DefaultPenalty::TotalAssign * distanceToRange(
+    delta += penalty.TotalAssign() * distanceToRange(
         (totalAssignNums[nurse] - 1) * totalWeekNum, contract.minShiftNum * currentWeek,
         contract.maxShiftNum * currentWeek ) / totalWeekNum;
 
     return delta;
 }
 
-void NurseRostering::Solution::addShift( int weekday, NurseID nurse, ShiftID shift, SkillID skill )
+NurseRostering::ObjValue NurseRostering::Solution::trySwapNurse( int weekday, NurseID nurse1, NurseID nurse2 ) const
 {
-    updateConsecutive( weekday, nurse, shift );
+    ObjValue delta = 0;
+    penalty.setSwapMode();
 
-    --missingNurseNums[weekday][shift][skill];
+    if (assign.isWorking( nurse1, weekday )) {
+        if (assign.isWorking( nurse2, weekday )) {
+            delta += tryChangeAssign( weekday, nurse1, assign[nurse2][weekday] );
+            delta += tryChangeAssign( weekday, nurse2, assign[nurse1][weekday] );
+        } else {
+            delta += tryRemoveAssign( weekday, nurse1 );
+            delta += tryAddAssign( weekday, nurse2, assign[nurse1][weekday] );
+        }
+    } else {
+        if (assign.isWorking( nurse2, weekday )) {
+            delta += tryAddAssign( weekday, nurse1, assign[nurse2][weekday] );
+            delta += tryRemoveAssign( weekday, nurse2 );
+        } else {    // no change
+            delta += DefaultPenalty::MAX_OBJ_VALUE;
+        }
+    }
+
+    penalty.setNormalMode();
+    return delta;
+}
+
+void NurseRostering::Solution::addAssign( int weekday, NurseID nurse, const Assign &a )
+{
+    updateConsecutive( weekday, nurse, a.shift );
+
+    --missingNurseNums[weekday][a.shift][a.skill];
 
     ++totalAssignNums[nurse];
 
-    assign[nurse][weekday] = Assign( shift, skill );
+    assign[nurse][weekday] = Assign( a );
 }
 
-void NurseRostering::Solution::changeShift( int weekday, NurseID nurse, ShiftID shift, SkillID skill )
+void NurseRostering::Solution::addAssign( const Move &move )
 {
-    if (shift != assign[nurse][weekday].shift) {
-        updateConsecutive( weekday, nurse, shift );
+    addAssign( move.weekday, move.nurse, move.assign );
+}
+
+void NurseRostering::Solution::changeAssign( int weekday, NurseID nurse, const Assign &a )
+{
+    if (a.shift != assign[nurse][weekday].shift) {
+        updateConsecutive( weekday, nurse, a.shift );
     }
 
-    --missingNurseNums[weekday][shift][skill];
+    --missingNurseNums[weekday][a.shift][a.skill];
     ++missingNurseNums[weekday][assign[nurse][weekday].shift][assign[nurse][weekday].skill];
 
-    assign[nurse][weekday] = Assign( shift, skill );
+    assign[nurse][weekday] = Assign( a );
 }
 
-void NurseRostering::Solution::removeShift( int weekday, NurseID nurse )
+void NurseRostering::Solution::changeAssign( const Move &move )
+{
+    changeAssign( move.weekday, move.nurse, move.assign );
+}
+
+void NurseRostering::Solution::removeAssign( int weekday, NurseID nurse )
 {
     updateConsecutive( weekday, nurse, NurseRostering::Scenario::Shift::ID_NONE );
 
@@ -1113,6 +1173,29 @@ void NurseRostering::Solution::removeShift( int weekday, NurseID nurse )
     --totalAssignNums[nurse];
 
     assign[nurse][weekday] = Assign();
+}
+
+void NurseRostering::Solution::removeAssign( const Move &move )
+{
+    removeAssign( move.weekday, move.nurse );
+}
+
+void NurseRostering::Solution::swapNurse( int weekday, NurseID nurse1, NurseID nurse2 )
+{
+    if (assign.isWorking( nurse1, weekday )) {
+        if (assign.isWorking( nurse2, weekday )) {
+            changeAssign( weekday, nurse1, assign[nurse2][weekday] );
+            changeAssign( weekday, nurse2, assign[nurse1][weekday] );
+        } else {
+            removeAssign( weekday, nurse1 );
+            addAssign( weekday, nurse2, assign[nurse1][weekday] );
+        }
+    } else {
+        if (assign.isWorking( nurse2, weekday )) {
+            addAssign( weekday, nurse1, assign[nurse2][weekday] );
+            removeAssign( weekday, nurse2 );
+        }
+    }
 }
 
 void NurseRostering::Solution::updateConsecutive( int weekday, NurseID nurse, ShiftID shift )
@@ -1229,16 +1312,16 @@ bool NurseRostering::Solution::checkIncrementalUpdate()
     ObjValue incrementalVal = objValue;
     evaluateObjValue();
     if (!solver.checkFeasibility( assign )) {
-        cerr << getTime() << " : infeasible solution." << endl;
+        solver.errorLog( "infeasible solution." );
         return false;
     }
     ObjValue checkResult = solver.checkObjValue( assign );
     if (checkResult != objValue) {
-        cerr << getTime() << " : check conflict with evaluate." << endl;
+        solver.errorLog( "check conflict with evaluate." );
         return false;
     }
     if (objValue != incrementalVal) {
-        cerr << getTime() << " : evaluate conflict with incremental update." << endl;
+        solver.errorLog( "evaluate conflict with incremental update." );
         return false;
     }
 
@@ -1251,7 +1334,7 @@ void NurseRostering::Solution::evaluateInsufficientStaff()
         for (ShiftID shift = 0; shift < solver.problem.scenario.shiftTypeNum; ++shift) {
             for (SkillID skill = 0; skill < solver.problem.scenario.skillTypeNum; ++skill) {
                 if (missingNurseNums[weekday][shift][skill] > 0) {
-                    objInsufficientStaff += DefaultPenalty::InsufficientStaff * missingNurseNums[weekday][shift][skill];
+                    objInsufficientStaff += penalty.InsufficientStaff() * missingNurseNums[weekday][shift][skill];
                 }
             }
         }
@@ -1273,22 +1356,22 @@ void NurseRostering::Solution::evaluateConsecutiveShift()
                 if (history.lastShifts[nurse] == assign[nurse][Weekday::Mon].shift) {
                     if (history.consecutiveShiftNums[nurse] > shift.maxConsecutiveShiftNum) {
                         // (high - low + 1) which low is Mon for exceeding part in previous week has been counted
-                        objConsecutiveShift += DefaultPenalty::ConsecutiveShift * (c.shiftHigh[Weekday::Mon] - Weekday::Mon + 1);
+                        objConsecutiveShift += penalty.ConsecutiveShift() * (c.shiftHigh[Weekday::Mon] - Weekday::Mon + 1);
                     } else {
-                        objConsecutiveShift += DefaultPenalty::ConsecutiveShift * distanceToRange(
+                        objConsecutiveShift += penalty.ConsecutiveShift() * distanceToRange(
                             c.shiftHigh[Weekday::Mon] - c.shiftLow[Weekday::Mon] + 1,
                             shift.minConsecutiveShiftNum, shift.maxConsecutiveShiftNum );
                     }
                 } else {
-                    objConsecutiveShift += DefaultPenalty::ConsecutiveShift * distanceToRange(
+                    objConsecutiveShift += penalty.ConsecutiveShift() * distanceToRange(
                         c.shiftHigh[Weekday::Mon] - Weekday::Mon + 1, shift.minConsecutiveShiftNum, shift.maxConsecutiveShiftNum );
                     if (AssignTable::isWorking( history.lastShifts[nurse] )) {
-                        objConsecutiveShift += DefaultPenalty::ConsecutiveShift * absentCount(
+                        objConsecutiveShift += penalty.ConsecutiveShift() * absentCount(
                             history.consecutiveShiftNums[nurse], shifts[history.lastShifts[nurse]].minConsecutiveShiftNum );
                     }
                 }
             } else if (AssignTable::isWorking( history.lastShifts[nurse] )) {
-                objConsecutiveShift += DefaultPenalty::ConsecutiveShift * absentCount(
+                objConsecutiveShift += penalty.ConsecutiveShift() * absentCount(
                     history.consecutiveShiftNums[nurse], shifts[history.lastShifts[nurse]].minConsecutiveShiftNum );
             }
             // handle blocks in the middle of the week
@@ -1296,7 +1379,7 @@ void NurseRostering::Solution::evaluateConsecutiveShift()
                 if (assign.isWorking( nurse, nextday )) {
                     const ShiftID &shiftID( assign[nurse][nextday].shift );
                     const Scenario::Shift &shift( shifts[shiftID] );
-                    objConsecutiveShift += DefaultPenalty::ConsecutiveShift *
+                    objConsecutiveShift += penalty.ConsecutiveShift() *
                         distanceToRange( c.shiftHigh[nextday] - c.shiftLow[nextday] + 1,
                         shift.minConsecutiveShiftNum, shift.maxConsecutiveShiftNum );
                 }
@@ -1311,28 +1394,28 @@ void NurseRostering::Solution::evaluateConsecutiveShift()
             if (c.isSingleConsecutiveShift()) { // the entire week is one block
                 if (history.lastShifts[nurse] == assign[nurse][Weekday::Sun].shift) {
                     if (history.consecutiveShiftNums[nurse] > shift.maxConsecutiveShiftNum) {
-                        objConsecutiveShift += DefaultPenalty::ConsecutiveShift * Weekday::NUM;
+                        objConsecutiveShift += penalty.ConsecutiveShift() * Weekday::NUM;
                     } else {
-                        objConsecutiveShift += DefaultPenalty::ConsecutiveShift * exceedCount(
+                        objConsecutiveShift += penalty.ConsecutiveShift() * exceedCount(
                             consecutiveShift_EntireWeek, shift.maxConsecutiveShiftNum );
                     }
                 } else {    // different shifts
                     if (Weekday::NUM > shift.maxConsecutiveShiftNum) {
-                        objConsecutiveShift += DefaultPenalty::ConsecutiveShift *
+                        objConsecutiveShift += penalty.ConsecutiveShift() *
                             (Weekday::NUM - shift.maxConsecutiveShiftNum);
                     }
                     if (AssignTable::isWorking( history.lastShifts[nurse] )) {
-                        objConsecutiveShift += DefaultPenalty::ConsecutiveShift * absentCount(
+                        objConsecutiveShift += penalty.ConsecutiveShift() * absentCount(
                             history.consecutiveShiftNums[nurse], shifts[history.lastShifts[nurse]].minConsecutiveShiftNum );
                     }
                 }
             } else {
-                objConsecutiveShift += DefaultPenalty::ConsecutiveShift * exceedCount(
+                objConsecutiveShift += penalty.ConsecutiveShift() * exceedCount(
                     consecutiveShift, shift.maxConsecutiveShiftNum );
             }
         } else if (c.isSingleConsecutiveShift() // the entire week is one block
             && AssignTable::isWorking( history.lastShifts[nurse] )) {
-            objConsecutiveShift += DefaultPenalty::ConsecutiveShift * absentCount(
+            objConsecutiveShift += penalty.ConsecutiveShift() * absentCount(
                 history.consecutiveShiftNums[nurse], shifts[history.lastShifts[nurse]].minConsecutiveShiftNum );
         }
     }
@@ -1352,20 +1435,20 @@ void NurseRostering::Solution::evaluateConsecutiveDay()
             if (assign.isWorking( nurse, Weekday::Mon )) {
                 if (history.consecutiveDayNums[nurse] > contract.maxConsecutiveDayNum) {
                     // (high - low + 1) which low is Mon for exceeding part in previous week has been counted
-                    objConsecutiveDay += DefaultPenalty::ConsecutiveDay * (c.dayHigh[Weekday::Mon] - Weekday::Mon + 1);
+                    objConsecutiveDay += penalty.ConsecutiveDay() * (c.dayHigh[Weekday::Mon] - Weekday::Mon + 1);
                 } else {
-                    objConsecutiveDay += DefaultPenalty::ConsecutiveDay * distanceToRange(
+                    objConsecutiveDay += penalty.ConsecutiveDay() * distanceToRange(
                         c.dayHigh[Weekday::Mon] - c.dayLow[Weekday::Mon] + 1,
                         contract.minConsecutiveDayNum, contract.maxConsecutiveDayNum );
                 }
             } else if (AssignTable::isWorking( history.lastShifts[nurse] )) {
-                objConsecutiveDay += DefaultPenalty::ConsecutiveDay * absentCount
+                objConsecutiveDay += penalty.ConsecutiveDay() * absentCount
                     ( history.consecutiveDayNums[nurse], contract.minConsecutiveDayNum );
             }
             // handle blocks in the middle of the week
             for (; c.dayHigh[nextday] < Weekday::Sun; nextday = c.dayHigh[nextday] + 1) {
                 if (assign.isWorking( nurse, nextday )) {
-                    objConsecutiveDay += DefaultPenalty::ConsecutiveDay *
+                    objConsecutiveDay += penalty.ConsecutiveDay() *
                         distanceToRange( c.dayHigh[nextday] - c.dayLow[nextday] + 1,
                         contract.minConsecutiveDayNum, contract.maxConsecutiveDayNum );
                 }
@@ -1376,18 +1459,18 @@ void NurseRostering::Solution::evaluateConsecutiveDay()
         if (assign.isWorking( nurse, Weekday::Sun )) {
             if (c.isSingleConsecutiveDay()) {   // the entire week is one block
                 if (history.consecutiveDayNums[nurse] > contract.maxConsecutiveDayNum) {
-                    objConsecutiveDay += DefaultPenalty::ConsecutiveDay * Weekday::NUM;
+                    objConsecutiveDay += penalty.ConsecutiveDay() * Weekday::NUM;
                 } else {
-                    objConsecutiveDay += DefaultPenalty::ConsecutiveDay * exceedCount(
+                    objConsecutiveDay += penalty.ConsecutiveDay() * exceedCount(
                         consecutiveDay, contract.maxConsecutiveDayNum );
                 }
             } else {
-                objConsecutiveDay += DefaultPenalty::ConsecutiveDay * exceedCount(
+                objConsecutiveDay += penalty.ConsecutiveDay() * exceedCount(
                     consecutiveDay, contract.maxConsecutiveDayNum );
             }
         } else if (c.isSingleConsecutiveDay() // the entire week is one block
             && AssignTable::isWorking( history.lastShifts[nurse] )) {
-            objConsecutiveDay += DefaultPenalty::ConsecutiveDay * absentCount(
+            objConsecutiveDay += penalty.ConsecutiveDay() * absentCount(
                 history.consecutiveDayNums[nurse], contract.minConsecutiveDayNum );
         }
     }
@@ -1406,20 +1489,20 @@ void NurseRostering::Solution::evaluateConsecutiveDayOff()
             // handle first block with history
             if (!assign.isWorking( nurse, Weekday::Mon )) {
                 if (history.consecutiveDayoffNums[nurse] > contract.maxConsecutiveDayoffNum) {
-                    objConsecutiveDayOff += DefaultPenalty::ConsecutiveDayOff * (c.dayHigh[Weekday::Mon] - Weekday::Mon + 1);
+                    objConsecutiveDayOff += penalty.ConsecutiveDayOff() * (c.dayHigh[Weekday::Mon] - Weekday::Mon + 1);
                 } else {
-                    objConsecutiveDayOff += DefaultPenalty::ConsecutiveDayOff * distanceToRange(
+                    objConsecutiveDayOff += penalty.ConsecutiveDayOff() * distanceToRange(
                         c.dayHigh[Weekday::Mon] - c.dayLow[Weekday::Mon] + 1,
                         contract.minConsecutiveDayoffNum, contract.maxConsecutiveDayoffNum );
                 }
             } else if (!AssignTable::isWorking( history.lastShifts[nurse] )) {
-                objConsecutiveDayOff += DefaultPenalty::ConsecutiveDayOff * absentCount(
+                objConsecutiveDayOff += penalty.ConsecutiveDayOff() * absentCount(
                     history.consecutiveDayoffNums[nurse], contract.minConsecutiveDayoffNum );
             }
             // handle blocks in the middle of the week
             for (; c.dayHigh[nextday] < Weekday::Sun; nextday = c.dayHigh[nextday] + 1) {
                 if (!assign.isWorking( nurse, nextday )) {
-                    objConsecutiveDayOff += DefaultPenalty::ConsecutiveDayOff *
+                    objConsecutiveDayOff += penalty.ConsecutiveDayOff() *
                         distanceToRange( c.dayHigh[nextday] - c.dayLow[nextday] + 1,
                         contract.minConsecutiveDayoffNum, contract.maxConsecutiveDayoffNum );
                 }
@@ -1430,18 +1513,18 @@ void NurseRostering::Solution::evaluateConsecutiveDayOff()
         if (!assign.isWorking( nurse, Weekday::Sun )) {
             if (c.isSingleConsecutiveDay()) {   // the entire week is one block
                 if (history.consecutiveDayoffNums[nurse] > contract.maxConsecutiveDayoffNum) {
-                    objConsecutiveDayOff += DefaultPenalty::ConsecutiveDayOff * Weekday::NUM;
+                    objConsecutiveDayOff += penalty.ConsecutiveDayOff() * Weekday::NUM;
                 } else {
-                    objConsecutiveDayOff += DefaultPenalty::ConsecutiveDayOff * exceedCount(
+                    objConsecutiveDayOff += penalty.ConsecutiveDayOff() * exceedCount(
                         consecutiveDay, contract.maxConsecutiveDayoffNum );
                 }
             } else {
-                objConsecutiveDayOff += DefaultPenalty::ConsecutiveDayOff * exceedCount(
+                objConsecutiveDayOff += penalty.ConsecutiveDayOff() * exceedCount(
                     consecutiveDay, contract.maxConsecutiveDayoffNum );
             }
         } else if (c.isSingleConsecutiveDay() // the entire week is one block
             && (!AssignTable::isWorking( history.lastShifts[nurse] ))) {
-            objConsecutiveDayOff += DefaultPenalty::ConsecutiveDayOff * absentCount(
+            objConsecutiveDayOff += penalty.ConsecutiveDayOff() * absentCount(
                 history.consecutiveDayoffNums[nurse], contract.minConsecutiveDayoffNum );
         }
     }
@@ -1453,7 +1536,7 @@ void NurseRostering::Solution::evaluatePreference()
         for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
             const ShiftID &shift = assign[nurse][weekday].shift;
             if (AssignTable::isWorking( shift )) {
-                objPreference += DefaultPenalty::Preference *
+                objPreference += penalty.Preference() *
                     solver.problem.weekData.shiftOffs[weekday][shift][nurse];
             }
         }
@@ -1463,7 +1546,7 @@ void NurseRostering::Solution::evaluatePreference()
 void NurseRostering::Solution::evaluateCompleteWeekend()
 {
     for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
-        objCompleteWeekend += DefaultPenalty::CompleteWeekend *
+        objCompleteWeekend += penalty.CompleteWeekend() *
             (solver.problem.scenario.contracts[solver.problem.scenario.nurses[nurse].contract].completeWeekend
             && (assign.isWorking( nurse, Weekday::Sat )
             != assign.isWorking( nurse, Weekday::Sun )));
@@ -1478,13 +1561,13 @@ void NurseRostering::Solution::evaluateTotalAssign()
     for (NurseID nurse = 0; nurse < scenario.nurseNum; ++nurse) {
         int min = scenario.contracts[scenario.nurses[nurse].contract].minShiftNum;
         int max = scenario.contracts[scenario.nurses[nurse].contract].maxShiftNum;
-        objTotalAssign += DefaultPenalty::TotalAssign * distanceToRange(
+        objTotalAssign += penalty.TotalAssign() * distanceToRange(
             totalAssignNums[nurse] * totalWeekNum,
             min * solver.problem.history.currentWeek,
             max * solver.problem.history.currentWeek ) / totalWeekNum;
         // remove penalty in the history except the first week
         if (solver.problem.history.pastWeekCount > 0) {
-            objTotalAssign -= DefaultPenalty::TotalAssign * distanceToRange(
+            objTotalAssign -= penalty.TotalAssign() * distanceToRange(
                 solver.problem.history.totalAssignNums[nurse] * totalWeekNum,
                 min * solver.problem.history.pastWeekCount,
                 max * solver.problem.history.pastWeekCount ) / totalWeekNum;
@@ -1502,14 +1585,14 @@ void NurseRostering::Solution::evaluateTotalWorkingWeekend()
         int exceedingWeekend = historyWeekend - (maxWeekend * solver.problem.history.currentWeek) +
             ((assign.isWorking( nurse, Weekday::Sat ) || assign.isWorking( nurse, Weekday::Sun )) * totalWeekNum);
         if (exceedingWeekend > 0) {
-            objTotalWorkingWeekend += DefaultPenalty::TotalWorkingWeekend *
+            objTotalWorkingWeekend += penalty.TotalWorkingWeekend() *
                 exceedingWeekend / totalWeekNum;
         }
         // remove penalty in the history except the first week
         if (solver.problem.history.pastWeekCount > 0) {
             historyWeekend -= maxWeekend * solver.problem.history.pastWeekCount;
             if (historyWeekend > 0) {
-                objTotalWorkingWeekend -= DefaultPenalty::TotalWorkingWeekend *
+                objTotalWorkingWeekend -= penalty.TotalWorkingWeekend() *
                     historyWeekend / totalWeekNum;
             }
         }
@@ -1525,7 +1608,7 @@ NurseRostering::History NurseRostering::Solution::genHistory() const
     newHistory.consecutiveDayNums.resize( solver.problem.scenario.nurseNum, 0 );
     newHistory.consecutiveDayoffNums.resize( solver.problem.scenario.nurseNum, 0 );
 
-    newHistory.accObjValue = history.accObjValue + (objValue / DefaultPenalty::AMP);
+    newHistory.accObjValue = history.accObjValue + objValue;
     newHistory.pastWeekCount = history.currentWeek;
     newHistory.currentWeek = history.currentWeek + 1;
     newHistory.totalAssignNums = totalAssignNums;

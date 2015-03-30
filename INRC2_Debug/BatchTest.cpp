@@ -4,9 +4,12 @@
 using namespace std;
 using namespace INRC2;
 
+using boost::asio::ip::tcp;
+
 
 char *fullArgv[ArgcVal::full] = {
     "INRC2.exe",
+    "--id", "",
     "--sce", "",
     "--his", "",
     "--week", "",
@@ -17,7 +20,7 @@ char *fullArgv[ArgcVal::full] = {
     "--cusOut", ""
 };
 
-const char *testOutputDir = "output";
+const std::string testOutputDir( "output" );
 const std::string instanceDir( "../INRC2/instance/" );
 const std::vector<std::string> instance = {
     "n005w4", "n012w8", "n021w4", // 0 1 2
@@ -49,18 +52,64 @@ const std::string solPrefix( "/sol-week" );
 const std::string fileSuffix( ".txt" );
 const std::string cusPrefix( "/custom-week" );
 
+const char *FeasibleCheckerHost = "themis.playhost.be";
+
+
+void testAllInstances( const std::string &id, int runCount )
+{
+    unsigned instIndex;
+    char initHis;
+    char weekdata[WEEKDATA_SEQ_SIZE];
+    int randSeed;
+
+    for (instIndex = 0; instIndex < instance.size(); ++instIndex) {
+        for (int i = runCount; i > 0; --i) {
+            genInstanceSequence( instIndex, initHis, weekdata );
+            randSeed = rand();
+            test_customIO( id, testOutputDir + id, instIndex, initHis, weekdata, instTimeout[instIndex], randSeed );
+        }
+    }
+}
 
 char genInitHisIndex()
 {
     return ((rand() % INIT_HIS_NUM) + '0');
 }
 
-void genWeekdataSequence( int instIndex, char *weekdata )
+void genWeekdataSequence( int instIndex, char weekdata[WEEKDATA_SEQ_SIZE] )
 {
+    memset( weekdata, 0, WEEKDATA_SEQ_SIZE * sizeof( char ) );
     int weekNum = instance[instIndex][5] - '1';
     for (; weekNum >= 0; --weekNum) {
         weekdata[weekNum] = (rand() % WEEKDATA_NUM) + '0';
     }
+}
+
+void genInstanceSequence( int instIndex, char &initHis, char weekdata[WEEKDATA_SEQ_SIZE] )
+{
+    bool feasible = false;
+    do {
+        initHis = genInitHisIndex();
+        genWeekdataSequence( instIndex, weekdata );
+
+        string file = "/" + instance[instIndex] + "/H0-" + instance[instIndex] + "-" + initHis;
+        for (int weekNum = instance[instIndex][5] - '1'; weekNum >= 0; --weekNum) {
+            file += ("/WD-" + instance[instIndex] + "-" + weekdata[weekNum]);
+        }
+
+        stringstream ss;
+        httpget( ss, FeasibleCheckerHost, file.c_str() );
+
+        char buf[256];
+        ss.getline( buf, 255 );
+        if (strstr( buf, "Feasible" )) {
+            feasible = true;
+        } else if (strstr( buf, "Infeasible" )) {
+            feasible = false;
+        } else {
+            cerr << getTime() << " : error in response from feasible checker." << endl;
+        }
+    } while (!feasible);
 }
 
 void makeSureDirExist( const string &dir )
@@ -72,7 +121,7 @@ void makeSureDirExist( const string &dir )
 #endif
 }
 
-void test( const char *outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec )
+void test( const std::string &id, const std::string &outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec )
 {
     makeSureDirExist( outputDir );
     ostringstream t;
@@ -82,16 +131,16 @@ void test( const char *outputDir, int instIndex, char initHis, const char *weeks
     char argvBuf[ArgcVal::full][MAX_ARGV_LEN];
     int argc = ArgcVal::noCusInCusOut;
 
-    prepareArgv_FirstWeek( outputDir, argv, argvBuf, instIndex, initHis, weeks[0], t.str() );
+    prepareArgv_FirstWeek( id, outputDir, argv, argvBuf, instIndex, initHis, weeks[0], t.str() );
     run( argc, argv );
 
     for (char w = '1'; w < instance[instIndex][5]; w++) {
-        prepareArgv( outputDir, argv, argvBuf, instIndex, weeks, w, t.str() );
+        prepareArgv( id, outputDir, argv, argvBuf, instIndex, weeks, w, t.str() );
         run( argc, argv );
     }
 }
 
-void test( const char *outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec, int randSeed )
+void test( const std::string &id, const std::string &outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec, int randSeed )
 {
     makeSureDirExist( outputDir );
     ostringstream t, r;
@@ -102,16 +151,16 @@ void test( const char *outputDir, int instIndex, char initHis, const char *weeks
     char argvBuf[ArgcVal::full][MAX_ARGV_LEN];
     int argc = ArgcVal::noCusInCusOut;
 
-    prepareArgv_FirstWeek( outputDir, argv, argvBuf, instIndex, initHis, weeks[0], t.str(), r.str() );
+    prepareArgv_FirstWeek( id, outputDir, argv, argvBuf, instIndex, initHis, weeks[0], t.str(), r.str() );
     run( argc, argv );
 
     for (char w = '1'; w < instance[instIndex][5]; w++) {
-        prepareArgv( outputDir, argv, argvBuf, instIndex, weeks, w, t.str(), r.str() );
+        prepareArgv( id, outputDir, argv, argvBuf, instIndex, weeks, w, t.str(), r.str() );
         run( argc, argv );
     }
 }
 
-void test_customIO( const char *outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec )
+void test_customIO( const std::string &id, const std::string &outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec )
 {
     makeSureDirExist( outputDir );
     ostringstream t;
@@ -122,25 +171,25 @@ void test_customIO( const char *outputDir, int instIndex, char initHis, const ch
     char argvBuf[ArgcVal::full][MAX_ARGV_LEN];
 
     argc = ArgcVal::noRandCusIn;
-    prepareArgv_FirstWeek( outputDir, argv, argvBuf, instIndex, initHis, weeks[0],
+    prepareArgv_FirstWeek( id, outputDir, argv, argvBuf, instIndex, initHis, weeks[0],
         t.str(), "", (outputDir + cusPrefix + '0') );
     run( argc, argv );
 
     char w = '1';
     for (; w < (instance[instIndex][5] - 1); w++) {
         argc = ArgcVal::noRand;
-        prepareArgv( outputDir, argv, argvBuf, instIndex, weeks, w, t.str(), "",
+        prepareArgv( id, outputDir, argv, argvBuf, instIndex, weeks, w, t.str(), "",
             outputDir + cusPrefix + static_cast<char>(w - 1), outputDir + cusPrefix + w );
         run( argc, argv );
     }
 
     argc = ArgcVal::noRandCusOut;
-    prepareArgv( outputDir, argv, argvBuf, instIndex, weeks, w, t.str(), "",
+    prepareArgv( id, outputDir, argv, argvBuf, instIndex, weeks, w, t.str(), "",
         outputDir + cusPrefix + static_cast<char>(w - 1), "" );
     run( argc, argv );
 }
 
-void test_customIO( const char *outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec, int randSeed )
+void test_customIO( const std::string &id, const std::string &outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec, int randSeed )
 {
     makeSureDirExist( outputDir );
     ostringstream t, r;
@@ -152,25 +201,25 @@ void test_customIO( const char *outputDir, int instIndex, char initHis, const ch
     char argvBuf[ArgcVal::full][MAX_ARGV_LEN];
 
     argc = ArgcVal::noCusIn;
-    prepareArgv_FirstWeek( outputDir, argv, argvBuf, instIndex, initHis, weeks[0],
+    prepareArgv_FirstWeek( id, outputDir, argv, argvBuf, instIndex, initHis, weeks[0],
         t.str(), r.str(), (outputDir + cusPrefix + '0') );
     run( argc, argv );
 
     char w = '1';
     for (; w < (instance[instIndex][5] - 1); w++) {
         argc = ArgcVal::full;
-        prepareArgv( outputDir, argv, argvBuf, instIndex, weeks, w, t.str(), r.str(),
+        prepareArgv( id, outputDir, argv, argvBuf, instIndex, weeks, w, t.str(), r.str(),
             outputDir + cusPrefix + static_cast<char>(w - 1), outputDir + cusPrefix + w );
         run( argc, argv );
     }
 
     argc = ArgcVal::noCusOut;
-    prepareArgv( outputDir, argv, argvBuf, instIndex, weeks, w, t.str(), r.str(),
+    prepareArgv( id, outputDir, argv, argvBuf, instIndex, weeks, w, t.str(), r.str(),
         outputDir + cusPrefix + static_cast<char>(w - 1), "" );
     run( argc, argv );
 }
 
-void prepareArgv_FirstWeek( const char *outputDir, char *argv[], char argvBuf[][MAX_ARGV_LEN], int i, char h, char w, string t, string r, string co )
+void prepareArgv_FirstWeek( const std::string &id, const std::string &outputDir, char *argv[], char argvBuf[][MAX_ARGV_LEN], int i, char h, char w, const std::string &t, const std::string &r, const std::string &co )
 {
     string sce = instanceDir + instance[i] + scePrefix + instance[i] + fileSuffix;
     string his = instanceDir + instance[i] + initHisPrefix + instance[i] + '-' + h + fileSuffix;
@@ -178,6 +227,9 @@ void prepareArgv_FirstWeek( const char *outputDir, char *argv[], char argvBuf[][
     string sol = outputDir + solPrefix + "0" + fileSuffix;
     i = 0;
     argv[i] = fullArgv[ArgvIndex::program];
+    argv[++i] = fullArgv[ArgvIndex::__id];
+    strcpy( argvBuf[++i], id.c_str() );
+    argv[i] = argvBuf[i];
     argv[++i] = fullArgv[ArgvIndex::__sce];
     strcpy( argvBuf[++i], sce.c_str() );
     argv[i] = argvBuf[i];
@@ -205,7 +257,7 @@ void prepareArgv_FirstWeek( const char *outputDir, char *argv[], char argvBuf[][
     }
 }
 
-void prepareArgv( const char *outputDir, char *argv[], char argvBuf[][MAX_ARGV_LEN], int i, const char *weeks, char w, string t, string r, string ci, string co )
+void prepareArgv( const std::string &id, const std::string &outputDir, char *argv[], char argvBuf[][MAX_ARGV_LEN], int i, const char *weeks, char w, const std::string &t, const std::string &r, const std::string &ci, const std::string &co )
 {
     string sce = instanceDir + instance[i] + scePrefix + instance[i] + fileSuffix;
     string week = instanceDir + instance[i] + weekPrefix + instance[i] + '-' + weeks[w - '0'] + fileSuffix;
@@ -213,6 +265,9 @@ void prepareArgv( const char *outputDir, char *argv[], char argvBuf[][MAX_ARGV_L
     string his = outputDir + hisPrefix + (--w) + fileSuffix;
     i = 0;
     argv[i] = fullArgv[ArgvIndex::program];
+    argv[++i] = fullArgv[ArgvIndex::__id];
+    strcpy( argvBuf[++i], id.c_str() );
+    argv[i] = argvBuf[i];
     argv[++i] = fullArgv[ArgvIndex::__sce];
     strcpy( argvBuf[++i], sce.c_str() );
     argv[i] = argvBuf[i];
@@ -242,5 +297,83 @@ void prepareArgv( const char *outputDir, char *argv[], char argvBuf[][MAX_ARGV_L
         argv[++i] = fullArgv[ArgvIndex::__cusOut];
         strcpy( argvBuf[++i], co.c_str() );
         argv[i] = argvBuf[i];
+    }
+}
+
+void httpget( ostream &os, const char *host, const char *file )
+{
+    try {
+        boost::asio::io_service io_service;
+
+        // Get a list of endpoints corresponding to the server name.
+        tcp::resolver resolver( io_service );
+        tcp::resolver::query query( host, "http" );
+        tcp::resolver::iterator endpoint_iterator = resolver.resolve( query );
+        tcp::resolver::iterator end;
+
+        // Try each endpoint until we successfully establish a connection.
+        tcp::socket socket( io_service );
+        boost::system::error_code error = boost::asio::error::host_not_found;
+        while (error && endpoint_iterator != end) {
+            socket.close();
+            socket.connect( *endpoint_iterator++, error );
+        }
+        if (error)
+            throw boost::system::system_error( error );
+
+        // Form the request. We specify the "Connection: close" header so that the
+        // server will close the socket after transmitting the response. This will
+        // allow us to treat all data up until the EOF as the content.
+        boost::asio::streambuf request;
+        std::ostream request_stream( &request );
+        request_stream << "GET " << file << " HTTP/1.0\r\n";
+        request_stream << "Host: " << host << "\r\n";
+        request_stream << "Accept: */*\r\n";
+        request_stream << "Connection: close\r\n\r\n";
+
+        // Send the request.
+        boost::asio::write( socket, request );
+
+        // Read the response status line.
+        boost::asio::streambuf response;
+        boost::asio::read_until( socket, response, "\r\n" );
+
+        // Check that response is OK.
+        std::istream response_stream( &response );
+        std::string http_version;
+        response_stream >> http_version;
+        unsigned int status_code;
+        response_stream >> status_code;
+        std::string status_message;
+        std::getline( response_stream, status_message );
+        if (!response_stream || http_version.substr( 0, 5 ) != "HTTP/") {
+            std::cerr << "Invalid response\n";
+            return;
+        }
+        if (status_code != 200) {
+            std::cerr << "Response returned with status code " << status_code << "\n";
+            return;
+        }
+
+        // Read the response headers, which are terminated by a blank line.
+        boost::asio::read_until( socket, response, "\r\n\r\n" );
+
+        // Process the response headers.
+        std::string header;
+        while (std::getline( response_stream, header ) && header != "\r") {}
+
+        // Write whatever content we already have to output.
+        if (response.size() > 0)
+            os << &response;
+
+        // Read until EOF, writing data to output as we go.
+        while (boost::asio::read( socket, response,
+            boost::asio::transfer_at_least( 1 ), error ))
+            os << &response;
+        if (error != boost::asio::error::eof)
+            throw boost::system::system_error( error );
+
+    } catch (std::exception& e) {
+        std::cerr << "Exception: " << e.what() << "\n";
     }
 }
