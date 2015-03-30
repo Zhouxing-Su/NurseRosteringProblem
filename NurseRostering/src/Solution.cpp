@@ -200,21 +200,6 @@ bool NurseRostering::Solution::repair( const Timer &timer )
     return (feasible || genInitAssign_BranchAndCut());
 }
 
-void NurseRostering::Solution::iterativeLocalSearch( const Timer &timer, Output &optima )
-{
-    const int timeForEachLoop = CLOCKS_PER_SEC * 1;
-    int loopCount = timer.restTime() / timeForEachLoop;
-    for (; !timer.isTimeOut() && loopCount > 0; --loopCount) {
-        Timer t( timer.restTime() / loopCount, clock() );
-        randomWalk( t, optima );
-        if (rand() % 2) {
-            localSearch( timer, optima );
-        } else {
-            localSearchOnConsecutiveBorder( timer, optima );
-        }
-    }
-}
-
 void NurseRostering::Solution::localSearch( const Timer &timer, Output &optima )
 {
 #ifdef INRC2_PERFORMANCE_TEST

@@ -1,4 +1,10 @@
-#include "INRC2_Debug.h"
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x601  // Win7
+#endif
+
+#include <boost/asio.hpp>
+
+#include "BatchTest.h"
 
 
 using namespace std;
@@ -8,7 +14,7 @@ using boost::asio::ip::tcp;
 
 
 char *fullArgv[ArgcVal::full] = {
-    "INRC2.exe",
+    "NurseRostering.exe",
     "--id", "",
     "--sce", "",
     "--his", "",
@@ -20,8 +26,8 @@ char *fullArgv[ArgcVal::full] = {
     "--cusOut", ""
 };
 
-const std::string testOutputDir( "output" );
-const std::string instanceDir( "../INRC2/instance/" );
+const std::string outputDirPrefix( "output" );
+const std::string instanceDir( "../NurseRostoring/instance/" );
 const std::vector<std::string> instance = {
     "n005w4", "n012w8", "n021w4", // 0 1 2
     "n030w4", "n030w8", // 3 4
@@ -66,7 +72,7 @@ void testAllInstances( const std::string &id, int runCount )
         for (int i = runCount; i > 0; --i) {
             genInstanceSequence( instIndex, initHis, weekdata );
             randSeed = rand();
-            test_customIO( id, testOutputDir + id, instIndex, initHis, weekdata, instTimeout[instIndex], randSeed );
+            test_customIO( id, outputDirPrefix + id, instIndex, initHis, weekdata, instTimeout[instIndex], randSeed );
         }
     }
 }

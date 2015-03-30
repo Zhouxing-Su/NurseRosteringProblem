@@ -11,9 +11,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{D4004FC3-2EF3-43BD-B1A7-DC29DB2BBFFB}</ProjectGuid>
+    <ProjectGuid>{81DBC9CD-88CA-4531-96D9-E346A177EEB8}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>INRC2_Debug</RootNamespace>
+    <RootNamespace>NurseRostering</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -41,17 +41,18 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(BOOST_DIR);$(SolutionDir)\INRC2\include;$(IncludePath)</IncludePath>
-    <ReferencePath>$(SolutionDir)\INRC2\instance;$(ReferencePath)</ReferencePath>
-    <LibraryPath>$(BOOST_DIR)/stage/lib;$(SolutionDir)\INRC2\lib;$(LibraryPath)</LibraryPath>
-    <SourcePath>$(SolutionDir)\INRC2\src;$(SourcePath)</SourcePath>
+    <IncludePath>$(ProjectDir)\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)\lib;$(LibraryPath)</LibraryPath>
+    <SourcePath>$(ProjectDir)\src;$(SourcePath)</SourcePath>
+    <ReferencePath>$(ProjectDir)\instance;$(ReferencePath)</ReferencePath>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(BOOST_DIR);$(SolutionDir)\INRC2\include;$(IncludePath)</IncludePath>
-    <ReferencePath>$(SolutionDir)\INRC2\instance;$(ReferencePath)</ReferencePath>
-    <LibraryPath>$(BOOST_DIR)/stage/lib;$(SolutionDir)\INRC2\lib;$(LibraryPath)</LibraryPath>
-    <SourcePath>$(SolutionDir)\INRC2\src;$(SourcePath)</SourcePath>
+    <IncludePath>$(ProjectDir)\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)\lib;$(LibraryPath)</LibraryPath>
+    <SourcePath>$(ProjectDir)\src;$(SourcePath)</SourcePath>
+    <ReferencePath>$(ProjectDir)\instance;$(ReferencePath)</ReferencePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -59,7 +60,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -68,13 +69,13 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <PrecompiledHeader>
       </PrecompiledHeader>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -84,31 +85,20 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\INRC2\src\INRC2.cpp" />
-    <ClCompile Include="..\INRC2\src\NurseRostering.cpp" />
-    <ClCompile Include="..\INRC2\src\Solution.cpp" />
-    <ClCompile Include="..\INRC2\src\Solver.cpp" />
-    <ClCompile Include="..\INRC2\src\utility.cpp" />
-    <ClCompile Include="BatchTest.cpp" />
-    <ClCompile Include="InstanceAnalysis.cpp" />
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="RebuildSolution.cpp" />
+    <ClCompile Include="src\INRC2.cpp" />
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\NurseRostering.cpp" />
+    <ClCompile Include="src\Solution.cpp" />
+    <ClCompile Include="src\Solver.cpp" />
+    <ClCompile Include="src\utility.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\INRC2\include\DebugFlag.h" />
-    <ClInclude Include="..\INRC2\include\INRC2.h" />
-    <ClInclude Include="..\INRC2\include\NurseRostering.h" />
-    <ClInclude Include="..\INRC2\include\Solution.h" />
-    <ClInclude Include="..\INRC2\include\Solver.h" />
-    <ClInclude Include="..\INRC2\include\utility.h" />
-    <ClInclude Include="INRC2_Debug.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="VBA_MergeAdjacentCellsWithSameValue.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="InstanceAnalysis.csv" />
-    <None Include="log.csv" />
+    <ClInclude Include="include\DebugFlag.h" />
+    <ClInclude Include="include\INRC2.h" />
+    <ClInclude Include="include\NurseRostering.h" />
+    <ClInclude Include="include\Solution.h" />
+    <ClInclude Include="include\Solver.h" />
+    <ClInclude Include="include\utility.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

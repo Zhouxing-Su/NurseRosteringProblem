@@ -102,6 +102,7 @@ protected:
     // initialize assist data about nurse-skill relation
     void discoverNurseSkillRelation();
 
+
     // nurse-skill relation
     NurseNumOfSkill nurseNumOfSkill;
     NurseWithSkill nurseWithSkill;
@@ -119,6 +120,9 @@ private:    // forbidden operators
 class NurseRostering::TabuSolver : public NurseRostering::Solver
 {
 public:
+    static const int PERTURB_COUNT_IN_ILS = 1000;
+
+
     TabuSolver( const NurseRostering &input, clock_t startTime = clock() );
     virtual ~TabuSolver() {}
 
@@ -128,6 +132,9 @@ public:
 private:
     void greedyInit();
     void exactInit();
+
+    // iteratively run local search and perturb
+    void iterativeLocalSearch();
 
 
     Solution sln;

@@ -397,6 +397,7 @@ NurseRostering::TabuSolver::TabuSolver( const NurseRostering &input, clock_t st 
 void NurseRostering::TabuSolver::init( const string &id )
 {
     runID = id;
+    algorithmName = "Tabu";
     srand( problem.randSeed );
 
     discoverNurseSkillRelation();
@@ -409,14 +410,12 @@ void NurseRostering::TabuSolver::init( const string &id )
 
 void NurseRostering::TabuSolver::solve()
 {
-    // TODO
-    Timer timer( problem.timeout, startTime );
-    sln.iterativeLocalSearch( timer, optima );
+    iterativeLocalSearch();
 }
 
 void NurseRostering::TabuSolver::greedyInit()
 {
-    algorithmName = "Tabu[GreedyInit]";
+    algorithmName += "[GreedyInit]";
 
     if (sln.genInitAssign_Greedy() == false) {
         Timer timer( REPAIR_TIMEOUT_IN_INIT, startTime );
@@ -428,9 +427,28 @@ void NurseRostering::TabuSolver::greedyInit()
 
 void NurseRostering::TabuSolver::exactInit()
 {
-    algorithmName = "Tabu[ExactInit]";
+    algorithmName += "[ExactInit]";
 
     if (sln.genInitAssign_BranchAndCut() == false) {
         errorLog( "no feasible solution!" );
+    }
+}
+
+void NurseRostering::TabuSolver::iterativeLocalSearch()
+{
+    algorithmName += "[IterativeLocalSearch]";
+
+    Timer timer( problem.timeout, startTime );
+
+    const int timeForEachLoop = problem.timeout / PERTURB_COUNT_IN_ILS;
+    int loopCount = timer.restTime() / timeForEachLoop;
+    for (; !timer.isTimeOut() && loopCount > 0; --loopCount) {
+        Timer t( timer.restTime() / loopCount, clock() );
+        sln.randomWalk( t, optima );
+        if (rand() % 2) {
+            sln.localSearch( timer, optima );
+        } else {
+            sln.localSearchOnConsecutiveBorder( timer, optima );
+        }
     }
 }

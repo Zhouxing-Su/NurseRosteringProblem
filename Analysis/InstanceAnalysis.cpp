@@ -1,4 +1,4 @@
-#include "INRC2_Debug.h"
+#include "Analysis.h"
 
 
 using namespace std;
@@ -7,7 +7,6 @@ using namespace INRC2;
 
 void analyzeInstance()
 {
-    const int weekdataNum = 10;
     const string header1_prefix0( "Scenario,Min|Max|Limit,AvgNurse" );
     const string header1_prefix1( "Scenario,AvgNursePerWeek,PerWeekend" );
     const string header1_suffix( ",Avg|Ideal Nurse" );
@@ -72,7 +71,7 @@ void analyzeInstance()
         }
         csv << endl;
         // analyze weekdata info
-        for (int w = 0; w < weekdataNum; w++) {
+        for (int w = 0; w < WEEKDATA_NUM; w++) {
             ostringstream weekdataName;
             weekdataName << instanceDir << instance[i] << weekPrefix << instance[i]
                 << '-' << w << fileSuffix;

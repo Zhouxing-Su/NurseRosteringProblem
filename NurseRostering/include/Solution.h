@@ -1,8 +1,9 @@
 /**
-*   usage : 1. provide interface to be manipulated by
+*   usage : 1.  provide interface to be manipulated by
 *               solver for Nurse Rostering Problem.
 *
-*   note :  1.
+*   note :  1.  use repair mode of penalty to fix infeasible solution in repaire().
+*
 */
 
 #ifndef SOLUTION_H
@@ -49,8 +50,6 @@ public:
     void evaluateObjValue();    // using assist data structure
     bool repair( const Timer &timer );  // make infeasible solution feasible
 
-    // iteratively run local search and perturb
-    void iterativeLocalSearch( const Timer &timer, Output &optima );
     // try add shift until there is no improvement , then try change shift,
     // then try remove shift, then try add shift again. if all of them
     // can't improve or time is out, return.

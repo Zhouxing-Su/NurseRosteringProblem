@@ -1,7 +1,7 @@
 /**
-*   usage : 1. just for test...
+*   usage : 1. simulator for calling solver on stages.
 *
-*   note :  1. use some bad tricks to reduce duplicated work.
+*   note :  1.
 */
 
 #ifndef INRC2_DEBUG_H
@@ -18,12 +18,6 @@
 #include <chrono>
 #include <cstring>
 #include <cstdlib>
-
-#ifndef _WIN32_WINNT
-#define _WIN32_WINNT 0x601  // Win7
-#endif
-
-#include <boost/asio.hpp>
 
 #include "DebugFlag.h"
 #include "INRC2.h"
@@ -56,7 +50,7 @@ static const int WEEKDATA_SEQ_SIZE = (MAX_WEEK_NUM + 1);
 
 extern char *fullArgv[ArgcVal::full];
 
-extern const std::string testOutputDir;
+extern const std::string outputDirPrefix;
 extern const std::string instanceDir;
 extern const std::vector<std::string> instance;
 
@@ -80,9 +74,6 @@ void genWeekdataSequence( int instIndex, char weekdata[WEEKDATA_SEQ_SIZE] );
 void genInstanceSequence( int instIndex, char &initHis, char weekdata[WEEKDATA_SEQ_SIZE] );
 
 void makeSureDirExist( const std::string &dir );
-
-void analyzeInstance();
-void rebuildSolution( const std::string &filename, int lineNum );
 
 void testAllInstances( const std::string &id, int runCount );
 void test( const std::string &id, const std::string &outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec );
