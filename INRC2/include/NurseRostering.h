@@ -2,7 +2,7 @@
 *   usage : 1. contain data for identifying a Nurse Rostering Problem.
 *           2. provide solver interface.
 *
-*   note :  1.
+*   note :  1. move DefaultPenalty into Penalty and change enum to ObjValue.
 */
 
 #ifndef NURSE_ROSTERING_H
@@ -20,11 +20,22 @@
 class NurseRostering
 {
 public:
-    static const int MAX_RUNNING_TIME = 1073741824;  // in clock count
     enum Weekday { HIS = 0, Mon, Tue, Wed, Thu, Fri, Sat, Sun, NUM = Sun, SIZE };
-    enum Penalty
+    enum DefaultPenalty
     {
+        MAX_OBJ_VALUE = (1 << 30),
+        // amplifier for improving accuracy
         AMP = 2 * 2 * 2 * 5 * 5,
+        // attenuation for fast repair without considering quality
+        DECAY = 5,
+        // hard constraints
+        SingleAssign = MAX_OBJ_VALUE,
+        UnderStaff = MAX_OBJ_VALUE,
+        UnderStaff_Repair = (AMP * 240),
+        Succession = MAX_OBJ_VALUE,
+        Succession_Repair = (AMP * 300),
+        MissSkill = MAX_OBJ_VALUE,
+        // soft constraints
         InsufficientStaff = (AMP * 30),
         ConsecutiveShift = (AMP * 15),
         ConsecutiveDay = (AMP * 30),
@@ -143,22 +154,22 @@ public:
         std::map<std::string, NurseID> nurseMap;
     };
 
-    class SingleAssign
+    class Assign
     {
     public:
         // the default constructor means there is no assignment
-        SingleAssign( ShiftID sh = Scenario::Shift::ID_NONE, SkillID sk = 0 ) :shift( sh ), skill( sk ) {}
+        Assign( ShiftID sh = Scenario::Shift::ID_NONE, SkillID sk = 0 ) :shift( sh ), skill( sk ) {}
 
         ShiftID shift;
         SkillID skill;
     };
-    // Assign[nurse][day] is a SingleAssign
-    class Assign : public std::vector < std::vector< SingleAssign > >
+    // AssignTable[nurse][day] is a SingleAssign
+    class AssignTable : public std::vector < std::vector< Assign > >
     {
     public:
-        Assign() {}
-        Assign( int nurseNum, int weekdayNum = Weekday::SIZE, const SingleAssign &singleAssign = SingleAssign() )
-            : std::vector< std::vector< SingleAssign > >( nurseNum, std::vector< SingleAssign >( weekdayNum, singleAssign ) ) {}
+        AssignTable() {}
+        AssignTable( int nurseNum, int weekdayNum = Weekday::SIZE, const Assign &singleAssign = Assign() )
+            : std::vector< std::vector< Assign > >( nurseNum, std::vector< Assign >( weekdayNum, singleAssign ) ) {}
 
         static bool isWorking( ShiftID shift )
         {
@@ -171,6 +182,57 @@ public:
         }
     private:
 
+    };
+
+    class Penalty
+    {
+    public:
+        Penalty() { setNormalMode(); }
+
+        // hard constraints must be satisfied 
+        // and soft constraints get their original penalty
+        void setNormalMode();
+        // UnderStaff and InsufficientStaff is not considered
+        // due to nurse number will not change
+        void setSwapMode();
+        // allow hard constraints UnderStaff and Succession being violated
+        // but with much greater penalty than soft constraints
+        void setRepairMode( ObjValue softConstraintDecay = DefaultPenalty::DECAY,
+            ObjValue WeightOnUnderStaff = DefaultPenalty::UnderStaff_Repair,
+            ObjValue WeightOnSuccesion = DefaultPenalty::Succession_Repair );
+
+        // hard constraint
+        ObjValue getUnderStaff() const { return UnderStaff; }
+        ObjValue getSingleAssign() const { return SingleAssign; }
+        ObjValue getSuccession() const { return Succession; };
+        ObjValue getMissSkill() const { return MissSkill; }
+
+        // soft constraint
+        ObjValue getInsufficientStaff() const { return InsufficientStaff; }
+        ObjValue getConsecutiveShift() const { return ConsecutiveShift; }
+        ObjValue getConsecutiveDay() const { return ConsecutiveDay; }
+        ObjValue getConsecutiveDayOff() const { return ConsecutiveDayOff; }
+        ObjValue getPreference() const { return Preference; }
+        ObjValue getCompleteWeekend() const { return CompleteWeekend; }
+        ObjValue getTotalAssign() const { return TotalAssign; }
+        ObjValue getTotalWorkingWeekend() const { return TotalWorkingWeekend; }
+
+    private:
+        // hard constraint
+        ObjValue SingleAssign;
+        ObjValue UnderStaff;
+        ObjValue Succession;
+        ObjValue MissSkill;
+
+        // soft constraint
+        ObjValue InsufficientStaff;
+        ObjValue ConsecutiveShift;
+        ObjValue ConsecutiveDay;
+        ObjValue ConsecutiveDayOff;
+        ObjValue Preference;
+        ObjValue CompleteWeekend;
+        ObjValue TotalAssign;
+        ObjValue TotalWorkingWeekend;
     };
 
     class Output;
@@ -187,7 +249,7 @@ public:
     typedef std::vector< std::vector<std::vector<NurseID> > > NurseWithSkill;
 
 
-    static const ObjValue MAX_OBJ_VALUE;
+    static const clock_t MAX_RUNNING_TIME;  // in clock count
 
 
     // must set all data members by direct accessing!

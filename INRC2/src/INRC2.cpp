@@ -60,6 +60,12 @@ namespace INRC2
         } else {
             input.timeout = NurseRostering::MAX_RUNNING_TIME;
         }
+        if (argvMap.find( ARGV_SOLUTION ) == argvMap.end()) {
+#ifdef INRC2_DEBUG
+            cerr << getTime() << " : missing obligate argument(solution file name)" << endl;
+#endif
+            return;
+        }
 
         // start computation
         NurseRostering::TabuSolver solver( input, startTime );
@@ -67,14 +73,7 @@ namespace INRC2
         solver.solve();
 
         // write output
-        if (argvMap.find( ARGV_SOLUTION ) != argvMap.end()) {
-            writeSolution( argvMap[ARGV_SOLUTION], solver );
-        } else {
-#ifdef INRC2_DEBUG
-            cerr << getTime() << " : missing obligate argument(solution file name)" << endl;
-#endif
-            return;
-        }
+        writeSolution( argvMap[ARGV_SOLUTION], solver );
         if (argvMap.find( ARGV_CUSTOM_OUTPUT ) != argvMap.end()) {
             writeCustomOutput( argvMap[ARGV_CUSTOM_OUTPUT], solver );
         }
@@ -315,7 +314,7 @@ namespace INRC2
     void writeSolution( const std::string &solutionFileName, const NurseRostering::Solver &solver )
     {
         const NurseRostering::Names &names( solver.problem.names );
-        const NurseRostering::Assign &assign( solver.getOptima().assign );
+        const NurseRostering::AssignTable &assign( solver.getOptima().assign );
         ofstream ofs( solutionFileName );
 
         ofs << "SOLUTION" << endl;

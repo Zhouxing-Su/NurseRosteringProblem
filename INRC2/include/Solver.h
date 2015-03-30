@@ -66,9 +66,9 @@ public:
 
     // calculate objective of optima with original input instead of auxiliary data structure
     // return objective value if solution is legal, else ILLEGAL_SOLUTION
-    bool checkFeasibility( const Assign &assgin ) const;
+    bool checkFeasibility( const AssignTable &assgin ) const;
     bool checkFeasibility() const;  // check optima assign
-    ObjValue checkObjValue( const Assign &assign ) const;
+    ObjValue checkObjValue( const AssignTable &assign ) const;
     ObjValue checkObjValue() const;  // check optima assign
 
     const NurseNumOfSkill& getNurseNumOfSkill() const { return nurseNumOfSkill; }
@@ -84,9 +84,9 @@ protected:
         return (!(iterCount & CHECK_TIME_INTERVAL_MASK_IN_ITER));
     }
 
-    NurseNumsOnSingleAssign countNurseNums( const Assign &assign ) const;
+    NurseNumsOnSingleAssign countNurseNums( const AssignTable &assign ) const;
     void checkConsecutiveViolation( int &objValue,
-        const Assign &assign, NurseID nurse, int weekday, ShiftID lastShiftID,
+        const AssignTable &assign, NurseID nurse, int weekday, ShiftID lastShiftID,
         int &consecutiveShift, int &consecutiveDay, int &consecutiveDayOff,
         bool &shiftBegin, bool &dayBegin, bool &dayoffBegin ) const;
 

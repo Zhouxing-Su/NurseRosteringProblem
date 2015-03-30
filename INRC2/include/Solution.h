@@ -22,12 +22,12 @@ class NurseRostering::Output
 {
 public:
     Output() :objVal( -1 ) {}
-    Output( int objValue, const Assign &assignment )
+    Output( int objValue, const AssignTable &assignment )
         :objVal( objValue ), assign( assignment ), findTime( clock() )
     {
     }
 
-    Assign assign;
+    AssignTable assign;
     ObjValue objVal;
     clock_t findTime;
 };
@@ -37,9 +37,9 @@ class NurseRostering::Solution
 {
 public:
     Solution( const Solver &solver );
-    Solution( const Solver &solver, const Assign &assign );
+    Solution( const Solver &solver, const AssignTable &assign );
     // there must not be self assignment and assign must be build from same problem
-    void rebuildAssistData( const Assign &assign );
+    void rebuildAssistData( const AssignTable &assign );
     Output genOutput() const { return Output( objValue, assign ); }
     History genHistory() const; // history for next week
 
@@ -59,7 +59,7 @@ public:
     // randomly select add, change or remove shift until timeout
     void randomWalk( const Timer &timer, Output &optima );
 
-    const Assign& getAssign() const { return assign; }
+    const AssignTable& getAssign() const { return assign; }
     // shift must not be none shift
     bool isValidSuccession( NurseID nurse, ShiftID shift, int weekday ) const;
     bool isValidPrior( NurseID nurse, ShiftID shift, int weekday ) const;
@@ -146,7 +146,7 @@ private:
         Consecutive() {}
         Consecutive( const History &his, NurseID nurse )
         {
-            if (Assign::isWorking( his.lastShifts[nurse] )) {
+            if (AssignTable::isWorking( his.lastShifts[nurse] )) {
                 std::fill( dayLow, dayLow + Weekday::SIZE, Weekday::Mon );
                 std::fill( dayHigh, dayHigh + Weekday::SIZE, Weekday::Sun );
                 std::fill( shiftLow, shiftLow + Weekday::SIZE, Weekday::Mon );
@@ -201,7 +201,7 @@ private:
     class Move
     {
     public:
-        Move() : delta( MAX_OBJ_VALUE ) {}
+        Move() : delta( DefaultPenalty::MAX_OBJ_VALUE ) {}
         Move( ObjValue d, NurseID n, int w )
             : delta( d ), nurse( n ), weekday( w )
         {
@@ -280,7 +280,7 @@ private:
     // consecutive[nurse] is the consecutive assignments record for nurse
     std::vector<Consecutive> consecutives;
 
-    Assign assign;
+    AssignTable assign;
 
     ObjValue objValue;
     ObjValue objInsufficientStaff;
