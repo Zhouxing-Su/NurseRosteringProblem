@@ -54,6 +54,7 @@ public:
 
 
     Solver( const NurseRostering &input, clock_t startTime );
+    Solver( const NurseRostering &input, const Output &optima, clock_t startTime );
     virtual ~Solver() {}
 
     // set algorithm name, set parameters, generate initial solution
@@ -124,6 +125,7 @@ public:
 
 
     TabuSolver( const NurseRostering &input, clock_t startTime = clock() );
+    TabuSolver( const NurseRostering &input, const Output &optima, clock_t startTime = clock() );
     virtual ~TabuSolver() {}
 
     virtual void init( const std::string &runID );

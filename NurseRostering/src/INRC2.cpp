@@ -6,7 +6,7 @@ using namespace std;
 
 namespace INRC2
 {
-    void run( int argc, char *argv[] )
+    int run( int argc, char *argv[] )
     {
         clock_t startTime = clock();
 
@@ -18,15 +18,12 @@ namespace INRC2
 
         // read input
         NurseRostering input;
-        // recover scenario first, for week data may use information in it
-        if (argvMap.find( ARGV_SCENARIO ) != argvMap.end()) {
-            readScenario( argvMap[ARGV_SCENARIO], input );
-        } else {
-#ifdef INRC2_DEBUG
-            cerr << getTime() << " : missing obligate argument(scenario)" << endl;
-#endif
-            return;
+        // load scenario first, for week data may use information in it
+        if (!readScenario( argvMap[ARGV_SCENARIO], input )) {
+            return -1;
         }
+
+        // load history
         if (argvMap.find( ARGV_CUSTOM_INPUT ) != argvMap.end()) {
             readCustomInput( argvMap[ARGV_CUSTOM_INPUT], input );
         } else if (argvMap.find( ARGV_HISTORY ) != argvMap.end()) {
@@ -35,22 +32,23 @@ namespace INRC2
 #ifdef INRC2_DEBUG
             cerr << getTime() << " : missing obligate argument(history)" << endl;
 #endif
-            return;
+            return -1;
         }
-        if (argvMap.find( ARGV_WEEKDATA ) != argvMap.end()) {
-            readWeekData( argvMap[ARGV_WEEKDATA], input );
-        } else {
-#ifdef INRC2_DEBUG
-            cerr << getTime() << " : missing obligate argument(week data)" << endl;
-#endif
-            return;
+
+        // load weekdata
+        if (!readWeekData( argvMap[ARGV_WEEKDATA], input )) {
+            return -1;
         }
+
+        // load random seed
         if (argvMap.find( ARGV_RANDOM_SEED ) != argvMap.end()) {
             istringstream iss( argvMap[ARGV_RANDOM_SEED] );
             iss >> input.randSeed;
         } else {
             input.randSeed = static_cast<int>(time( NULL ) + clock());
         }
+
+        // load timeout
         if (argvMap.find( ARGV_TIME ) != argvMap.end()) {
             istringstream iss( argvMap[ARGV_TIME] );
             double timeout;
@@ -60,11 +58,13 @@ namespace INRC2
         } else {
             input.timeout = NurseRostering::MAX_RUNNING_TIME;
         }
+
+        // check solution file name
         if (argvMap.find( ARGV_SOLUTION ) == argvMap.end()) {
 #ifdef INRC2_DEBUG
             cerr << getTime() << " : missing obligate argument(solution file name)" << endl;
 #endif
-            return;
+            return -1;
         }
 
         // start computation
@@ -89,14 +89,23 @@ namespace INRC2
             << '[' << argvMap[ARGV_WEEKDATA].substr( weekdataFileNameIndex ) << ']';
         solver.record( LOG_FILE_NAME, oss.str() );
 #endif
+
+        return 0;
     }
 
-    void readScenario( const std::string &scenarioFileName, NurseRostering &input )
+    bool readScenario( const std::string &scenarioFileName, NurseRostering &input )
     {
         NurseRostering::Scenario &scenario = input.scenario;
         char c;
         char buf[MAX_BUF_SIZE];
         ifstream ifs( scenarioFileName );
+
+        if (!ifs.is_open()) {
+#ifdef INRC2_DEBUG
+            cerr << getTime() << " : fail to open scenario file." << endl;
+#endif
+            return false;
+        }
 
         ifs.getline( buf, MAX_BUF_LEN, '=' );   // SCENARIO =
         ifs >> input.names.scenarioName;        //  nXXXwX
@@ -188,13 +197,21 @@ namespace INRC2
         }
 
         ifs.close();
+        return true;
     }
 
-    void readHistory( const std::string &historyFileName, NurseRostering &input )
+    bool readHistory( const std::string &historyFileName, NurseRostering &input )
     {
         NurseRostering::History &history = input.history;
         char buf[MAX_BUF_SIZE];
         ifstream ifs( historyFileName );
+
+        if (!ifs.is_open()) {
+#ifdef INRC2_DEBUG
+            cerr << getTime() << " : fail to open history file." << endl;
+#endif
+            return false;
+        }
 
         history.accObjValue = 0;
         ifs.getline( buf, MAX_BUF_LEN );    // HISTORY
@@ -221,9 +238,10 @@ namespace INRC2
         }
 
         ifs.close();
+        return true;
     }
 
-    void readWeekData( const std::string &weekDataFileName, NurseRostering &input )
+    bool readWeekData( const std::string &weekDataFileName, NurseRostering &input )
     {
         NurseRostering::WeekData &weekdata = input.weekData;
         weekdata.minNurseNums = vector< vector< vector<int> > >( NurseRostering::Weekday::SIZE, vector< vector<int> >( input.scenario.shifts.size(), vector<int>( input.scenario.skillTypeNum ) ) );
@@ -232,6 +250,13 @@ namespace INRC2
         char c;
         char buf[MAX_BUF_SIZE];
         ifstream ifs( weekDataFileName );
+
+        if (!ifs.is_open()) {
+#ifdef INRC2_DEBUG
+            cerr << getTime() << " : fail to open weekdata file." << endl;
+#endif
+            return false;
+        }
 
         ifs.getline( buf, MAX_BUF_LEN );    // WEEK_DATA
         ifs.getline( buf, MAX_BUF_LEN );    // nXXXwX
@@ -270,11 +295,19 @@ namespace INRC2
         }
 
         ifs.close();
+        return true;
     }
 
-    void readCustomInput( const std::string &customInputFileName, NurseRostering &input )
+    bool readCustomInput( const std::string &customInputFileName, NurseRostering &input )
     {
         ifstream ifs( customInputFileName, ios::binary );
+
+        if (!ifs.is_open()) {
+#ifdef INRC2_DEBUG
+            cerr << getTime() << " : fail to open custom input file." << endl;
+#endif
+            return false;
+        }
 
         const int nurseNum = input.scenario.nurseNum;
         int *totalAssignNums = new int[nurseNum];
@@ -309,13 +342,21 @@ namespace INRC2
         delete[] consecutiveDayoffNums;
 
         ifs.close();
+        return true;
     }
 
-    void writeSolution( const std::string &solutionFileName, const NurseRostering::Solver &solver )
+    bool writeSolution( const std::string &solutionFileName, const NurseRostering::Solver &solver )
     {
         const NurseRostering::Names &names( solver.problem.names );
         const NurseRostering::AssignTable &assign( solver.getOptima().assign );
         ofstream ofs( solutionFileName );
+
+        if (!ofs.is_open()) {
+#ifdef INRC2_DEBUG
+            cerr << getTime() << " : fail to open solution file." << endl;
+#endif
+            return false;
+        }
 
         ofs << "SOLUTION" << endl;
         ofs << solver.problem.history.pastWeekCount << ' '
@@ -336,13 +377,24 @@ namespace INRC2
         }
         ofs << "ASSIGNMENTS = " << totalAssign << endl;
         ofs << oss.str();
+
+        ofs.close();
+        return true;
     }
 
-    void writeCustomOutput( const std::string &customOutputFileName, const NurseRostering::Solver &solver )
+    bool writeCustomOutput( const std::string &customOutputFileName, const NurseRostering::Solver &solver )
     {
         NurseRostering::History history( solver.genHistory() );
 
         ofstream ofs( customOutputFileName, ios::binary );
+
+        if (!ofs.is_open()) {
+#ifdef INRC2_DEBUG
+            cerr << getTime() << " : fail to open custom output file." << endl;
+#endif
+            return false;
+        }
+
         ofs.write( reinterpret_cast<const char *>(&history.accObjValue), sizeof( history.accObjValue ) );
         ofs.write( reinterpret_cast<const char *>(&history.pastWeekCount), sizeof( history.pastWeekCount ) );
         ofs.write( reinterpret_cast<const char *>(&history.currentWeek), sizeof( history.currentWeek ) );
@@ -352,6 +404,8 @@ namespace INRC2
         ofs.write( reinterpret_cast<const char *>(history.consecutiveShiftNums.data()), history.consecutiveShiftNums.size() * sizeof( int ) );
         ofs.write( reinterpret_cast<const char *>(history.consecutiveDayNums.data()), history.consecutiveDayNums.size() * sizeof( int ) );
         ofs.write( reinterpret_cast<const char *>(history.consecutiveDayoffNums.data()), history.consecutiveDayoffNums.size() * sizeof( int ) );
+
         ofs.close();
+        return true;
     }
 }

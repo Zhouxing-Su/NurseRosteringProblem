@@ -9,6 +9,8 @@ int main()
 {
     srand( static_cast<int>(time( NULL ) + clock()) );
 
+    loadInstTimeOut();
+
     ostringstream id( "0" );
 
     //int instIndex = 2;

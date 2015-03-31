@@ -54,7 +54,8 @@ extern const std::string outputDirPrefix;
 extern const std::string instanceDir;
 extern const std::vector<std::string> instance;
 
-extern const std::vector<double> instTimeout;
+extern const std::string timoutFileName;
+extern std::map<int, double> instTimeout;
 
 extern const std::string scePrefix;
 extern const std::string weekPrefix;
@@ -66,6 +67,10 @@ extern const std::string cusPrefix;
 
 extern const char *FeasibleCheckerHost;
 
+void loadInstTimeOut();
+
+int getNurseNum( int instIndex );
+int getWeekNum( int instIndex );
 
 // this functions do not guarantee the sequence is feasible
 char genInitHisIndex();

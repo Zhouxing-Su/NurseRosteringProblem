@@ -1,4 +1,4 @@
-SCENARIO = n021w4_2
+SCENARIO = n021w4
 
 WEEKS = 4
 

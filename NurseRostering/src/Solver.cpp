@@ -14,6 +14,11 @@ NurseRostering::Solver::Solver( const NurseRostering &input, clock_t st )
 {
 }
 
+NurseRostering::Solver::Solver( const NurseRostering &input, const Output &opt, clock_t st )
+    : problem( input ), startTime( st ), optima( opt )
+{
+}
+
 NurseRostering::History NurseRostering::Solver::genHistory() const
 {
     return Solution( *this, optima.assign ).genHistory();
@@ -221,7 +226,7 @@ void NurseRostering::Solver::print() const
 
 void NurseRostering::Solver::initResultSheet( std::ofstream &csvFile )
 {
-    csvFile << "Time, ID, Instance, Algorithm, RandSeed, Duration, Feasible, ObjCheck, ObjValue, AccObjValue, Solution" << std::endl;
+    csvFile << "Time,ID,Instance,Algorithm,RandSeed,Duration,Feasible,ObjCheck,ObjValue,AccObjValue,Solution" << std::endl;
 }
 
 void NurseRostering::Solver::record( const std::string logFileName, const std::string &instanceName ) const
@@ -391,6 +396,11 @@ void NurseRostering::Solver::discoverNurseSkillRelation()
 
 NurseRostering::TabuSolver::TabuSolver( const NurseRostering &input, clock_t st )
     :Solver( input, st ), sln( *this )
+{
+}
+
+NurseRostering::TabuSolver::TabuSolver( const NurseRostering &input, const Output &opt, clock_t st )
+    : Solver( input, opt, st ), sln( *this )
 {
 }
 

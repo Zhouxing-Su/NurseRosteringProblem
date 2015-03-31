@@ -7,7 +7,5 @@ using namespace INRC2;
 
 int main( int argc, char *argv[] )
 {
-    run( argc, argv );
-
-    return 0;
+    return run( argc, argv );
 }

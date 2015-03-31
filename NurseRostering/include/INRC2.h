@@ -63,14 +63,14 @@ namespace INRC2
     };
 
 
-    void run( int argc, char *argv[] );
+    int run( int argc, char *argv[] );
 
-    void readScenario( const std::string &scenarioFileName, NurseRostering &input );
-    void readHistory( const std::string &historyFileName, NurseRostering &input );
-    void readWeekData( const std::string &weekDataFileName, NurseRostering &input );
-    void readCustomInput( const std::string &customInputFileName, NurseRostering &input );
-    void writeSolution( const std::string &solutionFileName, const NurseRostering::Solver &solver );
-    void writeCustomOutput( const std::string &customOutputFileName, const NurseRostering::Solver &solver );
+    bool readScenario( const std::string &scenarioFileName, NurseRostering &input );
+    bool readHistory( const std::string &historyFileName, NurseRostering &input );
+    bool readWeekData( const std::string &weekDataFileName, NurseRostering &input );
+    bool readCustomInput( const std::string &customInputFileName, NurseRostering &input );
+    bool writeSolution( const std::string &solutionFileName, const NurseRostering::Solver &solver );
+    bool writeCustomOutput( const std::string &customOutputFileName, const NurseRostering::Solver &solver );
 }
 
 

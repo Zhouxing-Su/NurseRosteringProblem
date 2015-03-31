@@ -75,6 +75,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DisableSpecificWarnings>4127;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -92,7 +93,7 @@
     <ClCompile Include="..\NurseRostering\src\utility.cpp" />
     <ClCompile Include="InstanceAnalysis.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="RebuildSolution.cpp" />
+    <ClCompile Include="SolutionChecker.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\INRC2_Simulator\BatchTest.h" />

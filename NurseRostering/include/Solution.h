@@ -23,7 +23,7 @@ class NurseRostering::Output
 {
 public:
     Output() :objVal( -1 ) {}
-    Output( int objValue, const AssignTable &assignment )
+    Output( ObjValue objValue, const AssignTable &assignment )
         :objVal( objValue ), assign( assignment ), findTime( clock() )
     {
     }

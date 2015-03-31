@@ -39,16 +39,8 @@ const std::vector<std::string> instance = {
     "n120w4", "n120w8"  // 15 16
 };
 
-const std::vector<double> instTimeout = {
-    30, 30, 30,     // 0 1 2
-    70.13, 70.13,   // 3 4
-    122.73, 122.73, // 5 6
-    175.34, 175.34, // 7 8
-    227.94, 227.94, // 9 10
-    333.14, 333.14, // 11 12
-    438.34, 438.34, // 13 14
-    543.54, 543.54  // 15 16
-};
+const std::string timoutFileName( "timeout.txt" );
+std::map<int, double> instTimeout;
 
 const std::string scePrefix( "/Sc-" );
 const std::string weekPrefix( "/WD-" );
@@ -72,9 +64,36 @@ void testAllInstances( const std::string &id, int runCount )
         for (int i = runCount; i > 0; --i) {
             genInstanceSequence( instIndex, initHis, weekdata );
             randSeed = static_cast<int>(time( NULL ) + clock());
-            test_customIO( id, outputDirPrefix + id, instIndex, initHis, weekdata, instTimeout[instIndex], randSeed );
+            test_customIO( id, outputDirPrefix + id, instIndex,
+                initHis, weekdata, instTimeout[getNurseNum( instIndex )], randSeed );
         }
     }
+}
+
+void loadInstTimeOut()
+{
+    ifstream timoutFile( timoutFileName );
+
+    int nurseNum;
+    double runningTime;
+    while (timoutFile >> nurseNum >> runningTime) {
+        instTimeout[nurseNum] = runningTime;
+    }
+
+    timoutFile.close();
+}
+
+int getNurseNum( int instIndex )
+{
+    istringstream iss( instance[instIndex].substr( 1, 3 ) );
+    int nurseNum;
+    iss >> nurseNum;
+    return nurseNum;
+}
+
+int getWeekNum( int instIndex )
+{
+    return instance[instIndex][5] - '1';
 }
 
 char genInitHisIndex()
@@ -85,7 +104,7 @@ char genInitHisIndex()
 void genWeekdataSequence( int instIndex, char weekdata[WEEKDATA_SEQ_SIZE] )
 {
     memset( weekdata, 0, WEEKDATA_SEQ_SIZE * sizeof( char ) );
-    int weekNum = instance[instIndex][5] - '1';
+    int weekNum = getWeekNum( instIndex );
     for (; weekNum >= 0; --weekNum) {
         weekdata[weekNum] = (rand() % WEEKDATA_NUM) + '0';
     }
@@ -99,7 +118,7 @@ void genInstanceSequence( int instIndex, char &initHis, char weekdata[WEEKDATA_S
         genWeekdataSequence( instIndex, weekdata );
 
         string file = "/" + instance[instIndex] + "/H0-" + instance[instIndex] + "-" + initHis;
-        for (int weekNum = instance[instIndex][5] - '1'; weekNum >= 0; --weekNum) {
+        for (int weekNum = getWeekNum( instIndex ); weekNum >= 0; --weekNum) {
             file += ("/WD-" + instance[instIndex] + "-" + weekdata[weekNum]);
         }
 
