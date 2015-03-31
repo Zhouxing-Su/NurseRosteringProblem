@@ -246,7 +246,7 @@ void NurseRostering::Solution::localSearch( const Timer &timer, Output &optima )
     }
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t duration = clock() - startTime;
-    cout << "iter: " << iterCount << ' '
+    cout << "[LS] iter: " << iterCount << ' '
         << "time: " << duration << ' '
         << "speed: " << iterCount * static_cast<double>(CLOCKS_PER_SEC) / (duration + 1) << endl;
 #endif
@@ -298,7 +298,7 @@ void NurseRostering::Solution::localSearchOnConsecutiveBorder( const Timer &time
     }
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t duration = clock() - startTime;
-    cout << "iter: " << iterCount << ' '
+    cout << "[LSCB] iter: " << iterCount << ' '
         << "time: " << duration << ' '
         << "speed: " << iterCount * static_cast<double>(CLOCKS_PER_SEC) / (duration + 1) << endl;
 #endif
@@ -349,7 +349,7 @@ void NurseRostering::Solution::randomWalk( const Timer &timer, Output &optima )
     }
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t duration = clock() - startTime;
-    cout << "iter: " << iterCount << ' '
+    cout << "[RW] iter: " << iterCount << ' '
         << "time: " << duration << ' '
         << "speed: " << iterCount * static_cast<double>(CLOCKS_PER_SEC) / (duration + 1) << endl;
 #endif
@@ -758,11 +758,10 @@ NurseRostering::ObjValue NurseRostering::Solution::tryChangeAssign( int weekday,
     }
 
     const WeekData &weekData( solver.problem.weekData );
-    int lack = weekData.minNurseNums[weekday][oldShiftID][oldSkillID] -
+    if (weekData.minNurseNums[weekday][oldShiftID][oldSkillID] >=
         (weekData.optNurseNums[weekday][oldShiftID][oldSkillID] -
-        missingNurseNums[weekday][oldShiftID][oldSkillID]);
-    if (lack >= 0) {
-        delta += penalty.UnderStaff() * lack;
+        missingNurseNums[weekday][oldShiftID][oldSkillID])) {
+        delta += penalty.UnderStaff();
     }
 
     if (delta >= DefaultPenalty::MAX_OBJ_VALUE) {
@@ -911,11 +910,10 @@ NurseRostering::ObjValue NurseRostering::Solution::tryRemoveAssign( int weekday,
     }
 
     const WeekData &weekData( solver.problem.weekData );
-    int lack = weekData.minNurseNums[weekday][oldShiftID][oldSkillID] -
+    if (weekData.minNurseNums[weekday][oldShiftID][oldSkillID] >=
         (weekData.optNurseNums[weekday][oldShiftID][oldSkillID] -
-        missingNurseNums[weekday][oldShiftID][oldSkillID]);
-    if (lack >= 0) {
-        delta += penalty.UnderStaff() * lack;
+        missingNurseNums[weekday][oldShiftID][oldSkillID])) {
+        delta += penalty.UnderStaff();
     }
 
     if (delta >= DefaultPenalty::MAX_OBJ_VALUE) {

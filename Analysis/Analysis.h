@@ -20,7 +20,7 @@
 
 
 void analyzeInstance();
-void rebuildSolution( const std::string &filename, int lineNum );
+void rebuildSolution( const std::string &filename, const std::string &startTime, const std::string id );
 
 
 #endif

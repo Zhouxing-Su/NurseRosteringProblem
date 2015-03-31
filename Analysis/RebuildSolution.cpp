@@ -4,7 +4,11 @@
 using namespace std;
 
 
-void rebuildSolution( const std::string &filename, int lineNum )
+void rebuildSolution( const string &filename, const string &startTime, const string id )
 {
+    ifstream ifs( filename );
 
+
+
+    ifs.close();
 }

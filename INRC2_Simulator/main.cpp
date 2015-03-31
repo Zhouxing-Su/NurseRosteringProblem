@@ -8,7 +8,6 @@ using namespace INRC2;
 int main()
 {
     srand( static_cast<int>(time( NULL ) + clock()) );
-    //analyzeInstance();
 
     ostringstream id( "0" );
 
@@ -16,7 +15,8 @@ int main()
     //char initHis = '2';
     //char weekdata[WEEKDATA_SEQ_SIZE] = "7655";
     //int randSeed = 22489;
-    //test_customIO( id.str(), testOutputDir + id.str(), instIndex, initHis, weekdata, instTimeout[instIndex], randSeed );
+    //double runningTime = 30;
+    //test_customIO( id.str(), outputDirPrefix + id.str(), instIndex, initHis, weekdata, runningTime, randSeed );
 
     vector<thread> vt;
     int threadNum = thread::hardware_concurrency() * 3 / 4;

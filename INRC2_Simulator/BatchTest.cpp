@@ -27,7 +27,7 @@ char *fullArgv[ArgcVal::full] = {
 };
 
 const std::string outputDirPrefix( "output" );
-const std::string instanceDir( "../NurseRostoring/instance/" );
+const std::string instanceDir( "../NurseRostering/instance/" );
 const std::vector<std::string> instance = {
     "n005w4", "n012w8", "n021w4", // 0 1 2
     "n030w4", "n030w8", // 3 4
@@ -71,7 +71,7 @@ void testAllInstances( const std::string &id, int runCount )
     for (instIndex = 0; instIndex < instance.size(); ++instIndex) {
         for (int i = runCount; i > 0; --i) {
             genInstanceSequence( instIndex, initHis, weekdata );
-            randSeed = rand();
+            randSeed = static_cast<int>(time( NULL ) + clock());
             test_customIO( id, outputDirPrefix + id, instIndex, initHis, weekdata, instTimeout[instIndex], randSeed );
         }
     }
@@ -324,8 +324,9 @@ void httpget( ostream &os, const char *host, const char *file )
             socket.close();
             socket.connect( *endpoint_iterator++, error );
         }
-        if (error)
+        if (error) {
             throw boost::system::system_error( error );
+        }
 
         // Form the request. We specify the "Connection: close" header so that the
         // server will close the socket after transmitting the response. This will
@@ -369,15 +370,18 @@ void httpget( ostream &os, const char *host, const char *file )
         while (std::getline( response_stream, header ) && header != "\r") {}
 
         // Write whatever content we already have to output.
-        if (response.size() > 0)
+        if (response.size() > 0) {
             os << &response;
+        }
 
         // Read until EOF, writing data to output as we go.
         while (boost::asio::read( socket, response,
-            boost::asio::transfer_at_least( 1 ), error ))
+            boost::asio::transfer_at_least( 1 ), error )) {
             os << &response;
-        if (error != boost::asio::error::eof)
+        }
+        if (error != boost::asio::error::eof) {
             throw boost::system::system_error( error );
+        }
 
     } catch (std::exception& e) {
         std::cerr << "Exception: " << e.what() << "\n";

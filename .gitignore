@@ -187,4 +187,7 @@ FakesAssemblies/
 GeneratedArtifacts/
 _Pvt_Extensions/
 ModelManifest.xml
-output
+
+# Custom file
+/INRC2_Simulator/output*
+/NurseRostering/instance/output*

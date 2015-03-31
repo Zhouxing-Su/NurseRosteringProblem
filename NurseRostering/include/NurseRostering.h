@@ -23,17 +23,17 @@ public:
     enum Weekday { HIS = 0, Mon, Tue, Wed, Thu, Fri, Sat, Sun, NUM = Sun, SIZE };
     enum DefaultPenalty
     {
-        MAX_OBJ_VALUE = (1 << 30),
+        MAX_OBJ_VALUE = (1 << 24),
         // amplifier for improving accuracy
-        AMP = 2 * 2 * 2 * 5 * 5,
+        AMP = 2 * 2 * 2 * 3 * 5,
         // attenuation for fast repair without considering quality
         DECAY = 5,
         // hard constraints
         SingleAssign = MAX_OBJ_VALUE,
         UnderStaff = MAX_OBJ_VALUE,
-        UnderStaff_Repair = (AMP * 240),
+        UnderStaff_Repair = (AMP * 80),
         Succession = MAX_OBJ_VALUE,
-        Succession_Repair = (AMP * 300),
+        Succession_Repair = (AMP * 120),
         MissSkill = MAX_OBJ_VALUE,
         // soft constraints
         InsufficientStaff = (AMP * 30),
