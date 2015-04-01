@@ -23,18 +23,22 @@ public:
     enum Weekday { HIS = 0, Mon, Tue, Wed, Thu, Fri, Sat, Sun, NUM = Sun, SIZE };
     enum DefaultPenalty
     {
+        // (delta >= MAX_OBJ_MAX) stands for forbidden move
+        // a tryMove should return FORBIDDEN_MOVE in case it is used by other complex move
         MAX_OBJ_VALUE = (1 << 24),
+        FORBIDDEN_MOVE = (MAX_OBJ_VALUE * 2),
         // amplifier for improving accuracy
         AMP = 2 * 2 * 2 * 3 * 5,
         // attenuation for fast repair without considering quality
         DECAY = 5,
         // hard constraints
-        SingleAssign = MAX_OBJ_VALUE,
-        UnderStaff = MAX_OBJ_VALUE,
+        SingleAssign = FORBIDDEN_MOVE,
+        UnderStaff = FORBIDDEN_MOVE,
+        Succession = FORBIDDEN_MOVE,
+        MissSkill = FORBIDDEN_MOVE,
+
         UnderStaff_Repair = (AMP * 80),
-        Succession = MAX_OBJ_VALUE,
         Succession_Repair = (AMP * 120),
-        MissSkill = MAX_OBJ_VALUE,
         // soft constraints
         InsufficientStaff = (AMP * 30),
         ConsecutiveShift = (AMP * 15),

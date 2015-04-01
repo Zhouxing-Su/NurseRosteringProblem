@@ -63,7 +63,7 @@ void testAllInstances( const std::string &id, int runCount )
     for (instIndex = 0; instIndex < instance.size(); ++instIndex) {
         for (int i = runCount; i > 0; --i) {
             genInstanceSequence( instIndex, initHis, weekdata );
-            randSeed = static_cast<int>(time( NULL ) + clock());
+            randSeed = static_cast<int>(rand() + time( NULL ) + clock());
             test_customIO( id, outputDirPrefix + id, instIndex,
                 initHis, weekdata, instTimeout[getNurseNum( instIndex )], randSeed );
         }

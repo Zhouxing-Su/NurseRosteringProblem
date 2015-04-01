@@ -226,7 +226,7 @@ void NurseRostering::Solver::print() const
 
 void NurseRostering::Solver::initResultSheet( std::ofstream &csvFile )
 {
-    csvFile << "Time,ID,Instance,Algorithm,RandSeed,Duration,Feasible,ObjCheck,ObjValue,AccObjValue,Solution" << std::endl;
+    csvFile << "Time,ID,Instance,Algorithm,RandSeed,Duration,Feasible,Check-Obj,ObjValue,AccObjValue,Solution" << std::endl;
 }
 
 void NurseRostering::Solver::record( const std::string logFileName, const std::string &instanceName ) const
@@ -255,7 +255,7 @@ void NurseRostering::Solver::record( const std::string logFileName, const std::s
         << problem.randSeed << ","
         << (optima.findTime - startTime) / static_cast<double>(CLOCKS_PER_SEC) << "s,"
         << checkFeasibility() << ","
-        << checkObjValue() / static_cast<double>(DefaultPenalty::AMP) << ","
+        << (checkObjValue() - optima.objVal) / static_cast<double>(DefaultPenalty::AMP) << ","
         << optima.objVal / static_cast<double>(DefaultPenalty::AMP) << ","
         << (optima.objVal + problem.history.accObjValue) / static_cast<double>(DefaultPenalty::AMP) << ",";
 
@@ -273,7 +273,7 @@ void NurseRostering::Solver::record( const std::string logFileName, const std::s
 void NurseRostering::Solver::errorLog( const std::string &msg ) const
 {
 #ifdef INRC2_DEBUG
-    cerr << "[" << getTime() << "][" << runID << "] : " << msg << endl;
+    cerr << getTime() << "," << runID << "," << msg << endl;
 #endif
 }
 
@@ -420,7 +420,8 @@ void NurseRostering::TabuSolver::init( const string &id )
 
 void NurseRostering::TabuSolver::solve()
 {
-    iterativeLocalSearch();
+    randomWalk();
+    //iterativeLocalSearch();
 }
 
 void NurseRostering::TabuSolver::greedyInit()
@@ -442,6 +443,15 @@ void NurseRostering::TabuSolver::exactInit()
     if (sln.genInitAssign_BranchAndCut() == false) {
         errorLog( "no feasible solution!" );
     }
+}
+
+void NurseRostering::TabuSolver::randomWalk()
+{
+    algorithmName += "[RandomWalk]";
+
+    Timer timer( problem.timeout, startTime );
+
+    sln.randomWalk( timer, optima );
 }
 
 void NurseRostering::TabuSolver::iterativeLocalSearch()

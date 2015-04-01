@@ -1,16 +1,16 @@
         |M|T|W|T|F|S|S| |M|T|W|T|F|S|S| |M|T|W|T|F|S|S| |M|T|W|T|F|S|S|
 -------------------------------------------------------------------------
-Patrick |N|N|-|-|E|E|E| |E|E|-|-|E|N|N| |N|N|-|-|L|L|L| |N|N|-|E|E|L|L|
-Andrea  |-|-|L|L|L|N|N| |-|-|N|N|N|N|N| |N|-|E|E|E|L|L| |-|L|L|N|N|N|N|
-Stefaan |L|L|L|-|-|-|-| |L|L|L|-|-|-|L| |L|L|N|N|-|-|-| |N|N|N|-|-|N|N|
-Sara    |-|-|N|N|N|N|N| |-|-|-|E|L|L|L| |-|-|-|N|N|N|N| |-|L|L|L|L|-|-|
-Nguyen  |E|E|E|-|-|L|L| |L|N|N|-|E|E|E| |E|E|L|L|-|E|E| |E|E|E|-|-|E|E|
+Patrick |E|E|L|-|L|L|L| |-|-|-|E|E|N|N| |-|E|N|N|N|N|N| |-|E|N|N|-|E|E|
+Andrea  |N|-|-|-|E|E|E| |N|N|N|-|-|E|E| |L|L|L|-|E|L|L| |N|N|N|-|L|N|N|
+Stefaan |-|L|L|L|N|N|N| |-|-|-|L|N|N|N| |-|-|-|L|L|N|N| |N|-|L|L|L|-|-|
+Sara    |L|N|N|-|-|-|-| |E|E|E|-|-|-|-| |E|N|N|-|-|-|L| |L|L|-|-|N|N|N|
+Nguyen  |-|E|E|E|E|-|-| |L|L|L|-|L|L|L| |L|-|E|E|E|E|E| |-|E|E|E|E|E|L|
 
 
 Hard constraint violations
 --------------------------
 
-Minimal coverage constraints: 0
+Minimal coverage constraints: 1
 Required skill constraints: 0
 Illegal shift type succession constraints: 0
 Single assignment per day: 0
@@ -20,13 +20,13 @@ Cost per constraint type
 ------------------------
 
 Total assignment constraints: 220
-Consecutive constraints: 375
-Non working days constraints: 300
-Preferences: 80
-Max working weekend: 210
+Consecutive constraints: 495
+Non working days constraints: 420
+Preferences: 30
+Max working weekend: 180
 Complete weekends: 30
-Optimal coverage constraints: 420
+Optimal coverage constraints: 540
 
 ------------------------
 
-Total cost: 1635
+Total cost: 1915

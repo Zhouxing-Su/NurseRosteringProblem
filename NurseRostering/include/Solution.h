@@ -37,6 +37,9 @@ public:
 class NurseRostering::Solution
 {
 public:
+    // fundamental move modes in local search, NUM is the number of move types
+    enum MoveMode { ADD = 0, CHANGE, REMOVE, SWAP, NUM };
+
     Solution( const Solver &solver );
     Solution( const Solver &solver, const AssignTable &assign );
     // there must not be self assignment and assign must be build from same problem
@@ -55,6 +58,8 @@ public:
     // can't improve or time is out, return.
     void localSearch( const Timer &timer, Output &optima );
     void localSearchOnConsecutiveBorder( const Timer &timer, Output &optima );
+    // change solution structure in certain complexity
+    void perturb( Output &optima );
     // randomly select add, change or remove shift until timeout
     void randomWalk( const Timer &timer, Output &optima );
 

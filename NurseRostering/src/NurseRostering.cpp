@@ -26,10 +26,10 @@ NurseRostering::NurseRostering()
 
 void NurseRostering::Penalty::setNormalMode()
 {
-    singleAssign = DefaultPenalty::MAX_OBJ_VALUE;
-    underStaff = DefaultPenalty::MAX_OBJ_VALUE;
-    succession = DefaultPenalty::MAX_OBJ_VALUE;
-    missSkill = DefaultPenalty::MAX_OBJ_VALUE;
+    singleAssign = DefaultPenalty::FORBIDDEN_MOVE;
+    underStaff = DefaultPenalty::FORBIDDEN_MOVE;
+    succession = DefaultPenalty::FORBIDDEN_MOVE;
+    missSkill = DefaultPenalty::FORBIDDEN_MOVE;
 
     insufficientStaff = DefaultPenalty::InsufficientStaff;
     consecutiveShift = DefaultPenalty::ConsecutiveShift;
@@ -43,10 +43,10 @@ void NurseRostering::Penalty::setNormalMode()
 
 void NurseRostering::Penalty::setSwapMode()
 {
-    singleAssign = DefaultPenalty::MAX_OBJ_VALUE;
+    singleAssign = DefaultPenalty::FORBIDDEN_MOVE;
     underStaff = 0;
-    succession = DefaultPenalty::MAX_OBJ_VALUE;
-    missSkill = DefaultPenalty::MAX_OBJ_VALUE;
+    succession = DefaultPenalty::FORBIDDEN_MOVE;
+    missSkill = DefaultPenalty::FORBIDDEN_MOVE;
 
     insufficientStaff = 0;
     consecutiveShift = DefaultPenalty::ConsecutiveShift;
@@ -60,10 +60,10 @@ void NurseRostering::Penalty::setSwapMode()
 
 void NurseRostering::Penalty::setRepairMode( ObjValue softConstraintDecay, ObjValue WeightOnUnderStaff, ObjValue WeightOnSuccesion )
 {
-    singleAssign = DefaultPenalty::MAX_OBJ_VALUE;
+    singleAssign = DefaultPenalty::FORBIDDEN_MOVE;
     underStaff = WeightOnUnderStaff;
     succession = WeightOnSuccesion;
-    missSkill = DefaultPenalty::MAX_OBJ_VALUE;
+    missSkill = DefaultPenalty::FORBIDDEN_MOVE;
 
     insufficientStaff = DefaultPenalty::InsufficientStaff / softConstraintDecay;
     consecutiveShift = DefaultPenalty::ConsecutiveShift / softConstraintDecay;

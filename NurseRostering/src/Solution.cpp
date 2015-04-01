@@ -209,7 +209,7 @@ void NurseRostering::Solution::localSearch( const Timer &timer, Output &optima )
     long long iterCount = 0;
     int failCount = 0;
 
-    while (!timer.isTimeOut() && (failCount < 3)) {
+    while (!timer.isTimeOut() && (failCount < MoveMode::NUM)) {
         Move bestMove;
         while (!timer.isTimeOut() && findBestAddShift( bestMove )) {
             addAssign( bestMove );
@@ -261,7 +261,7 @@ void NurseRostering::Solution::localSearchOnConsecutiveBorder( const Timer &time
     long long iterCount = 0;
     int failCount = 0;
 
-    while (!timer.isTimeOut() && (failCount < 3)) {
+    while (!timer.isTimeOut() && (failCount < MoveMode::NUM)) {
         Move bestMove;
         while (!timer.isTimeOut() && findBestAddShiftOnConsecutiveBorder( bestMove )) {
             addAssign( bestMove );
@@ -304,6 +304,17 @@ void NurseRostering::Solution::localSearchOnConsecutiveBorder( const Timer &time
 #endif
 }
 
+void NurseRostering::Solution::perturb( Output &optima )
+{
+    // TODO : make this change solution structure in certain complexity
+
+
+    if (objValue < optima.objVal) {
+        optima = genOutput();
+    }
+}
+
+
 void NurseRostering::Solution::randomWalk( const Timer &timer, Output &optima )
 {
 #ifdef INRC2_PERFORMANCE_TEST
@@ -314,31 +325,39 @@ void NurseRostering::Solution::randomWalk( const Timer &timer, Output &optima )
 
     ObjValue delta;
     for (; !timer.isTimeOut(); ++iterCount) {
-        int select = rand() % 3;
+        int select = rand() % MoveMode::NUM;
         int weekday = (rand() % Weekday::NUM) + Weekday::Mon;
         NurseID nurse = rand() % solver.problem.scenario.nurseNum;
+        NurseID nurse2 = rand() % solver.problem.scenario.nurseNum;
         Assign a( rand() % solver.problem.scenario.shiftTypeNum,
             rand() % solver.problem.scenario.skillTypeNum );
         switch (select) {
-            case 0:
+            case MoveMode::ADD:
                 delta = tryAddAssign( weekday, nurse, a );
                 if (delta < DefaultPenalty::MAX_OBJ_VALUE) {
                     objValue += delta;
                     addAssign( weekday, nurse, a );
                 }
                 break;
-            case 1:
+            case MoveMode::CHANGE:
                 delta = tryChangeAssign( weekday, nurse, a );
                 if (delta < DefaultPenalty::MAX_OBJ_VALUE) {
                     objValue += delta;
                     changeAssign( weekday, nurse, a );
                 }
                 break;
-            case 2:
+            case MoveMode::REMOVE:
                 delta = tryRemoveAssign( weekday, nurse );
                 if (delta < DefaultPenalty::MAX_OBJ_VALUE) {
                     objValue += delta;
                     removeAssign( weekday, nurse );
+                }
+                break;
+            case MoveMode::SWAP:
+                delta = trySwapNurse( weekday, nurse, nurse2 );
+                if (delta < DefaultPenalty::MAX_OBJ_VALUE) {
+                    objValue += delta;
+                    swapNurse( weekday, nurse, nurse2 );
                 }
                 break;
         }
@@ -358,7 +377,7 @@ void NurseRostering::Solution::randomWalk( const Timer &timer, Output &optima )
 bool NurseRostering::Solution::findBestAddShift( Move &bestMove ) const
 {
     RandSelect<ObjValue> rs;
-    bestMove.delta = DefaultPenalty::MAX_OBJ_VALUE;
+    bestMove.delta = DefaultPenalty::FORBIDDEN_MOVE;
 
     // search for best addShift
     for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
@@ -383,7 +402,7 @@ bool NurseRostering::Solution::findBestAddShift( Move &bestMove ) const
 bool NurseRostering::Solution::findBestChangeShift( Move &bestMove ) const
 {
     RandSelect<ObjValue> rs;
-    bestMove.delta = DefaultPenalty::MAX_OBJ_VALUE;
+    bestMove.delta = DefaultPenalty::FORBIDDEN_MOVE;
 
     for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
         for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
@@ -407,7 +426,7 @@ bool NurseRostering::Solution::findBestChangeShift( Move &bestMove ) const
 bool NurseRostering::Solution::findBestRemoveShift( Move &bestMove ) const
 {
     RandSelect<ObjValue> rs;
-    bestMove.delta = DefaultPenalty::MAX_OBJ_VALUE;
+    bestMove.delta = DefaultPenalty::FORBIDDEN_MOVE;
 
     for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
         for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
@@ -426,7 +445,7 @@ bool NurseRostering::Solution::findBestRemoveShift( Move &bestMove ) const
 bool NurseRostering::Solution::findBestAddShiftOnConsecutiveBorder( Move &bestMove ) const
 {
     RandSelect<ObjValue> rs;
-    bestMove.delta = DefaultPenalty::MAX_OBJ_VALUE;
+    bestMove.delta = DefaultPenalty::FORBIDDEN_MOVE;
 
     // search for best addShift
     for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
@@ -455,7 +474,7 @@ bool NurseRostering::Solution::findBestAddShiftOnConsecutiveBorder( Move &bestMo
 bool NurseRostering::Solution::findBestChangeShiftOnConsecutiveBorder( Move &bestMove ) const
 {
     RandSelect<ObjValue> rs;
-    bestMove.delta = DefaultPenalty::MAX_OBJ_VALUE;
+    bestMove.delta = DefaultPenalty::FORBIDDEN_MOVE;
 
     for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
         const Consecutive &c( consecutives[nurse] );
@@ -483,7 +502,7 @@ bool NurseRostering::Solution::findBestChangeShiftOnConsecutiveBorder( Move &bes
 bool NurseRostering::Solution::findBestRemoveShiftOnConsecutiveBorder( Move &bestMove ) const
 {
     RandSelect<ObjValue> rs;
-    bestMove.delta = DefaultPenalty::MAX_OBJ_VALUE;
+    bestMove.delta = DefaultPenalty::FORBIDDEN_MOVE;
 
     for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
         const Consecutive &c( consecutives[nurse] );
@@ -523,7 +542,7 @@ NurseRostering::ObjValue NurseRostering::Solution::tryAddAssign( int weekday, Nu
     // TODO : make sure they won't be the same and leave out this
     if (!AssignTable::isWorking( a.shift ) || (a.shift == oldShiftID)
         || AssignTable::isWorking( oldShiftID )) {
-        return DefaultPenalty::MAX_OBJ_VALUE;
+        return DefaultPenalty::FORBIDDEN_MOVE;
     }
 
     // hard constraint check
@@ -745,7 +764,7 @@ NurseRostering::ObjValue NurseRostering::Solution::tryChangeAssign( int weekday,
     // TODO : make sure they won't be the same and leave out this
     if (!AssignTable::isWorking( a.shift ) || !AssignTable::isWorking( oldShiftID )
         || ((a.shift == oldShiftID) && (a.skill == oldSkillID))) {
-        return DefaultPenalty::MAX_OBJ_VALUE;
+        return DefaultPenalty::FORBIDDEN_MOVE;
     }
 
     if (!solver.problem.scenario.nurses[nurse].skills[a.skill]) {
@@ -906,7 +925,7 @@ NurseRostering::ObjValue NurseRostering::Solution::tryRemoveAssign( int weekday,
     SkillID oldSkillID = assign[nurse][weekday].skill;
     // TODO : make sure they won't be the same and leave out this
     if (!AssignTable::isWorking( oldShiftID )) {
-        return DefaultPenalty::MAX_OBJ_VALUE;
+        return DefaultPenalty::FORBIDDEN_MOVE;
     }
 
     const WeekData &weekData( solver.problem.weekData );
@@ -1090,6 +1109,11 @@ NurseRostering::ObjValue NurseRostering::Solution::tryRemoveAssign( int weekday,
 
 NurseRostering::ObjValue NurseRostering::Solution::trySwapNurse( int weekday, NurseID nurse1, NurseID nurse2 ) const
 {
+    // TODO : make sure they won't be the same and leave out this
+    if (nurse1 == nurse2) {
+        return DefaultPenalty::FORBIDDEN_MOVE;
+    }
+
     ObjValue delta = 0;
     penalty.setSwapMode();
 
@@ -1106,7 +1130,7 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapNurse( int weekday, Nu
             delta += tryAddAssign( weekday, nurse1, assign[nurse2][weekday] );
             delta += tryRemoveAssign( weekday, nurse2 );
         } else {    // no change
-            delta += DefaultPenalty::MAX_OBJ_VALUE;
+            delta += DefaultPenalty::FORBIDDEN_MOVE;
         }
     }
 
@@ -1167,11 +1191,12 @@ void NurseRostering::Solution::swapNurse( int weekday, NurseID nurse1, NurseID n
 {
     if (assign.isWorking( nurse1, weekday )) {
         if (assign.isWorking( nurse2, weekday )) {
+            Assign a( assign[nurse1][weekday] );
             changeAssign( weekday, nurse1, assign[nurse2][weekday] );
-            changeAssign( weekday, nurse2, assign[nurse1][weekday] );
+            changeAssign( weekday, nurse2, a );
         } else {
-            removeAssign( weekday, nurse1 );
             addAssign( weekday, nurse2, assign[nurse1][weekday] );
+            removeAssign( weekday, nurse1 );
         }
     } else {
         if (assign.isWorking( nurse2, weekday )) {

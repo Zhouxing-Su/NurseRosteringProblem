@@ -135,6 +135,8 @@ private:
     void greedyInit();
     void exactInit();
 
+    // random walk until timeout
+    void randomWalk();
     // iteratively run local search and perturb
     void iterativeLocalSearch();
 

@@ -192,3 +192,4 @@ ModelManifest.xml
 /INRC2_Simulator/output*
 /NurseRostering/instance/output*
 /Analysis/output*
+/Analysis/log.csv

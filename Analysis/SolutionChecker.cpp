@@ -15,7 +15,7 @@ const std::string totalObjName( "Total cost: " );
 static const string slnFileNameSuffix( "sol.txt" );
 
 
-NurseRostering::ObjValue rebuildSolution( const string &logFileName, const string &logTime, const string id, ValidatorArgvPack &argv )
+NurseRostering::ObjValue rebuildSolution( const string &logFileName, const string &logTime, const string id, ValidatorArgvPack &vap )
 {
     makeSureDirExist( outputDirPrefix );
 
@@ -58,12 +58,12 @@ NurseRostering::ObjValue rebuildSolution( const string &logFileName, const strin
     csvFile >> feasible >> c >> checkObj >> c
         >> obj >> c >> accObj >> c;
 
-    argv.instName = instNameBuf;
-    argv.sceName = instanceDir + argv.instName + scePrefix + argv.instName + fileSuffix;
-    argv.initHisName = instanceDir + argv.instName + '/' + hisNameBuf;
+    vap.instName = instNameBuf;
+    vap.sceName = instanceDir + vap.instName + scePrefix + vap.instName + fileSuffix;
+    vap.initHisName = instanceDir + vap.instName + '/' + hisNameBuf;
 
     NurseRostering problem;
-    if (!readScenario( argv.sceName, problem )) {
+    if (!readScenario( vap.sceName, problem )) {
         csvFile.close();
         return -1;
     }
@@ -80,9 +80,9 @@ NurseRostering::ObjValue rebuildSolution( const string &logFileName, const strin
     char week = '0';
     problem.history.pastWeekCount = 0;
 
-    argv.weekdataName.push_back( instanceDir + argv.instName + '/' + weekdataNameBuf );
-    argv.solFileName.push_back( outputDirPrefix + '/' + week + slnFileNameSuffix );
-    writeSolution( argv.solFileName.back(),
+    vap.weekdataName.push_back( instanceDir + vap.instName + '/' + weekdataNameBuf );
+    vap.solFileName.push_back( outputDirPrefix + '/' + week + slnFileNameSuffix );
+    writeSolution( vap.solFileName.back(),
         NurseRostering::TabuSolver( problem, NurseRostering::Output( static_cast<NurseRostering::ObjValue>(obj), assign ) ) );
 
     // handle rest weeks
@@ -102,7 +102,7 @@ NurseRostering::ObjValue rebuildSolution( const string &logFileName, const strin
 
         // read information
         csvFile.getline( instNameBuf, MaxLen::INST_NAME, '[' );
-        if (argv.instName != instNameBuf) {
+        if (vap.instName != instNameBuf) {
             csvFile.close();
             return -1;
         }
@@ -124,14 +124,32 @@ NurseRostering::ObjValue rebuildSolution( const string &logFileName, const strin
             }
         }
 
-        argv.weekdataName.push_back( instanceDir + argv.instName + '/' + weekdataNameBuf );
-        argv.solFileName.push_back( outputDirPrefix + '/' + week + slnFileNameSuffix );
-        writeSolution( argv.solFileName.back(),
+        vap.weekdataName.push_back( instanceDir + vap.instName + '/' + weekdataNameBuf );
+        vap.solFileName.push_back( outputDirPrefix + '/' + week + slnFileNameSuffix );
+        writeSolution( vap.solFileName.back(),
             NurseRostering::TabuSolver( problem, NurseRostering::Output( static_cast<NurseRostering::ObjValue>(obj), assign ) ) );
     }
 
     csvFile.close();
     return static_cast<NurseRostering::ObjValue>(totalObj);
+}
+
+int callValidator( const ValidatorArgvPack &vap )
+{
+    string argv( "java -jar " + instanceDir + "validator.jar" );
+    argv += (" --sce " + vap.sceName);
+    argv += (" --his " + vap.initHisName);
+    argv += " --weeks";
+    for (auto iter = vap.weekdataName.begin(); iter != vap.weekdataName.end(); ++iter) {
+        argv += (" " + *iter);
+    }
+    argv += " --sols";
+    for (auto iter = vap.solFileName.begin(); iter != vap.solFileName.end(); ++iter) {
+        argv += (" " + *iter);
+    }
+    argv += (" 1> " + validatorResultName + " 2>&1 ");
+
+    return system( argv.c_str() );
 }
 
 void validatorCheck( const std::string &logFileName, const std::string &outputFileName )
@@ -152,23 +170,10 @@ void validatorCheck( const std::string &logFileName, const std::string &outputFi
         csvFile.getline( idBuf, MaxLen::LINE, ',' );
         if (csvFile.eof()) { break; }
 
-        ValidatorArgvPack varg;
-        NurseRostering::ObjValue totalObj = rebuildSolution( logFileName, timeBuf, idBuf, varg );
+        ValidatorArgvPack vap;
+        NurseRostering::ObjValue totalObj = rebuildSolution( logFileName, timeBuf, idBuf, vap );
         if (totalObj >= 0) {
-            string argv( "java -jar " + instanceDir + "validator.jar" );
-            argv += (" --sce " + varg.sceName);
-            argv += (" --his " + varg.initHisName);
-            argv += " --weeks";
-            for (auto iter = varg.weekdataName.begin(); iter != varg.weekdataName.end(); ++iter) {
-                argv += (" " + *iter);
-            }
-            argv += " --sols";
-            for (auto iter = varg.solFileName.begin(); iter != varg.solFileName.end(); ++iter) {
-                argv += (" " + *iter);
-            }
-            argv += (" 1> " + validatorResultName + " 2>&1 ");
-
-            int r = system( argv.c_str() );
+            callValidator( vap );
 
             NurseRostering::ObjValue checkResult = getObjValueInValidatorResult();
             output << timeBuf << "," << idBuf << "," << (checkResult >= 0) << "," << (checkResult - totalObj) << endl;

@@ -57,6 +57,9 @@ void analyzeInstance();
 // files named [week]sol.txt have been created in output directory
 NurseRostering::ObjValue rebuildSolution( const std::string &logFileName, const std::string &logTime, const std::string id, ValidatorArgvPack &argv );
 
+// call validator to generate validator result
+int callValidator(const ValidatorArgvPack &vap);
+
 // check all complete record in log file by calling validator
 void validatorCheck( const std::string &logFileName, const std::string &outputFileName );
 // return total objective value, -1 for infeasible

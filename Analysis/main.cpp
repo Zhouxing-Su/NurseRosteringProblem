@@ -8,7 +8,11 @@ int main()
 {
     //analyzeInstance();
 
-    validatorCheck( "../INRC2_Simulator/log.csv", "checkResult.csv" );
+    //validatorCheck( "log.csv", "checkResult.csv" );
+
+    ValidatorArgvPack vap;
+    rebuildSolution( "log.csv", "2015-03-30 Mon 15:55:26", "1", vap );
+    callValidator( vap );
 
     return 0;
 }
