@@ -69,7 +69,7 @@ NurseRostering::ObjValue rebuildSolution( const string &logFileName, const strin
     }
 
     NurseRostering::AssignTable assign( problem.scenario.nurseNum );
-    double totalObj = checkObj;
+    double totalObj = obj;
 
     for (NurseRostering::NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
         for (int weekday = NurseRostering::Weekday::Mon; weekday < NurseRostering::Weekday::SIZE; ++weekday) {
@@ -116,7 +116,7 @@ NurseRostering::ObjValue rebuildSolution( const string &logFileName, const strin
         csvFile.getline( buf, MaxLen::ALGORITHM_NAME, ',' );    // timeCost
         csvFile >> feasible >> c >> checkObj >> c
             >> obj >> c >> accObj >> c;
-        totalObj += checkObj;
+        totalObj += obj;
 
         for (NurseRostering::NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
             for (int weekday = NurseRostering::Weekday::Mon; weekday < NurseRostering::Weekday::SIZE; ++weekday) {

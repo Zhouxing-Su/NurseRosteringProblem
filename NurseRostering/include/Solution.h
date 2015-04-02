@@ -37,8 +37,52 @@ public:
 class NurseRostering::Solution
 {
 public:
-    // fundamental move modes in local search, NUM is the number of move types
-    enum MoveMode { ADD = 0, CHANGE, REMOVE, SWAP, NUM };
+    // single move in neighborhood search
+    class Move
+    {
+    public:
+        // fundamental move modes in local search, NUM is the number of move types
+        enum Mode { ADD = 0, CHANGE, REMOVE, SWAP, NUM };
+
+        Move() : delta( DefaultPenalty::MAX_OBJ_VALUE ) {}
+        Move( ObjValue d, int w, NurseID n )
+            : delta( d ), weekday( w ), nurse( n )
+        {
+        }
+        Move( ObjValue d, int w, NurseID n, const Assign &a )
+            : delta( d ), weekday( w ), nurse( n ), assign( a )
+        {
+        }
+        Move( ObjValue d, int w, NurseID n, ShiftID sh, SkillID sk )
+            : delta( d ), weekday( w ), nurse( n ), assign( sh, sk )
+        {
+        }
+        Move( ObjValue d, int w, NurseID n, NurseID  n2 )
+            : delta( d ), weekday( w ), nurse( n ), nurse2( n2 )
+        {
+        }
+
+        ObjValue delta;
+        int weekday;
+        NurseID nurse;
+        NurseID nurse2;
+        Assign assign;
+    };
+
+    typedef ObjValue( Solution::*TryMove )(const Move &move) const;
+    typedef bool (Solution::*FindBestMove)(Move &move) const;
+    typedef void (Solution::*ApplyMove)(const Move &move);
+
+    typedef const TryMove TryMoveTable[Move::Mode::NUM];
+    typedef const FindBestMove FindBestMoveTable[Move::Mode::NUM];
+    typedef const ApplyMove ApplyMoveTable[Move::Mode::NUM];
+
+
+    static TryMoveTable tryMove;
+    static FindBestMoveTable findBestMove;
+    static FindBestMoveTable findBestMoveOnConsecutiveBorder;
+    static ApplyMoveTable applyMove;
+
 
     Solution( const Solver &solver );
     Solution( const Solver &solver, const AssignTable &assign );
@@ -56,8 +100,7 @@ public:
     // try add shift until there is no improvement , then try change shift,
     // then try remove shift, then try add shift again. if all of them
     // can't improve or time is out, return.
-    void localSearch( const Timer &timer, Output &optima );
-    void localSearchOnConsecutiveBorder( const Timer &timer, Output &optima );
+    void localSearch( const Timer &timer, Output &optima, FindBestMoveTable findBestMoveTable );
     // change solution structure in certain complexity
     void perturb( Output &optima );
     // randomly select add, change or remove shift until timeout
@@ -201,30 +244,6 @@ private:
     private:    // forbidden operators
     };
 
-    // single move in neighborhood search
-    class Move
-    {
-    public:
-        Move() : delta( DefaultPenalty::MAX_OBJ_VALUE ) {}
-        Move( ObjValue d, NurseID n, int w )
-            : delta( d ), nurse( n ), weekday( w )
-        {
-        }
-        Move( ObjValue d, NurseID n, int w, const Assign &a )
-            : delta( d ), nurse( n ), weekday( w ), assign( a )
-        {
-        }
-        Move( ObjValue d, NurseID n, int w, ShiftID sh, SkillID sk )
-            : delta( d ), nurse( n ), weekday( w ), assign( sh, sk )
-        {
-        }
-
-        ObjValue delta;
-        NurseID nurse;
-        int weekday;
-        Assign assign;
-    };
-
 
     // depth first search to fill assign
     bool fillAssign( const Timer &timer, int weekday, ShiftID shift, SkillID skill, NurseID nurse, int nurseNum );
@@ -240,12 +259,16 @@ private:
 
     // evaluate cost of adding a shift to nurse without shift in weekday
     ObjValue tryAddAssign( int weekday, NurseID nurse, const Assign &a ) const;
+    ObjValue tryAddAssign( const Move &move ) const;
     // evaluate cost of assigning another shift or skill to nurse already assigned in weekday
     ObjValue tryChangeAssign( int weekday, NurseID nurse, const Assign &a ) const;
+    ObjValue tryChangeAssign( const Move &move ) const;
     // evaluate cost of removing the shift from nurse already assigned in weekday
     ObjValue tryRemoveAssign( int weekday, NurseID nurse ) const;
+    ObjValue tryRemoveAssign( const Move &move ) const;
     // evaluate cost of swapping Assign of two nurses
     ObjValue trySwapNurse( int weekday, NurseID nurse1, NurseID nurse2 ) const;
+    ObjValue trySwapNurse( const Move &move ) const;
     // apply assigning a shift to nurse without shift in weekday
     void addAssign( int weekday, NurseID nurse, const Assign &a );
     void addAssign( const Move &move );
@@ -257,6 +280,7 @@ private:
     void removeAssign( const Move &move );
     // apply swapping Assign of two nurses
     void swapNurse( int weekday, NurseID nurse1, NurseID nurse2 );
+    void swapNurse( const Move &move );
 
     void updateConsecutive( int weekday, NurseID nurse, ShiftID shift );
     // the assignment is on the right side of a consecutive block
@@ -272,9 +296,11 @@ private:
     bool findBestAddShift( Move &bestMove ) const;
     bool findBestChangeShift( Move &bestMove ) const;
     bool findBestRemoveShift( Move &bestMove ) const;
+    bool findBestSwapShift( Move &bestMove ) const;
     bool findBestAddShiftOnConsecutiveBorder( Move &bestMove ) const;
     bool findBestChangeShiftOnConsecutiveBorder( Move &bestMove ) const;
     bool findBestRemoveShiftOnConsecutiveBorder( Move &bestMove ) const;
+    bool findBestSwapNursetOnConsecutiveBorder( Move &bestMove ) const;
 
     void evaluateInsufficientStaff();
     void evaluateConsecutiveShift();

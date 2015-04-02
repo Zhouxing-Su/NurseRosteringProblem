@@ -236,9 +236,8 @@ void NurseRostering::Solver::record( const std::string logFileName, const std::s
     csvFile.close();
 
     // wait if others are writing to log file
-    while (0 != rename( logFileName.c_str(), logFileName.c_str() )) {
-        this_thread::sleep_for( chrono::milliseconds( RECORD_RETRY_INTERVAL ) );
-    }
+    FileLock fl( logFileName );
+    fl.lock();
 
     csvFile.open( logFileName, ios::app );
     csvFile.seekp( 0, ios::beg );
@@ -268,6 +267,7 @@ void NurseRostering::Solver::record( const std::string logFileName, const std::s
 
     csvFile << endl;
     csvFile.close();
+    fl.unlock();
 }
 
 void NurseRostering::Solver::errorLog( const std::string &msg ) const
@@ -420,8 +420,8 @@ void NurseRostering::TabuSolver::init( const string &id )
 
 void NurseRostering::TabuSolver::solve()
 {
-    randomWalk();
-    //iterativeLocalSearch();
+    //randomWalk();
+    iterativeLocalSearch();
 }
 
 void NurseRostering::TabuSolver::greedyInit()
@@ -465,10 +465,9 @@ void NurseRostering::TabuSolver::iterativeLocalSearch()
     for (; !timer.isTimeOut() && loopCount > 0; --loopCount) {
         Timer t( timer.restTime() / loopCount, clock() );
         sln.randomWalk( t, optima );
-        if (rand() % 2) {
-            sln.localSearch( timer, optima );
-        } else {
-            sln.localSearchOnConsecutiveBorder( timer, optima );
-        }
+        Solution::FindBestMoveTable &findBestMoveTable =
+            (rand() % 2) ? Solution::findBestMove
+            : Solution::findBestMoveOnConsecutiveBorder;
+        sln.localSearch( timer, optima, findBestMoveTable );
     }
 }
