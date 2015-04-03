@@ -42,7 +42,7 @@ public:
     {
     public:
         // fundamental move modes in local search, NUM is the number of move types
-        enum Mode { ADD = 0, CHANGE, REMOVE, SWAP, NUM };
+        enum Mode { ADD = 0, CHANGE, SWAP, REMOVE, NUM };
 
         Move() : delta( DefaultPenalty::MAX_OBJ_VALUE ) {}
         Move( ObjValue d, int w, NurseID n )
@@ -97,14 +97,16 @@ public:
     void evaluateObjValue();    // using assist data structure
     bool repair( const Timer &timer );  // make infeasible solution feasible
 
+    // run until timeout, switch move mode after a certain steps of no improvement
+    long long tabuSearch( const Timer &timer, Output &optima, FindBestMoveTable findBestMoveTable );
     // try add shift until there is no improvement , then try change shift,
     // then try remove shift, then try add shift again. if all of them
     // can't improve or time is out, return.
-    void localSearch( const Timer &timer, Output &optima, FindBestMoveTable findBestMoveTable );
+    long long localSearch( const Timer &timer, Output &optima, FindBestMoveTable findBestMoveTable );
     // change solution structure in certain complexity
     void perturb( Output &optima );
     // randomly select add, change or remove shift until timeout
-    void randomWalk( const Timer &timer, Output &optima );
+    long long randomWalk( const Timer &timer, Output &optima );
 
     const AssignTable& getAssign() const { return assign; }
     // shift must not be none shift
@@ -244,9 +246,11 @@ private:
     private:    // forbidden operators
     };
 
+    // (iterCount < RemoveTabu[nurse][weekday][shift][skill]) means forbid to be added
+    typedef std::vector< std::vector< std::vector< std::vector<int> > > > AddTabu;
+    // (iterCount < AddTabu[nurse][weekday]) means forbid to be removed
+    typedef std::vector< std::vector<int> > RemoveTabu;
 
-    // depth first search to fill assign
-    bool fillAssign( const Timer &timer, int weekday, ShiftID shift, SkillID skill, NurseID nurse, int nurseNum );
 
     // find day number to be punished for a single block
     // work for shift, day and day-off
@@ -256,6 +260,19 @@ private:
             distanceToRange( len, min, max ) :
             exceedCount( len, max );
     }
+
+    // depth first search to fill assign
+    bool fillAssign( const Timer &timer, int weekday, ShiftID shift, SkillID skill, NurseID nurse, int nurseNum );
+
+    // return true if the solution will be improved (delta < 0)
+    bool findBestAddShift( Move &bestMove ) const;
+    bool findBestChangeShift( Move &bestMove ) const;
+    bool findBestRemoveShift( Move &bestMove ) const;
+    bool findBestSwapShift( Move &bestMove ) const;
+    bool findBestAddShiftOnConsecutiveBorder( Move &bestMove ) const;
+    bool findBestChangeShiftOnConsecutiveBorder( Move &bestMove ) const;
+    bool findBestRemoveShiftOnConsecutiveBorder( Move &bestMove ) const;
+    bool findBestSwapNursetOnConsecutiveBorder( Move &bestMove ) const;
 
     // evaluate cost of adding a shift to nurse without shift in weekday
     ObjValue tryAddAssign( int weekday, NurseID nurse, const Assign &a ) const;
@@ -292,16 +309,6 @@ private:
     // the assignment is on a consecutive block with single slot
     void assignSingle( int weekday, int high[Weekday::SIZE], int low[Weekday::SIZE], bool affectRight, bool affectLeft );
 
-    // return true if the solution will be improved (delta < 0)
-    bool findBestAddShift( Move &bestMove ) const;
-    bool findBestChangeShift( Move &bestMove ) const;
-    bool findBestRemoveShift( Move &bestMove ) const;
-    bool findBestSwapShift( Move &bestMove ) const;
-    bool findBestAddShiftOnConsecutiveBorder( Move &bestMove ) const;
-    bool findBestChangeShiftOnConsecutiveBorder( Move &bestMove ) const;
-    bool findBestRemoveShiftOnConsecutiveBorder( Move &bestMove ) const;
-    bool findBestSwapNursetOnConsecutiveBorder( Move &bestMove ) const;
-
     void evaluateInsufficientStaff();
     void evaluateConsecutiveShift();
     void evaluateConsecutiveDay();
@@ -314,6 +321,9 @@ private:
     const Solver &solver;
 
     mutable Penalty penalty;
+
+    AddTabu addTabu;
+    RemoveTabu removeTabu;
 
     // total assignments for each nurse
     std::vector<int> totalAssignNums;

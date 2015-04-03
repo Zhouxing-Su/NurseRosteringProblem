@@ -56,6 +56,9 @@ extern const std::vector<std::string> instance;
 
 extern const std::string timoutFileName;
 extern std::map<int, double> instTimeout;
+extern const std::string instSeqFileName;
+extern std::vector<char> instInitHis;
+extern std::vector<std::string> instWeekdataSeq;
 
 extern const std::string scePrefix;
 extern const std::string weekPrefix;
@@ -67,7 +70,10 @@ extern const std::string cusPrefix;
 
 extern const char *FeasibleCheckerHost;
 
+// load timeout from "timeout.txt"
 void loadInstTimeOut();
+// load instance sequence from "seq.txt"
+void loadInstSeq();
 
 int getNurseNum( int instIndex );
 int getWeekNum( int instIndex );
@@ -75,12 +81,14 @@ int getWeekNum( int instIndex );
 // this functions do not guarantee the sequence is feasible
 char genInitHisIndex();
 void genWeekdataSequence( int instIndex, char weekdata[WEEKDATA_SEQ_SIZE] );
-// this function will make sure the sequence is feasible
+// generate initHis and weekdata randomly
+// this function will make sure the sequence is feasible by asking feasible checker
 void genInstanceSequence( int instIndex, char &initHis, char weekdata[WEEKDATA_SEQ_SIZE] );
 
 void makeSureDirExist( const std::string &dir );
 
-void testAllInstances( const std::string &id, int runCount );
+void testAllInstancesWithPreloadedInstSeq( const std::string &id, int runCount );
+void testAllInstances( const std::string &id, int runCount, int seedForInstSeq );
 void test( const std::string &id, const std::string &outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec );
 void test( const std::string &id, const std::string &outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec, int randSeed );
 void test_customIO( const std::string &id, const std::string &outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec );

@@ -24,8 +24,10 @@ NurseRostering::NurseRostering()
 }
 
 
-void NurseRostering::Penalty::setNormalMode()
+void NurseRostering::Penalty::setDefaultMode()
 {
+    mode = Mode::Default;
+
     singleAssign = DefaultPenalty::FORBIDDEN_MOVE;
     underStaff = DefaultPenalty::FORBIDDEN_MOVE;
     succession = DefaultPenalty::FORBIDDEN_MOVE;
@@ -43,6 +45,8 @@ void NurseRostering::Penalty::setNormalMode()
 
 void NurseRostering::Penalty::setSwapMode()
 {
+    mode = Mode::Swap;
+
     singleAssign = DefaultPenalty::FORBIDDEN_MOVE;
     underStaff = 0;
     succession = DefaultPenalty::FORBIDDEN_MOVE;
@@ -60,6 +64,8 @@ void NurseRostering::Penalty::setSwapMode()
 
 void NurseRostering::Penalty::setRepairMode( ObjValue softConstraintDecay, ObjValue WeightOnUnderStaff, ObjValue WeightOnSuccesion )
 {
+    mode = Mode::Repair;
+
     singleAssign = DefaultPenalty::FORBIDDEN_MOVE;
     underStaff = WeightOnUnderStaff;
     succession = WeightOnSuccesion;

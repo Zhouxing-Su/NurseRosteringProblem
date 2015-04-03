@@ -41,6 +41,9 @@ const std::vector<std::string> instance = {
 
 const std::string timoutFileName( "timeout.txt" );
 std::map<int, double> instTimeout;
+const std::string instSeqFileName( "seq.txt" );
+std::vector<char> instInitHis;
+std::vector<std::string> instWeekdataSeq;
 
 const std::string scePrefix( "/Sc-" );
 const std::string weekPrefix( "/WD-" );
@@ -53,7 +56,21 @@ const std::string cusPrefix( "/custom-week" );
 const char *FeasibleCheckerHost = "themis.playhost.be";
 
 
-void testAllInstances( const std::string &id, int runCount )
+void testAllInstancesWithPreloadedInstSeq( const std::string &id, int runCount )
+{
+    unsigned instIndex;
+    int randSeed;
+
+    for (instIndex = 0; instIndex < instance.size(); ++instIndex) {
+        for (int i = runCount; i > 0; --i) {
+            randSeed = static_cast<int>(rand() + time( NULL ) + clock());
+            test_customIO( id, outputDirPrefix + id, instIndex,
+                instInitHis[instIndex], instWeekdataSeq[instIndex].c_str(), instTimeout[getNurseNum( instIndex )], randSeed );
+        }
+    }
+}
+
+void testAllInstances( const std::string &id, int runCount, int seedForInstSeq )
 {
     unsigned instIndex;
     char initHis;
@@ -62,6 +79,8 @@ void testAllInstances( const std::string &id, int runCount )
 
     for (instIndex = 0; instIndex < instance.size(); ++instIndex) {
         for (int i = runCount; i > 0; --i) {
+            srand( seedForInstSeq );
+            seedForInstSeq = rand();
             genInstanceSequence( instIndex, initHis, weekdata );
             randSeed = static_cast<int>(rand() + time( NULL ) + clock());
             test_customIO( id, outputDirPrefix + id, instIndex,
@@ -81,6 +100,21 @@ void loadInstTimeOut()
     }
 
     timoutFile.close();
+}
+
+void loadInstSeq()
+{
+    ifstream instSeqFile( instSeqFileName );
+
+    std::string instName;
+    char initHis;
+    std::string weekdataSeq;
+    while (instSeqFile >> instName >> initHis >> weekdataSeq) {
+        instInitHis.push_back( initHis );
+        instWeekdataSeq.push_back( weekdataSeq );
+    }
+
+    instSeqFile.close();
 }
 
 int getNurseNum( int instIndex )

@@ -191,11 +191,16 @@ public:
     class Penalty
     {
     public:
-        Penalty() { setNormalMode(); }
+        enum Mode { Default, Swap, Repair };
+
+
+        Penalty() { setDefaultMode(); }
+
+        Mode getMode() const { return mode; }
 
         // hard constraints must be satisfied 
         // and soft constraints get their original penalty
-        void setNormalMode();
+        void setDefaultMode();
         // UnderStaff and InsufficientStaff is not considered
         // due to nurse number will not change
         void setSwapMode();
@@ -222,6 +227,8 @@ public:
         ObjValue TotalWorkingWeekend() const { return totalWorkingWeekend; }
 
     private:
+        Mode mode;
+
         // hard constraint
         ObjValue singleAssign;
         ObjValue underStaff;

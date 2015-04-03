@@ -422,6 +422,7 @@ void NurseRostering::TabuSolver::solve()
 {
     //randomWalk();
     iterativeLocalSearch();
+    //tabuSearch();
 }
 
 void NurseRostering::TabuSolver::greedyInit()
@@ -470,4 +471,14 @@ void NurseRostering::TabuSolver::iterativeLocalSearch()
             : Solution::findBestMoveOnConsecutiveBorder;
         sln.localSearch( timer, optima, findBestMoveTable );
     }
+}
+
+void NurseRostering::TabuSolver::tabuSearch()
+{
+    algorithmName += "[TabuSearch]";
+
+    Timer timer( problem.timeout, startTime );
+
+    // TODO : add perturb? findBestMoveOnConsecutiveBorder?
+    sln.tabuSearch( timer, optima, Solution::findBestMove );
 }

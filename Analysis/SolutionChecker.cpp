@@ -102,14 +102,15 @@ NurseRostering::ObjValue rebuildSolution( const string &logFileName, const strin
 
         // read information
         csvFile.getline( instNameBuf, MaxLen::INST_NAME, '[' );
-        if (vap.instName != instNameBuf) {
-            csvFile.close();
-            return -1;
-        }
         csvFile.getline( hisNameBuf, MaxLen::INIT_HIS_NAME, ']' );
         csvFile.get();  // '['
         csvFile.getline( weekdataNameBuf, MaxLen::WEEKDATA_NAME, ']' );
         csvFile.get();  // ','
+        if ((vap.instName != instNameBuf)
+            || ((hisNameBuf[0] == 'H') && (hisNameBuf[1] == '0'))) {
+            csvFile.close();
+            return -1;
+        }
 
         csvFile.getline( buf, MaxLen::ALGORITHM_NAME, ',' );    // algorithmName
         csvFile.getline( buf, MaxLen::ALGORITHM_NAME, ',' );    // randSeed

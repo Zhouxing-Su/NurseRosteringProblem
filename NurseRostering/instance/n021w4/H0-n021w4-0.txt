@@ -1,5 +1,5 @@
 HISTORY
-0 n021w4_2
+0 n021w4
 
 NURSE_HISTORY
 HN_0 0 0 Night 3 5 0

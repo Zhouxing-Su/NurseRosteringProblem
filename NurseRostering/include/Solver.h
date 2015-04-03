@@ -135,10 +135,12 @@ private:
     void greedyInit();
     void exactInit();
 
-    // random walk until timeout
-    void randomWalk();
+    // search with tabu table
+    void tabuSearch();
     // iteratively run local search and perturb
     void iterativeLocalSearch();
+    // random walk until timeout
+    void randomWalk();
 
 
     Solution sln;

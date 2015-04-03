@@ -11,7 +11,7 @@ int main()
     //validatorCheck( "log.csv", "checkResult.csv" );
 
     ValidatorArgvPack vap;
-    rebuildSolution( "log.csv", "2015-04-02 Thu 10:40:01", "0", vap );
+    rebuildSolution( "log.csv", "2015-04-01 Wed 10:10:40", "0", vap );
     callValidator( vap );
 
     return 0;
