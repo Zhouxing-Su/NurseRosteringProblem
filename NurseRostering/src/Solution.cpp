@@ -290,7 +290,7 @@ long long NurseRostering::Solution::localSearch( const Timer &timer, Output &opt
     long long iterCount = 0;
     int moveModeNum = findBestMoveTable.size();
     bitset<Move::Mode::NUM> improveFlag;
-    for (int i = moveModeNum; i > 0; --i) {
+    for (int i = 0; i < moveModeNum; ++i) {
         improveFlag.set( i );
     }
     bitset<Move::Mode::NUM> improveFlagBackup( improveFlag );
@@ -1386,11 +1386,7 @@ void NurseRostering::Solution::swapNurse( const Move &move )
 
 void NurseRostering::Solution::arAssign( const Move &move )
 {
-    if (AssignTable::isWorking( move.assign.shift )) {
-        removeAssign( move );
-    } else {
-        addAssign( move );
-    }
+    AssignTable::isWorking( move.assign.shift ) ? addAssign( move ) : removeAssign( move );
 }
 
 void NurseRostering::Solution::updateConsecutive( int weekday, NurseID nurse, ShiftID shift )

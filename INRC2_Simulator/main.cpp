@@ -15,10 +15,10 @@ int main()
 
     /// single instance and single thread for single run
     //srand( static_cast<int>(time( NULL ) + clock()) );
-    //int instIndex = 3;
-    //char initHis = '2';
-    //char weekdata[WEEKDATA_SEQ_SIZE] = "6715";
-    //int randSeed = rand();
+    //int instIndex = 0;
+    //char initHis = '0';
+    //char weekdata[WEEKDATA_SEQ_SIZE] = "5533";
+    //int randSeed = 1427984165;
     //double runningTime = instTimeout[getNurseNum( instIndex )];
     //test_customIO( id.str(), outputDirPrefix + id.str(), instIndex, initHis, weekdata, runningTime, randSeed );
 
@@ -41,17 +41,15 @@ int main()
 
     int runCount = 4;
     int threadBeginInterval = 3;
-
-    vector<thread> vt;
-    int threadNum = thread::hardware_concurrency() / 2;
+    int threadNum = thread::hardware_concurrency();
     threadNum += (threadNum == 0);
+    vector<thread> vt;
     for (int i = 0; i < threadNum; ++i) {
         id.str( string() );
         id << i;
         vt.push_back( thread( testAllInstancesWithPreloadedInstSeq, id.str(), runCount ) );
         this_thread::sleep_for( chrono::seconds( threadBeginInterval ) );
     }
-
     for (int i = 0; i < threadNum; ++i) {
         vt[i].join();
     }

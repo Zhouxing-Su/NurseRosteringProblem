@@ -457,13 +457,12 @@ void NurseRostering::TabuSolver::randomWalk()
 
 void NurseRostering::TabuSolver::iterativeLocalSearch()
 {
-    algorithmName += "[ILS][ASCR]";
+    algorithmName += "[ILS][ARBCS]";
 
     vector<int> modeSeq = {
-        Solution::Move::Mode::Add,
+        Solution::Move::Mode::ARBoth,
         Solution::Move::Mode::Change,
-        Solution::Move::Mode::Swap,
-        Solution::Move::Mode::Remove
+        Solution::Move::Mode::Swap
     };
 
     int modeSeqLen = modeSeq.size();
