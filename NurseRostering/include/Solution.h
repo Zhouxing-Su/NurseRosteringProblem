@@ -3,6 +3,7 @@
 *               solver for Nurse Rostering Problem.
 *
 *   note :  1.  use repair mode of penalty to fix infeasible solution in repaire().
+*           2.  merge add and remove to a single neighborhood, abreast of swap and change.
 *
 */
 
@@ -12,6 +13,7 @@
 
 #include <algorithm>
 #include <vector>
+#include <bitset>
 #include <ctime>
 
 #include "DebugFlag.h"
@@ -42,7 +44,10 @@ public:
     {
     public:
         // fundamental move modes in local search, NUM is the number of move types
-        enum Mode { ADD = 0, CHANGE, SWAP, REMOVE, NUM };
+        // AR stands for "Add and Remove", "Rand" means select one to search randomly,
+        // "Both" means search both, "Loop" means switch to another when no improvement
+        enum Mode { Add = 0, Change, Swap, Remove, BASIC_MOVE_NUM, 
+            ARLoop = BASIC_MOVE_NUM, ARRand, ARBoth, NUM };
 
         Move() : delta( DefaultPenalty::MAX_OBJ_VALUE ) {}
         Move( ObjValue d, int w, NurseID n )
@@ -73,15 +78,15 @@ public:
     typedef bool (Solution::*FindBestMove)(Move &move) const;
     typedef void (Solution::*ApplyMove)(const Move &move);
 
-    typedef const TryMove TryMoveTable[Move::Mode::NUM];
-    typedef const FindBestMove FindBestMoveTable[Move::Mode::NUM];
-    typedef const ApplyMove ApplyMoveTable[Move::Mode::NUM];
+    typedef std::vector<TryMove> TryMoveTable;
+    typedef std::vector<FindBestMove> FindBestMoveTable;
+    typedef std::vector<ApplyMove> ApplyMoveTable;
 
 
-    static TryMoveTable tryMove;
-    static FindBestMoveTable findBestMove;
-    static FindBestMoveTable findBestMoveOnConsecutiveBorder;
-    static ApplyMoveTable applyMove;
+    static const TryMoveTable tryMove;
+    static const FindBestMoveTable findBestMove;
+    static const FindBestMoveTable findBestMoveOnBlockBorder;
+    static const ApplyMoveTable applyMove;
 
 
     Solution( const Solver &solver );
@@ -98,11 +103,13 @@ public:
     bool repair( const Timer &timer );  // make infeasible solution feasible
 
     // run until timeout, switch move mode after a certain steps of no improvement
-    long long tabuSearch( const Timer &timer, Output &optima, FindBestMoveTable findBestMoveTable );
+    long long tabuSearch( const Timer &timer, Output &optima,
+        const FindBestMoveTable &findBestMoveTable, const ApplyMoveTable &applyMoveTable );
     // try add shift until there is no improvement , then try change shift,
     // then try remove shift, then try add shift again. if all of them
     // can't improve or time is out, return.
-    long long localSearch( const Timer &timer, Output &optima, FindBestMoveTable findBestMoveTable );
+    long long localSearch( const Timer &timer, Output &optima,
+        const FindBestMoveTable &findBestMoveTable, const ApplyMoveTable &applyMoveTable );
     // change solution structure in certain complexity
     void perturb( Output &optima );
     // randomly select add, change or remove shift until timeout
@@ -265,39 +272,48 @@ private:
     bool fillAssign( const Timer &timer, int weekday, ShiftID shift, SkillID skill, NurseID nurse, int nurseNum );
 
     // return true if the solution will be improved (delta < 0)
-    bool findBestAddShift( Move &bestMove ) const;
-    bool findBestChangeShift( Move &bestMove ) const;
-    bool findBestRemoveShift( Move &bestMove ) const;
-    bool findBestSwapShift( Move &bestMove ) const;
-    bool findBestAddShiftOnConsecutiveBorder( Move &bestMove ) const;
-    bool findBestChangeShiftOnConsecutiveBorder( Move &bestMove ) const;
-    bool findBestRemoveShiftOnConsecutiveBorder( Move &bestMove ) const;
-    bool findBestSwapNursetOnConsecutiveBorder( Move &bestMove ) const;
+    // BlockBorder means the start or end day of a consecutive block
+    bool findBestAdd( Move &bestMove ) const;
+    bool findBestChange( Move &bestMove ) const;
+    bool findBestRemove( Move &bestMove ) const;
+    bool findBestSwap( Move &bestMove ) const;
+    bool findBestARLoop( Move &bestMove ) const;
+    bool findBestARRand( Move &bestMove ) const;
+    bool findBestARBoth( Move &bestMove ) const;
+    bool findBestAddOnBlockBorder( Move &bestMove ) const;
+    bool findBestChangeOnBlockBorder( Move &bestMove ) const;
+    bool findBestRemoveOnBlockBorder( Move &bestMove ) const;
+    bool findBestSwapOnBlockBorder( Move &bestMove ) const;
+    bool findBestARLoopOnBlockBorder( Move &bestMove ) const;
+    bool findBestARRandOnBlockBorder( Move &bestMove ) const;
+    bool findBestARBothOnBlockBorder( Move &bestMove ) const;
 
-    // evaluate cost of adding a shift to nurse without shift in weekday
+    // evaluate cost of adding a Assign to nurse without Assign in weekday
     ObjValue tryAddAssign( int weekday, NurseID nurse, const Assign &a ) const;
     ObjValue tryAddAssign( const Move &move ) const;
-    // evaluate cost of assigning another shift or skill to nurse already assigned in weekday
+    // evaluate cost of assigning another Assign or skill to nurse already assigned in weekday
     ObjValue tryChangeAssign( int weekday, NurseID nurse, const Assign &a ) const;
     ObjValue tryChangeAssign( const Move &move ) const;
-    // evaluate cost of removing the shift from nurse already assigned in weekday
+    // evaluate cost of removing the Assign from nurse already assigned in weekday
     ObjValue tryRemoveAssign( int weekday, NurseID nurse ) const;
     ObjValue tryRemoveAssign( const Move &move ) const;
     // evaluate cost of swapping Assign of two nurses
     ObjValue trySwapNurse( int weekday, NurseID nurse1, NurseID nurse2 ) const;
     ObjValue trySwapNurse( const Move &move ) const;
-    // apply assigning a shift to nurse without shift in weekday
+    // apply assigning a Assign to nurse without Assign in weekday
     void addAssign( int weekday, NurseID nurse, const Assign &a );
     void addAssign( const Move &move );
-    // apply assigning another shift or skill to nurse already assigned in weekday
+    // apply assigning another Assign or skill to nurse already assigned in weekday
     void changeAssign( int weekday, NurseID nurse, const Assign &a );
     void changeAssign( const Move &move );
-    // apply removing a shift to nurse in weekday
+    // apply removing a Assign to nurse in weekday
     void removeAssign( int weekday, NurseID nurse );
     void removeAssign( const Move &move );
     // apply swapping Assign of two nurses
     void swapNurse( int weekday, NurseID nurse1, NurseID nurse2 );
     void swapNurse( const Move &move );
+    // apply add or remove Assign, automatically recognize move type
+    void arAssign( const Move &move );
 
     void updateConsecutive( int weekday, NurseID nurse, ShiftID shift );
     // the assignment is on the right side of a consecutive block
@@ -321,6 +337,11 @@ private:
     const Solver &solver;
 
     mutable Penalty penalty;
+
+    // for switching between add and remove
+    // 1 for no improvement which is opposite in localSearch
+    mutable bool findBestARLoopFlag;
+    mutable bool findBestARLoopOnBlockBorderFlag;
 
     AddTabu addTabu;
     RemoveTabu removeTabu;

@@ -14,24 +14,33 @@ NurseRostering::Solution::tryMove = {
 };
 const NurseRostering::Solution::FindBestMoveTable
 NurseRostering::Solution::findBestMove = {
-    &NurseRostering::Solution::findBestAddShift,
-    &NurseRostering::Solution::findBestChangeShift,
-    &NurseRostering::Solution::findBestSwapShift,
-    &NurseRostering::Solution::findBestRemoveShift
+    &NurseRostering::Solution::findBestAdd,
+    &NurseRostering::Solution::findBestChange,
+    &NurseRostering::Solution::findBestSwap,
+    &NurseRostering::Solution::findBestRemove,
+    &NurseRostering::Solution::findBestARLoop,
+    &NurseRostering::Solution::findBestARRand,
+    &NurseRostering::Solution::findBestARBoth
 };
 const NurseRostering::Solution::FindBestMoveTable
-NurseRostering::Solution::findBestMoveOnConsecutiveBorder = {
-    &NurseRostering::Solution::findBestAddShiftOnConsecutiveBorder,
-    &NurseRostering::Solution::findBestChangeShiftOnConsecutiveBorder,
-    &NurseRostering::Solution::findBestSwapNursetOnConsecutiveBorder,
-    &NurseRostering::Solution::findBestRemoveShiftOnConsecutiveBorder
+NurseRostering::Solution::findBestMoveOnBlockBorder = {
+    &NurseRostering::Solution::findBestAddOnBlockBorder,
+    &NurseRostering::Solution::findBestChangeOnBlockBorder,
+    &NurseRostering::Solution::findBestSwapOnBlockBorder,
+    &NurseRostering::Solution::findBestRemoveOnBlockBorder,
+    &NurseRostering::Solution::findBestARLoopOnBlockBorder,
+    &NurseRostering::Solution::findBestARRandOnBlockBorder,
+    &NurseRostering::Solution::findBestARBothOnBlockBorder
 };
 const NurseRostering::Solution::ApplyMoveTable
 NurseRostering::Solution::applyMove = {
     &NurseRostering::Solution::addAssign,
     &NurseRostering::Solution::changeAssign,
     &NurseRostering::Solution::swapNurse,
-    &NurseRostering::Solution::removeAssign
+    &NurseRostering::Solution::removeAssign,
+    &NurseRostering::Solution::arAssign,
+    &NurseRostering::Solution::arAssign,
+    &NurseRostering::Solution::arAssign
 };
 
 
@@ -230,7 +239,8 @@ bool NurseRostering::Solution::repair( const Timer &timer )
     return (feasible || genInitAssign_BranchAndCut());
 }
 
-long long NurseRostering::Solution::tabuSearch( const Timer &timer, Output &optima, FindBestMoveTable findBestMoveTable )
+long long NurseRostering::Solution::tabuSearch( const Timer &timer, Output &optima,
+    const FindBestMoveTable &findBestMoveTable, const ApplyMoveTable &applyMoveTable )
 {
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t startTime = clock();
@@ -243,7 +253,7 @@ long long NurseRostering::Solution::tabuSearch( const Timer &timer, Output &opti
         vector<int>( Weekday::SIZE, 0 ) );
 
     long long iterCount = 0;
-    int moveMode = Move::Mode::ADD;
+    int moveMode = 0;
     int noImproveCount = 0;
 
     Move bestMove;
@@ -251,7 +261,7 @@ long long NurseRostering::Solution::tabuSearch( const Timer &timer, Output &opti
         (this->*findBestMoveTable[moveMode])(bestMove)
             ? noImproveCount = 0 : ++noImproveCount;
 
-        (this->*applyMove[moveMode])(bestMove);
+        (this->*applyMoveTable[moveMode])(bestMove);
         objValue += bestMove.delta;
         if (objValue < optima.objVal) {
             optima = genOutput();
@@ -271,27 +281,34 @@ long long NurseRostering::Solution::tabuSearch( const Timer &timer, Output &opti
     return iterCount;
 }
 
-long long NurseRostering::Solution::localSearch( const Timer &timer, Output &optima, FindBestMoveTable findBestMoveTable )
+long long NurseRostering::Solution::localSearch( const Timer &timer, Output &optima,
+    const FindBestMoveTable &findBestMoveTable, const ApplyMoveTable &applyMoveTable )
 {
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t startTime = clock();
 #endif
     long long iterCount = 0;
-    int moveMode = Move::Mode::ADD;
-    int failCount = 0;
+    int moveModeNum = findBestMoveTable.size();
+    bitset<Move::Mode::NUM> improveFlag;
+    for (int i = moveModeNum; i > 0; --i) {
+        improveFlag.set( i );
+    }
+    bitset<Move::Mode::NUM> improveFlagBackup( improveFlag );
+
+    int moveMode = 0;
     Move bestMove;
-    while (!timer.isTimeOut() && (failCount < Move::Mode::NUM)) {
+    while (!timer.isTimeOut() && improveFlag.any()) {
         if ((this->*findBestMoveTable[moveMode])(bestMove)) {
-            (this->*applyMove[moveMode])(bestMove);
+            (this->*applyMoveTable[moveMode])(bestMove);
             objValue += bestMove.delta;
             if (objValue < optima.objVal) {
                 optima = genOutput();
             }
             ++iterCount;
-            failCount = 0;
+            improveFlag = improveFlagBackup;
         } else {
-            ++failCount;
-            (++moveMode) %= Move::Mode::NUM;
+            improveFlag.reset( moveMode );
+            (++moveMode) %= moveModeNum;
         }
     }
 #ifdef INRC2_PERFORMANCE_TEST
@@ -323,7 +340,7 @@ long long NurseRostering::Solution::randomWalk( const Timer &timer, Output &opti
 
     ObjValue delta;
     for (; !timer.isTimeOut(); ++iterCount) {
-        int moveMode = rand() % Move::Mode::NUM;
+        int moveMode = rand() % Move::Mode::BASIC_MOVE_NUM;
         Move move;
         move.weekday = (rand() % Weekday::NUM) + Weekday::Mon;
         move.nurse = rand() % solver.problem.scenario.nurseNum;
@@ -350,7 +367,7 @@ long long NurseRostering::Solution::randomWalk( const Timer &timer, Output &opti
     return iterCount;
 }
 
-bool NurseRostering::Solution::findBestAddShift( Move &bestMove ) const
+bool NurseRostering::Solution::findBestAdd( Move &bestMove ) const
 {
     RandSelect<ObjValue> rs;
     bestMove.delta = DefaultPenalty::FORBIDDEN_MOVE;
@@ -375,7 +392,7 @@ bool NurseRostering::Solution::findBestAddShift( Move &bestMove ) const
     return (bestMove.delta < 0);
 }
 
-bool NurseRostering::Solution::findBestChangeShift( Move &bestMove ) const
+bool NurseRostering::Solution::findBestChange( Move &bestMove ) const
 {
     RandSelect<ObjValue> rs;
     bestMove.delta = DefaultPenalty::FORBIDDEN_MOVE;
@@ -399,7 +416,7 @@ bool NurseRostering::Solution::findBestChangeShift( Move &bestMove ) const
     return (bestMove.delta < 0);
 }
 
-bool NurseRostering::Solution::findBestRemoveShift( Move &bestMove ) const
+bool NurseRostering::Solution::findBestRemove( Move &bestMove ) const
 {
     RandSelect<ObjValue> rs;
     bestMove.delta = DefaultPenalty::FORBIDDEN_MOVE;
@@ -418,7 +435,7 @@ bool NurseRostering::Solution::findBestRemoveShift( Move &bestMove ) const
     return (bestMove.delta < 0);
 }
 
-bool NurseRostering::Solution::findBestSwapShift( Move &bestMove ) const
+bool NurseRostering::Solution::findBestSwap( Move &bestMove ) const
 {
     RandSelect<ObjValue> rs;
     bestMove.delta = DefaultPenalty::FORBIDDEN_MOVE;
@@ -437,7 +454,57 @@ bool NurseRostering::Solution::findBestSwapShift( Move &bestMove ) const
     return (bestMove.delta < 0);
 }
 
-bool NurseRostering::Solution::findBestAddShiftOnConsecutiveBorder( Move &bestMove ) const
+bool NurseRostering::Solution::findBestARLoop( Move &bestMove ) const
+{
+    bool isImproved;
+    isImproved = findBestARLoopFlag
+        ? findBestAdd( bestMove ) : findBestRemove( bestMove );
+
+    if (!isImproved) {
+        findBestARLoopFlag = !findBestARLoopFlag;
+        isImproved = findBestARLoopFlag
+            ? findBestAdd( bestMove ) : findBestRemove( bestMove );
+    }
+
+    return isImproved;
+}
+
+bool NurseRostering::Solution::findBestARRand( Move &bestMove ) const
+{
+    return ((rand() % 2) ? findBestAdd( bestMove ) : findBestRemove( bestMove ));
+}
+
+bool NurseRostering::Solution::findBestARBoth( Move &bestMove ) const
+{
+    RandSelect<ObjValue> rs;
+    bestMove.delta = DefaultPenalty::FORBIDDEN_MOVE;
+
+    // search for best addShift
+    for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
+        for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
+            if (assign.isWorking( nurse, weekday )) {
+                ObjValue delta = tryRemoveAssign( weekday, nurse );
+                if (rs.isMinimal( delta, bestMove.delta )) {
+                    bestMove = Move( delta, weekday, nurse );
+                }
+            } else {
+                Assign a;
+                for (a.shift = 0; a.shift < solver.problem.scenario.shiftTypeNum; ++a.shift) {
+                    for (a.skill = 0; a.skill < solver.problem.scenario.skillTypeNum; ++a.skill) {
+                        ObjValue delta = tryAddAssign( weekday, nurse, a );
+                        if (rs.isMinimal( delta, bestMove.delta )) {
+                            bestMove = Move( delta, weekday, nurse, a );
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return (bestMove.delta < 0);
+}
+
+bool NurseRostering::Solution::findBestAddOnBlockBorder( Move &bestMove ) const
 {
     RandSelect<ObjValue> rs;
     bestMove.delta = DefaultPenalty::FORBIDDEN_MOVE;
@@ -466,7 +533,7 @@ bool NurseRostering::Solution::findBestAddShiftOnConsecutiveBorder( Move &bestMo
     return (bestMove.delta < 0);
 }
 
-bool NurseRostering::Solution::findBestChangeShiftOnConsecutiveBorder( Move &bestMove ) const
+bool NurseRostering::Solution::findBestChangeOnBlockBorder( Move &bestMove ) const
 {
     RandSelect<ObjValue> rs;
     bestMove.delta = DefaultPenalty::FORBIDDEN_MOVE;
@@ -494,7 +561,7 @@ bool NurseRostering::Solution::findBestChangeShiftOnConsecutiveBorder( Move &bes
     return (bestMove.delta < 0);
 }
 
-bool NurseRostering::Solution::findBestRemoveShiftOnConsecutiveBorder( Move &bestMove ) const
+bool NurseRostering::Solution::findBestRemoveOnBlockBorder( Move &bestMove ) const
 {
     RandSelect<ObjValue> rs;
     bestMove.delta = DefaultPenalty::FORBIDDEN_MOVE;
@@ -517,7 +584,7 @@ bool NurseRostering::Solution::findBestRemoveShiftOnConsecutiveBorder( Move &bes
     return (bestMove.delta < 0);
 }
 
-bool NurseRostering::Solution::findBestSwapNursetOnConsecutiveBorder( Move &bestMove ) const
+bool NurseRostering::Solution::findBestSwapOnBlockBorder( Move &bestMove ) const
 {
     RandSelect<ObjValue> rs;
     bestMove.delta = DefaultPenalty::FORBIDDEN_MOVE;
@@ -529,6 +596,58 @@ bool NurseRostering::Solution::findBestSwapNursetOnConsecutiveBorder( Move &best
                 ObjValue delta = trySwapNurse( weekday, nurse, nurse2 );
                 if (rs.isMinimal( delta, bestMove.delta )) {
                     bestMove = Move( delta, weekday, nurse, nurse2 );
+                }
+            }
+            weekday = (weekday != c.dayHigh[weekday]) ? c.dayHigh[weekday] : (weekday + 1);
+        }
+    }
+
+    return (bestMove.delta < 0);
+}
+
+bool NurseRostering::Solution::findBestARLoopOnBlockBorder( Move &bestMove ) const
+{
+    bool isImproved;
+    isImproved = findBestARLoopOnBlockBorderFlag
+        ? findBestAddOnBlockBorder( bestMove ) : findBestRemove( bestMove );
+
+    if (!isImproved) {
+        findBestARLoopOnBlockBorderFlag = !findBestARLoopOnBlockBorderFlag;
+        isImproved = findBestARLoopOnBlockBorderFlag
+            ? findBestAddOnBlockBorder( bestMove ) : findBestRemoveOnBlockBorder( bestMove );
+    }
+
+    return isImproved;
+}
+
+bool NurseRostering::Solution::findBestARRandOnBlockBorder( Move &bestMove ) const
+{
+    return ((rand() % 2) ? findBestAddOnBlockBorder( bestMove ) : findBestRemoveOnBlockBorder( bestMove ));
+}
+
+bool NurseRostering::Solution::findBestARBothOnBlockBorder( Move &bestMove ) const
+{
+    RandSelect<ObjValue> rs;
+    bestMove.delta = DefaultPenalty::FORBIDDEN_MOVE;
+
+    // search for best addShift
+    for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
+        const Consecutive &c( consecutives[nurse] );
+        for (int weekday = Weekday::Mon; weekday < Weekday::SIZE;) {
+            if (assign.isWorking( nurse, weekday )) {
+                ObjValue delta = tryRemoveAssign( weekday, nurse );
+                if (rs.isMinimal( delta, bestMove.delta )) {
+                    bestMove = Move( delta, weekday, nurse );
+                }
+            } else {
+                Assign a;
+                for (a.shift = 0; a.shift < solver.problem.scenario.shiftTypeNum; ++a.shift) {
+                    for (a.skill = 0; a.skill < solver.problem.scenario.skillTypeNum; ++a.skill) {
+                        ObjValue delta = tryAddAssign( weekday, nurse, a );
+                        if (rs.isMinimal( delta, bestMove.delta )) {
+                            bestMove = Move( delta, weekday, nurse, a );
+                        }
+                    }
                 }
             }
             weekday = (weekday != c.dayHigh[weekday]) ? c.dayHigh[weekday] : (weekday + 1);
@@ -1263,6 +1382,15 @@ void NurseRostering::Solution::swapNurse( int weekday, NurseID nurse1, NurseID n
 void NurseRostering::Solution::swapNurse( const Move &move )
 {
     swapNurse( move.weekday, move.nurse, move.nurse2 );
+}
+
+void NurseRostering::Solution::arAssign( const Move &move )
+{
+    if (AssignTable::isWorking( move.assign.shift )) {
+        removeAssign( move );
+    } else {
+        addAssign( move );
+    }
 }
 
 void NurseRostering::Solution::updateConsecutive( int weekday, NurseID nurse, ShiftID shift )

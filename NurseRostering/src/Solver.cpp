@@ -448,7 +448,7 @@ void NurseRostering::TabuSolver::exactInit()
 
 void NurseRostering::TabuSolver::randomWalk()
 {
-    algorithmName += "[RandomWalk]";
+    algorithmName += "[RW]";
 
     Timer timer( problem.timeout, startTime );
 
@@ -457,7 +457,26 @@ void NurseRostering::TabuSolver::randomWalk()
 
 void NurseRostering::TabuSolver::iterativeLocalSearch()
 {
-    algorithmName += "[IterativeLocalSearch]";
+    algorithmName += "[ILS][ASCR]";
+
+    vector<int> modeSeq = {
+        Solution::Move::Mode::Add,
+        Solution::Move::Mode::Change,
+        Solution::Move::Mode::Swap,
+        Solution::Move::Mode::Remove
+    };
+
+    int modeSeqLen = modeSeq.size();
+
+    Solution::FindBestMoveTable fbmt( modeSeqLen );
+    Solution::FindBestMoveTable fbmtobb( modeSeqLen );
+    Solution::ApplyMoveTable amt( modeSeqLen );
+
+    for (int i = 0; i < modeSeqLen; ++i) {
+        fbmt[i] = Solution::findBestMove[modeSeq[i]];
+        fbmtobb[i] = Solution::findBestMoveOnBlockBorder[modeSeq[i]];
+        amt[i] = Solution::applyMove[modeSeq[i]];
+    }
 
     Timer timer( problem.timeout, startTime );
 
@@ -466,19 +485,20 @@ void NurseRostering::TabuSolver::iterativeLocalSearch()
     for (; !timer.isTimeOut() && loopCount > 0; --loopCount) {
         Timer t( timer.restTime() / loopCount, clock() );
         sln.randomWalk( t, optima );
-        Solution::FindBestMoveTable &findBestMoveTable =
-            (rand() % 2) ? Solution::findBestMove
-            : Solution::findBestMoveOnConsecutiveBorder;
-        sln.localSearch( timer, optima, findBestMoveTable );
+        if (rand() % 2) {
+            sln.localSearch( timer, optima, fbmt, amt );
+        } else {
+            sln.localSearch( timer, optima, fbmtobb, amt );
+        }
     }
 }
 
 void NurseRostering::TabuSolver::tabuSearch()
 {
-    algorithmName += "[TabuSearch]";
+    algorithmName += "[TS]";
 
     Timer timer( problem.timeout, startTime );
 
-    // TODO : add perturb? findBestMoveOnConsecutiveBorder?
-    sln.tabuSearch( timer, optima, Solution::findBestMove );
+    // TODO : add perturb? findBestMoveOnBlockBorder?
+    sln.tabuSearch( timer, optima, Solution::findBestMove, Solution::applyMove );
 }
