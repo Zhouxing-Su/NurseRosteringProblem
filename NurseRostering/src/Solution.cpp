@@ -69,6 +69,21 @@ void NurseRostering::Solution::rebuildAssistData( const AssignTable &a )
     evaluateObjValue();
 }
 
+bool NurseRostering::Solution::genInitAssign( int greedyRetryCount )
+{
+    bool feasible;
+    clock_t timeForBranchAndCut = solver.timer.restTime() * 3 / 4;
+    do {
+        feasible = genInitAssign_Greedy();
+        if (!feasible) {
+            Timer timer( (solver.timer.restTime() - timeForBranchAndCut) / greedyRetryCount );
+            feasible = repair( solver.timer );
+        }
+    } while (!feasible && (--greedyRetryCount > 0));
+
+    return (feasible || genInitAssign_BranchAndCut());
+}
+
 bool NurseRostering::Solution::genInitAssign_Greedy()
 {
     resetAssign();
@@ -132,30 +147,29 @@ bool NurseRostering::Solution::genInitAssign_BranchAndCut()
 {
     resetAssign();
 
-    Timer timer( solver.problem.timeout, solver.startTime );
-    bool feasible = fillAssign( timer, Weekday::Mon, 0, 0, 0, 0 );
+    bool feasible = fillAssign( Weekday::Mon, 0, 0, 0, 0 );
     AssignTable a( assign );
     rebuildAssistData( a );
     return feasible;
 }
 
-bool NurseRostering::Solution::fillAssign( const Timer &timer, int weekday, ShiftID shift, SkillID skill, NurseID nurse, int nurseNum )
+bool NurseRostering::Solution::fillAssign( int weekday, ShiftID shift, SkillID skill, NurseID nurse, int nurseNum )
 {
     if (nurse >= solver.problem.scenario.nurseNum) {
         if (nurseNum < solver.problem.weekData.minNurseNums[weekday][shift][skill]) {
             return false;
         } else {
-            return fillAssign( timer, weekday, shift, skill + 1, 0, 0 );
+            return fillAssign( weekday, shift, skill + 1, 0, 0 );
         }
     } else if (skill >= solver.problem.scenario.skillTypeNum) {
-        return fillAssign( timer, weekday, shift + 1, 0, 0, 0 );
+        return fillAssign( weekday, shift + 1, 0, 0, 0 );
     } else if (shift >= solver.problem.scenario.shiftTypeNum) {
-        return fillAssign( timer, weekday + 1, 0, 0, 0, 0 );
+        return fillAssign( weekday + 1, 0, 0, 0, 0 );
     } else if (weekday > Weekday::Sun) {
         return true;
     }
 
-    if (timer.isTimeOut()) {
+    if (solver.timer.isTimeOut()) {
         return false;
     }
 
@@ -174,7 +188,7 @@ bool NurseRostering::Solution::fillAssign( const Timer &timer, int weekday, Shif
             }
 
             assign[nurse][weekday] = firstAssign;
-            if (fillAssign( timer, weekday, shift, skill, nurse + 1, firstNurseNum )) {
+            if (fillAssign( weekday, shift, skill, nurse + 1, firstNurseNum )) {
                 return true;
             }
         }
@@ -182,7 +196,7 @@ bool NurseRostering::Solution::fillAssign( const Timer &timer, int weekday, Shif
         assign[nurse][weekday] = secondAssign;
     }
 
-    if (fillAssign( timer, weekday, shift, skill, nurse + 1, secondNurseNum )) {
+    if (fillAssign( weekday, shift, skill, nurse + 1, secondNurseNum )) {
         return true;
     } else if (isNotAssignedBefore) {
         assign[nurse][weekday] = Assign();
@@ -230,13 +244,13 @@ void NurseRostering::Solution::evaluateObjValue()
 
 bool NurseRostering::Solution::repair( const Timer &timer )
 {
-    // TODO
-    bool feasible;
-    do {
-        feasible = genInitAssign_Greedy();
-    } while (!feasible && !timer.isTimeOut());
+    penalty.setRepairMode();
 
-    return (feasible || genInitAssign_BranchAndCut());
+    // TODO
+    //tabuSearch( timer );
+
+    penalty.setDefaultMode();
+    return false;
 }
 
 long long NurseRostering::Solution::tabuSearch( const Timer &timer, Output &optima,
@@ -252,6 +266,25 @@ long long NurseRostering::Solution::tabuSearch( const Timer &timer, Output &opti
     removeTabu = RemoveTabu( solver.problem.scenario.nurseNum,
         vector<int>( Weekday::SIZE, 0 ) );
 
+    // TODO : 
+    // method1: randomly select neighborhood to search.
+    //          for each neighborhood i, the possibility to select is P[i].
+    //          increase the possibility to select when no improvement.
+    //          in detail, the P[i] contains two part, local and global.
+    //          the local part will increase if the neighborhood i makes
+    //          improvement, and decrease vice versa. the global part will
+    //          increase if recent search (not only on neighborhood i)
+    //          can not make improvement, otherwise, it will decrease.
+    //          in case the iteration takes too much time, it can be changed
+    //          from best improvement to first improvement.
+    //          Q: what if no neighborhood has been selected
+    //          A: prepare a loop queue, if no one is selected, select
+    //              the first one in the queue, only move it to the end
+    //              of the queue if it makes no improvement.
+    //
+    // method2: loop to select neighborhood sequentially to search.
+    //          
+
     long long iterCount = 0;
     int moveMode = 0;
     int noImproveCount = 0;
@@ -263,9 +296,7 @@ long long NurseRostering::Solution::tabuSearch( const Timer &timer, Output &opti
 
         (this->*applyMoveTable[moveMode])(bestMove);
         objValue += bestMove.delta;
-        if (objValue < optima.objVal) {
-            optima = genOutput();
-        }
+        solver.updateOptima( *this );
 
         // TODO : switch move strategy?
         if (noImproveCount > 100) {
@@ -301,9 +332,7 @@ long long NurseRostering::Solution::localSearch( const Timer &timer, Output &opt
         if ((this->*findBestMoveTable[moveMode])(bestMove)) {
             (this->*applyMoveTable[moveMode])(bestMove);
             objValue += bestMove.delta;
-            if (objValue < optima.objVal) {
-                optima = genOutput();
-            }
+            solver.updateOptima( *this );
             ++iterCount;
             improveFlag = improveFlagBackup;
         } else {
@@ -320,14 +349,12 @@ long long NurseRostering::Solution::localSearch( const Timer &timer, Output &opt
     return iterCount;
 }
 
-void NurseRostering::Solution::perturb( Output &optima )
+void NurseRostering::Solution::perturb( Output &optima, double strength )
 {
     // TODO : make this change solution structure in certain complexity
 
 
-    if (objValue < optima.objVal) {
-        optima = genOutput();
-    }
+    solver.updateOptima( *this );
 }
 
 
@@ -354,9 +381,7 @@ long long NurseRostering::Solution::randomWalk( const Timer &timer, Output &opti
             (this->*applyMove[moveMode])(move);
         }
 
-        if (objValue < optima.objVal) {
-            optima = genOutput();
-        }
+        solver.updateOptima( *this );
     }
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t duration = clock() - startTime;
@@ -1878,7 +1903,7 @@ NurseRostering::NurseID NurseRostering::Solution::AvailableNurses::getNurse()
             int n = rand() % validNurseNum_CurShift[minSkillNum];
             NurseID nurse = nurseWithSkill[skill][minSkillNum][n];
             vector<NurseID> &nurseSet = nurseWithSkill[skill][minSkillNum];
-            if (sln.getAssign().isWorking( nurse, weekday )) { // set the nurse invalid for current day
+            if (sln.getAssignTable().isWorking( nurse, weekday )) { // set the nurse invalid for current day
                 swap( nurseSet[n], nurseSet[--validNurseNum_CurShift[minSkillNum]] );
                 swap( nurseSet[validNurseNum_CurShift[minSkillNum]], nurseSet[--validNurseNum_CurDay[minSkillNum]] );
             } else if (sln.isValidSuccession( nurse, shift, weekday )) {

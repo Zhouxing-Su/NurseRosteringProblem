@@ -29,8 +29,6 @@ public:
         FORBIDDEN_MOVE = (MAX_OBJ_VALUE * 2),
         // amplifier for improving accuracy
         AMP = 2 * 2 * 2 * 3 * 5,
-        // attenuation for fast repair without considering quality
-        DECAY = 5,
         // hard constraints
         SingleAssign = FORBIDDEN_MOVE,
         UnderStaff = FORBIDDEN_MOVE,
@@ -206,9 +204,10 @@ public:
         void setSwapMode();
         // allow hard constraints UnderStaff and Succession being violated
         // but with much greater penalty than soft constraints
-        void setRepairMode( ObjValue softConstraintDecay = DefaultPenalty::DECAY,
-            ObjValue WeightOnUnderStaff = DefaultPenalty::UnderStaff_Repair,
-            ObjValue WeightOnSuccesion = DefaultPenalty::Succession_Repair );
+        // set softConstraintDecay to MAX_OBJ_VALUE to make them does not count
+        void setRepairMode( ObjValue WeightOnUnderStaff = DefaultPenalty::UnderStaff_Repair,
+            ObjValue WeightOnSuccesion = DefaultPenalty::Succession_Repair,
+            ObjValue softConstraintDecay = DefaultPenalty::MAX_OBJ_VALUE );
 
         // hard constraint
         ObjValue UnderStaff() const { return underStaff; }

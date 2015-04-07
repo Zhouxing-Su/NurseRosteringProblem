@@ -10,6 +10,8 @@ int main()
 
     //validatorCheck( "log.csv", "checkResult.csv" );
 
+    //solutionAnalysis( "log.csv", "analysisResult.csv" );
+
     ValidatorArgvPack vap;
     rebuildSolution( "log.csv", "2015-04-01 Wed 10:10:40", "0", vap );
     callValidator( vap );

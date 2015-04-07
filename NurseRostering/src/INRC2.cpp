@@ -348,7 +348,7 @@ namespace INRC2
     bool writeSolution( const std::string &solutionFileName, const NurseRostering::Solver &solver )
     {
         const NurseRostering::Names &names( solver.problem.names );
-        const NurseRostering::AssignTable &assign( solver.getOptima().assign );
+        const NurseRostering::AssignTable &assign( solver.getOptima().getAssignTable() );
         ofstream ofs( solutionFileName );
 
         if (!ofs.is_open()) {

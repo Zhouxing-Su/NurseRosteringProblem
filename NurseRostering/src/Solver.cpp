@@ -5,29 +5,40 @@ using namespace std;
 
 
 const clock_t NurseRostering::Solver::SAVE_SOLUTION_TIME = CLOCKS_PER_SEC / 2;
-const clock_t NurseRostering::Solver::REPAIR_TIMEOUT_IN_INIT = CLOCKS_PER_SEC * 2;
+
+
+const std::vector<std::string> NurseRostering::TabuSolver::modeSeqNames = {
+    "[ACSR]", "[ASCR]", "[ARLCS]", "[ARRCS]", "[ARBCS]"
+};
+const std::vector<std::vector<int> > NurseRostering::TabuSolver::modeSeqPatterns = {
+    { Solution::Move::Mode::Add, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::Remove },
+    { Solution::Move::Mode::Add, Solution::Move::Mode::Swap, Solution::Move::Mode::Change, Solution::Move::Mode::Remove },
+    { Solution::Move::Mode::ARLoop, Solution::Move::Mode::Change, Solution::Move::Mode::Swap },
+    { Solution::Move::Mode::ARRand, Solution::Move::Mode::Change, Solution::Move::Mode::Swap },
+    { Solution::Move::Mode::ARBoth, Solution::Move::Mode::Change, Solution::Move::Mode::Swap }
+};
 
 
 
 NurseRostering::Solver::Solver( const NurseRostering &input, clock_t st )
-    : problem( input ), startTime( st )
+    : problem( input ), startTime( st ), timer( problem.timeout, startTime )
 {
 }
 
 NurseRostering::Solver::Solver( const NurseRostering &input, const Output &opt, clock_t st )
-    : problem( input ), startTime( st ), optima( opt )
+    : problem( input ), startTime( st ), optima( opt ), timer( problem.timeout, startTime )
 {
 }
 
 NurseRostering::History NurseRostering::Solver::genHistory() const
 {
-    return Solution( *this, optima.assign ).genHistory();
+    return Solution( *this, optima.getAssignTable() ).genHistory();
 }
 
 bool NurseRostering::Solver::check() const
 {
     bool feasible = checkFeasibility();
-    bool objValMatch = (checkObjValue() == optima.objVal);
+    bool objValMatch = (checkObjValue() == optima.getObjValue());
 
     if (!feasible) {
         errorLog( "infeasible optima solution." );
@@ -93,7 +104,7 @@ bool NurseRostering::Solver::checkFeasibility( const AssignTable &assign ) const
 
 bool NurseRostering::Solver::checkFeasibility() const
 {
-    return checkFeasibility( optima.assign );
+    return checkFeasibility( optima.getAssignTable() );
 }
 
 NurseRostering::ObjValue NurseRostering::Solver::checkObjValue( const AssignTable &assign ) const
@@ -216,12 +227,12 @@ NurseRostering::ObjValue NurseRostering::Solver::checkObjValue( const AssignTabl
 
 NurseRostering::ObjValue NurseRostering::Solver::checkObjValue() const
 {
-    return checkObjValue( optima.assign );
+    return checkObjValue( optima.getAssignTable() );
 }
 
 void NurseRostering::Solver::print() const
 {
-    cout << "optima.objVal: " << (optima.objVal / DefaultPenalty::AMP) << endl;
+    cout << "optima.objVal: " << (optima.getObjValue() / DefaultPenalty::AMP) << endl;
 }
 
 void NurseRostering::Solver::initResultSheet( std::ofstream &csvFile )
@@ -252,16 +263,16 @@ void NurseRostering::Solver::record( const std::string logFileName, const std::s
         << instanceName << ","
         << algorithmName << ","
         << problem.randSeed << ","
-        << (optima.findTime - startTime) / static_cast<double>(CLOCKS_PER_SEC) << "s,"
+        << (optimaFindTime - startTime) / static_cast<double>(CLOCKS_PER_SEC) << "s,"
         << checkFeasibility() << ","
-        << (checkObjValue() - optima.objVal) / static_cast<double>(DefaultPenalty::AMP) << ","
-        << optima.objVal / static_cast<double>(DefaultPenalty::AMP) << ","
-        << (optima.objVal + problem.history.accObjValue) / static_cast<double>(DefaultPenalty::AMP) << ",";
+        << (checkObjValue() - optima.getObjValue()) / static_cast<double>(DefaultPenalty::AMP) << ","
+        << optima.getObjValue() / static_cast<double>(DefaultPenalty::AMP) << ","
+        << (optima.getObjValue() + problem.history.accObjValue) / static_cast<double>(DefaultPenalty::AMP) << ",";
 
     for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
         for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
-            csvFile << optima.assign[nurse][weekday].shift << ' '
-                << optima.assign[nurse][weekday].skill << ' ';
+            csvFile << optima.getAssign( nurse, weekday ).shift << ' '
+                << optima.getAssign( nurse, weekday ).skill << ' ';
         }
     }
 
@@ -415,25 +426,33 @@ void NurseRostering::TabuSolver::init( const string &id )
     //exactInit();
     greedyInit();
 
-    optima = sln.genOutput();
+    optima = sln;
 }
 
 void NurseRostering::TabuSolver::solve()
 {
     //randomWalk();
-    iterativeLocalSearch();
+    iterativeLocalSearch( ModeSeq::ARLCS );
     //tabuSearch();
+}
+
+bool NurseRostering::TabuSolver::updateOptima( const Output &localOptima ) const
+{
+    if (localOptima.getObjValue() < optima.getObjValue()) {
+        optima = localOptima;
+        optimaFindTime = clock();
+        return true;
+    }
+
+    return false;
 }
 
 void NurseRostering::TabuSolver::greedyInit()
 {
     algorithmName += "[GreedyInit]";
 
-    if (sln.genInitAssign_Greedy() == false) {
-        Timer timer( REPAIR_TIMEOUT_IN_INIT, startTime );
-        if (sln.repair( timer ) == false) {
-            errorLog( "fail to generate feasible init solution." );
-        }
+    if (sln.genInitAssign( problem.scenario.nurseNum / 4 ) == false) {
+        errorLog( "fail to generate feasible init solution." );
     }
 }
 
@@ -455,26 +474,21 @@ void NurseRostering::TabuSolver::randomWalk()
     sln.randomWalk( timer, optima );
 }
 
-void NurseRostering::TabuSolver::iterativeLocalSearch()
+void NurseRostering::TabuSolver::iterativeLocalSearch( ModeSeq modeSeq )
 {
-    algorithmName += "[ILS][ARBCS]";
+    algorithmName += "[ILS]" + modeSeqNames[modeSeq];
 
-    vector<int> modeSeq = {
-        Solution::Move::Mode::ARBoth,
-        Solution::Move::Mode::Change,
-        Solution::Move::Mode::Swap
-    };
-
-    int modeSeqLen = modeSeq.size();
+    const vector<int> &modeSeqPat( modeSeqPatterns[modeSeq] );
+    int modeSeqLen = modeSeqPat.size();
 
     Solution::FindBestMoveTable fbmt( modeSeqLen );
     Solution::FindBestMoveTable fbmtobb( modeSeqLen );
     Solution::ApplyMoveTable amt( modeSeqLen );
 
     for (int i = 0; i < modeSeqLen; ++i) {
-        fbmt[i] = Solution::findBestMove[modeSeq[i]];
-        fbmtobb[i] = Solution::findBestMoveOnBlockBorder[modeSeq[i]];
-        amt[i] = Solution::applyMove[modeSeq[i]];
+        fbmt[i] = Solution::findBestMove[modeSeqPat[i]];
+        fbmtobb[i] = Solution::findBestMoveOnBlockBorder[modeSeqPat[i]];
+        amt[i] = Solution::applyMove[modeSeqPat[i]];
     }
 
     Timer timer( problem.timeout, startTime );

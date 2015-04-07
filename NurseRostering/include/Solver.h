@@ -45,12 +45,12 @@ class NurseRostering::Solver
 public:
     static const int ILLEGAL_SOLUTION = -1;
     static const int CHECK_TIME_INTERVAL_MASK_IN_ITER = ((1 << 10) - 1);
-    static const int RECORD_RETRY_INTERVAL = 50;// in millisecond
+    static const int RECORD_RETRY_INTERVAL = 50;    // in millisecond
     static const clock_t SAVE_SOLUTION_TIME;    // 0.5 seconds
-    static const clock_t REPAIR_TIMEOUT_IN_INIT;// 2 seconds
 
     const NurseRostering &problem;
     const clock_t startTime;
+    const Timer timer;
 
 
     Solver( const NurseRostering &input, clock_t startTime );
@@ -61,11 +61,13 @@ public:
     virtual void init( const std::string &runID ) = 0;
     // search for optima
     virtual void solve() = 0;
-    // generate history for next week
-    virtual History genHistory() const;
+    // return true if global optima or population is updated
+    virtual bool updateOptima( const Output &localOptima ) const = 0;
     // return const reference of the optima
     const Output& getOptima() const { return optima; }
     // print simple information of the solution to console
+    // generate history for next week
+    virtual History genHistory() const;
     void print() const;
     // record solution to specified file and create custom file if required
     void record( const std::string logFileName, const std::string &instanceName ) const;  // contain check()
@@ -108,7 +110,8 @@ protected:
     NurseNumOfSkill nurseNumOfSkill;
     NurseWithSkill nurseWithSkill;
 
-    Output optima;
+    mutable Output optima;
+    mutable clock_t optimaFindTime;
 
     std::string runID;
     std::string algorithmName;
@@ -121,8 +124,11 @@ private:    // forbidden operators
 class NurseRostering::TabuSolver : public NurseRostering::Solver
 {
 public:
-    static const int PERTURB_COUNT_IN_ILS = 1000;
+    static const int PERTURB_COUNT_IN_ILS = 1024;
 
+    enum ModeSeq { ACSR, ASCR, ARLCS, ARRCS, ARBCS };
+    static const std::vector<std::string> modeSeqNames;
+    static const std::vector<std::vector<int> > modeSeqPatterns;
 
     TabuSolver( const NurseRostering &input, clock_t startTime = clock() );
     TabuSolver( const NurseRostering &input, const Output &optima, clock_t startTime = clock() );
@@ -131,6 +137,8 @@ public:
     virtual void init( const std::string &runID );
     virtual void solve();
 
+    virtual bool updateOptima( const Output &localOptima ) const;
+
 private:
     void greedyInit();
     void exactInit();
@@ -138,7 +146,7 @@ private:
     // search with tabu table
     void tabuSearch();
     // iteratively run local search and perturb
-    void iterativeLocalSearch();
+    void iterativeLocalSearch( ModeSeq modeSeq );
     // random walk until timeout
     void randomWalk();
 

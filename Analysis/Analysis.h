@@ -66,4 +66,8 @@ void validatorCheck( const std::string &logFileName, const std::string &outputFi
 NurseRostering::ObjValue getObjValueInValidatorResult();
 
 
+// count average objective value on each stage
+void solutionAnalysis( const std::string &logFileName, const std::string &outputFileName );
+
+
 #endif

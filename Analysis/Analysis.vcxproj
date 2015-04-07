@@ -93,6 +93,7 @@
     <ClCompile Include="..\NurseRostering\src\utility.cpp" />
     <ClCompile Include="InstanceAnalysis.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="SolutionAnalysis.cpp" />
     <ClCompile Include="SolutionChecker.cpp" />
   </ItemGroup>
   <ItemGroup>

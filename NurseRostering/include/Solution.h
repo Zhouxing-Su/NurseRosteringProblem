@@ -3,7 +3,11 @@
 *               solver for Nurse Rostering Problem.
 *
 *   note :  1.  use repair mode of penalty to fix infeasible solution in repaire().
-*           2.  merge add and remove to a single neighborhood, abreast of swap and change.
+*           v2.  merge add and remove to a single neighborhood, abreast of swap and change.
+*           3.  const solver will not be able to call updateOptima,
+*               but none-const solver will stub the construction in solver.genHistory().
+*           4.  create a fastRepair() which is separate repair and local search
+*               to improve efficiency since repair process in more like generate initial assignment?
 *
 */
 
@@ -24,19 +28,26 @@
 class NurseRostering::Output
 {
 public:
-    Output() :objVal( -1 ) {}
-    Output( ObjValue objValue, const AssignTable &assignment )
-        :objVal( objValue ), assign( assignment ), findTime( clock() )
+    Output() :objValue( -1 ) {}
+    Output( ObjValue objVal, const AssignTable &assignment )
+        :objValue( objVal ), assign( assignment )
     {
     }
 
+    const Assign& getAssign( NurseID nurse, int weekday ) const
+    {
+        return assign[nurse][weekday];
+    }
+    const AssignTable& getAssignTable() const { return assign; }
+    ObjValue getObjValue() const { return objValue; }
+
+protected:
     AssignTable assign;
-    ObjValue objVal;
-    clock_t findTime;
+    ObjValue objValue;
 };
 
 
-class NurseRostering::Solution
+class NurseRostering::Solution : public NurseRostering::Output
 {
 public:
     // single move in neighborhood search
@@ -46,8 +57,11 @@ public:
         // fundamental move modes in local search, NUM is the number of move types
         // AR stands for "Add and Remove", "Rand" means select one to search randomly,
         // "Both" means search both, "Loop" means switch to another when no improvement
-        enum Mode { Add = 0, Change, Swap, Remove, BASIC_MOVE_NUM, 
-            ARLoop = BASIC_MOVE_NUM, ARRand, ARBoth, NUM };
+        enum Mode
+        {
+            Add, Change, Swap, Remove, BASIC_MOVE_NUM,
+            ARLoop = BASIC_MOVE_NUM, ARRand, ARBoth, NUM
+        };
 
         Move() : delta( DefaultPenalty::MAX_OBJ_VALUE ) {}
         Move( ObjValue d, int w, NurseID n )
@@ -93,10 +107,10 @@ public:
     Solution( const Solver &solver, const AssignTable &assign );
     // there must not be self assignment and assign must be build from same problem
     void rebuildAssistData( const AssignTable &assign );
-    Output genOutput() const { return Output( objValue, assign ); }
     History genHistory() const; // history for next week
 
-    bool genInitAssign_Greedy();   // assign must be default value( call resetAssign() )
+    bool genInitAssign( int greedyRetryCount );
+    bool genInitAssign_Greedy();
     bool genInitAssign_BranchAndCut();
     void resetAssign();     // reset all shift to Shift::ID_NONE
     void evaluateObjValue();    // using assist data structure
@@ -111,11 +125,11 @@ public:
     long long localSearch( const Timer &timer, Output &optima,
         const FindBestMoveTable &findBestMoveTable, const ApplyMoveTable &applyMoveTable );
     // change solution structure in certain complexity
-    void perturb( Output &optima );
+    void perturb( Output &optima, double strength );
     // randomly select add, change or remove shift until timeout
     long long randomWalk( const Timer &timer, Output &optima );
 
-    const AssignTable& getAssign() const { return assign; }
+    const AssignTable& getAssignTable() const { return assign; }
     // shift must not be none shift
     bool isValidSuccession( NurseID nurse, ShiftID shift, int weekday ) const;
     bool isValidPrior( NurseID nurse, ShiftID shift, int weekday ) const;
@@ -269,7 +283,7 @@ private:
     }
 
     // depth first search to fill assign
-    bool fillAssign( const Timer &timer, int weekday, ShiftID shift, SkillID skill, NurseID nurse, int nurseNum );
+    bool fillAssign( int weekday, ShiftID shift, SkillID skill, NurseID nurse, int nurseNum );
 
     // return true if the solution will be improved (delta < 0)
     // BlockBorder means the start or end day of a consecutive block
@@ -353,9 +367,7 @@ private:
     // consecutive[nurse] is the consecutive assignments record for nurse
     std::vector<Consecutive> consecutives;
 
-    AssignTable assign;
 
-    ObjValue objValue;
     ObjValue objInsufficientStaff;
     ObjValue objConsecutiveShift;
     ObjValue objConsecutiveDay;

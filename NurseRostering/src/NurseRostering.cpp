@@ -62,7 +62,7 @@ void NurseRostering::Penalty::setSwapMode()
     totalWorkingWeekend = DefaultPenalty::TotalWorkingWeekend;
 }
 
-void NurseRostering::Penalty::setRepairMode( ObjValue softConstraintDecay, ObjValue WeightOnUnderStaff, ObjValue WeightOnSuccesion )
+void NurseRostering::Penalty::setRepairMode( ObjValue WeightOnUnderStaff, ObjValue WeightOnSuccesion, ObjValue softConstraintDecay )
 {
     mode = Mode::Repair;
 
@@ -80,4 +80,3 @@ void NurseRostering::Penalty::setRepairMode( ObjValue softConstraintDecay, ObjVa
     totalAssign = DefaultPenalty::TotalAssign / softConstraintDecay;
     totalWorkingWeekend = DefaultPenalty::TotalWorkingWeekend / softConstraintDecay;
 }
-
