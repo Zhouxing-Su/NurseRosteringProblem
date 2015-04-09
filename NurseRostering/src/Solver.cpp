@@ -483,12 +483,10 @@ void NurseRostering::TabuSolver::iterativeLocalSearch( ModeSeq modeSeq )
 
     Solution::FindBestMoveTable fbmt( modeSeqLen );
     Solution::FindBestMoveTable fbmtobb( modeSeqLen );
-    Solution::ApplyMoveTable amt( modeSeqLen );
 
     for (int i = 0; i < modeSeqLen; ++i) {
         fbmt[i] = Solution::findBestMove[modeSeqPat[i]];
         fbmtobb[i] = Solution::findBestMoveOnBlockBorder[modeSeqPat[i]];
-        amt[i] = Solution::applyMove[modeSeqPat[i]];
     }
 
     Timer timer( problem.timeout, startTime );
@@ -499,9 +497,9 @@ void NurseRostering::TabuSolver::iterativeLocalSearch( ModeSeq modeSeq )
         Timer t( timer.restTime() / loopCount, clock() );
         sln.randomWalk( t, optima );
         if (rand() % 2) {
-            sln.localSearch( timer, optima, fbmt, amt );
+            sln.localSearch( timer, optima, fbmt );
         } else {
-            sln.localSearch( timer, optima, fbmtobb, amt );
+            sln.localSearch( timer, optima, fbmtobb );
         }
     }
 }
@@ -513,5 +511,5 @@ void NurseRostering::TabuSolver::tabuSearch()
     Timer timer( problem.timeout, startTime );
 
     // TODO : add perturb? findBestMoveOnBlockBorder?
-    sln.tabuSearch( timer, optima, Solution::findBestMove, Solution::applyMove );
+    sln.tabuSearch( timer, optima, Solution::findBestMove);
 }

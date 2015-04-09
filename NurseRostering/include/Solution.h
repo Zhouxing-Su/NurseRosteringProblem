@@ -63,25 +63,26 @@ public:
             ARLoop = BASIC_MOVE_NUM, ARRand, ARBoth, NUM
         };
 
-        Move() : delta( DefaultPenalty::MAX_OBJ_VALUE ) {}
-        Move( ObjValue d, int w, NurseID n )
-            : delta( d ), weekday( w ), nurse( n )
+        Move() : delta( DefaultPenalty::FORBIDDEN_MOVE ) {}
+        Move( ObjValue d, int w, NurseID n, Mode m = Mode::Remove )
+            : delta( d ), weekday( w ), nurse( n ), mode( m )
         {
         }
-        Move( ObjValue d, int w, NurseID n, const Assign &a )
-            : delta( d ), weekday( w ), nurse( n ), assign( a )
+        Move( ObjValue d, int w, NurseID n, const Assign &a, Mode m )
+            : delta( d ), weekday( w ), nurse( n ), assign( a ), mode( m )
         {
         }
-        Move( ObjValue d, int w, NurseID n, ShiftID sh, SkillID sk )
-            : delta( d ), weekday( w ), nurse( n ), assign( sh, sk )
+        Move( ObjValue d, int w, NurseID n, ShiftID sh, SkillID sk, Mode m )
+            : delta( d ), weekday( w ), nurse( n ), assign( sh, sk ), mode( m )
         {
         }
-        Move( ObjValue d, int w, NurseID n, NurseID  n2 )
-            : delta( d ), weekday( w ), nurse( n ), nurse2( n2 )
+        Move( ObjValue d, int w, NurseID n, NurseID  n2, Mode m = Mode::Swap )
+            : delta( d ), weekday( w ), nurse( n ), nurse2( n2 ), mode( m )
         {
         }
 
         ObjValue delta;
+        Mode mode;
         int weekday;
         NurseID nurse;
         NurseID nurse2;
@@ -116,14 +117,25 @@ public:
     void evaluateObjValue();    // using assist data structure
     bool repair( const Timer &timer );  // make infeasible solution feasible
 
-    // run until timeout, switch move mode after a certain steps of no improvement
-    long long tabuSearch( const Timer &timer, Output &optima,
-        const FindBestMoveTable &findBestMoveTable, const ApplyMoveTable &applyMoveTable );
+
+    // randomly select neighborhood to search until timeout.
+    // for each neighborhood i, the possibility to select is P[i].
+    // increase the possibility to select when no improvement.
+    // in detail, the P[i] contains two part, local and global.
+    // the local part will increase if the neighborhood i makes
+    // improvement, and decrease vice versa. the global part will
+    // increase if recent search (not only on neighborhood i)
+    // can not make improvement, otherwise, it will decrease.
+    // in case the iteration takes too much time, it can be changed
+    // from best improvement to first improvement.
+    // if no neighborhood has been selected, prepare a loop queue.
+    // select the one by one in the queue until a valid move is found.
+    // move the head to the tail of the queue if it makes no improvement.
+    long long tabuSearch( const Timer &timer, Output &optima, const FindBestMoveTable &findBestMoveTable );
     // try add shift until there is no improvement , then try change shift,
     // then try remove shift, then try add shift again. if all of them
     // can't improve or time is out, return.
-    long long localSearch( const Timer &timer, Output &optima,
-        const FindBestMoveTable &findBestMoveTable, const ApplyMoveTable &applyMoveTable );
+    long long localSearch( const Timer &timer, Output &optima, const FindBestMoveTable &findBestMoveTable );
     // change solution structure in certain complexity
     void perturb( Output &optima, double strength );
     // randomly select add, change or remove shift until timeout
@@ -326,8 +338,6 @@ private:
     // apply swapping Assign of two nurses
     void swapNurse( int weekday, NurseID nurse1, NurseID nurse2 );
     void swapNurse( const Move &move );
-    // apply add or remove Assign, automatically recognize move type
-    void arAssign( const Move &move );
 
     void updateConsecutive( int weekday, NurseID nurse, ShiftID shift );
     // the assignment is on the right side of a consecutive block
