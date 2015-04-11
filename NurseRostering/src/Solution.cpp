@@ -332,7 +332,6 @@ void NurseRostering::Solution::tabuSearch( const Timer &timer, const FindBestMov
         (this->*applyMove[bestMove.mode])(bestMove);
         objValue += bestMove.delta;
 
-
         if (bestMove.delta < 0) {   // improved
             solver.updateOptima( *this );
             P_global = static_cast<int>(P_global * dec_global);
@@ -1700,23 +1699,25 @@ void NurseRostering::Solution::updateShiftTabu( NurseID nurse, int weekday, cons
 
 bool NurseRostering::Solution::checkIncrementalUpdate()
 {
+    bool correct = true;
+
     ObjValue incrementalVal = objValue;
     evaluateObjValue();
     if (solver.checkFeasibility( assign ) != 0) {
         solver.errorLog( "infeasible solution." );
-        return false;
+        correct = false;
     }
     ObjValue checkResult = solver.checkObjValue( assign );
     if (checkResult != objValue) {
         solver.errorLog( "check conflict with evaluate." );
-        return false;
+        correct = false;
     }
     if (objValue != incrementalVal) {
         solver.errorLog( "evaluate conflict with incremental update." );
-        return false;
+        correct = false;
     }
 
-    return true;
+    return correct;
 }
 
 void NurseRostering::Solution::evaluateInsufficientStaff()
