@@ -58,7 +58,7 @@ NurseRostering::ObjValue NurseRostering::Solver::checkFeasibility( const AssignT
         for (ShiftID shift = 0; shift < problem.scenario.shiftTypeNum; ++shift) {
             for (SkillID skill = 0; skill < problem.scenario.skillTypeNum; ++skill) {
                 if (nurseNum[weekday][shift][skill] < problem.weekData.minNurseNums[weekday][shift][skill]) {
-                    objValue += DefaultPenalty::UnderStaff_Repair * 
+                    objValue += DefaultPenalty::UnderStaff_Repair *
                         (problem.weekData.minNurseNums[weekday][shift][skill] - nurseNum[weekday][shift][skill]);
                 }
             }
@@ -66,21 +66,11 @@ NurseRostering::ObjValue NurseRostering::Solver::checkFeasibility( const AssignT
     }
 
     // check H3: Shift type successions
-    // first day check the history
-    for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
-        if (assign.isWorking( nurse, Weekday::Mon )
-            && (problem.history.lastShifts[nurse] != NurseRostering::Scenario::Shift::ID_NONE)) {
-            if (!problem.scenario.shifts[problem.history.lastShifts[nurse]].legalNextShifts[assign[nurse][Weekday::Mon].shift]) {
-                objValue += DefaultPenalty::Succession_Repair;
-            }
-        }
-    }
     for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
         for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
             if (assign.isWorking( nurse, weekday ) && assign.isWorking( nurse, weekday - 1 )) {
-                if (!problem.scenario.shifts[assign[nurse][weekday - 1].shift].legalNextShifts[assign[nurse][weekday].shift]) {
-                    objValue += DefaultPenalty::Succession_Repair;
-                }
+                objValue += DefaultPenalty::Succession_Repair *
+                    (!problem.scenario.shifts[assign[nurse][weekday - 1].shift].legalNextShifts[assign[nurse][weekday].shift]);
             }
         }
     }
@@ -420,6 +410,15 @@ void NurseRostering::TabuSolver::init( const string &id )
 
     discoverNurseSkillRelation();
 
+    dayTabuTenureBase = problem.scenario.nurseNum / 2;
+    dayTabuTenureBase += (dayTabuTenureBase == 0);
+    dayTabuTenureAmp = dayTabuTenureBase / 4;
+    dayTabuTenureAmp += (dayTabuTenureAmp == 0);
+    shiftTabuTenureBase = problem.scenario.nurseNum * 4 / 5;
+    shiftTabuTenureBase += (shiftTabuTenureBase == 0);
+    shiftTabuTenureAmp = shiftTabuTenureBase / 4;
+    shiftTabuTenureAmp += (shiftTabuTenureAmp == 0);
+
     //exactInit();
     greedyInit();
 
@@ -515,11 +514,6 @@ void NurseRostering::TabuSolver::iterativeLocalSearch( ModeSeq modeSeq )
 void NurseRostering::TabuSolver::tabuSearch( ModeSeq modeSeq )
 {
     algorithmName += "[TTD=0.5NN][TTS=0.8NN]" + modeSeqNames[modeSeq];
-
-    dayTabuTenureBase = problem.scenario.nurseNum / 2;
-    dayTabuTenureAmp = dayTabuTenureBase / 4;
-    shiftTabuTenureBase = problem.scenario.nurseNum * 4 / 5;
-    shiftTabuTenureAmp = shiftTabuTenureBase / 4;
 
     const vector<int> &modeSeqPat( modeSeqPatterns[modeSeq] );
     int modeSeqLen = modeSeqPat.size();

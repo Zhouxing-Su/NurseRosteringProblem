@@ -289,14 +289,14 @@ void NurseRostering::Solution::tabuSearch( const Timer &timer, const FindBestMov
 
     const int maxP_local = RAND_MAX / modeNum;
     const int maxP_global = RAND_MAX * (modeNum - 1) / modeNum;
-    const double amp_local = 1 / (2 * modeNum);
-    const double amp_global = 1 / (4 * modeNum * modeNum);
-    const double dec_local = (2 * modeNum - 1) / (2 * modeNum);
-    const double dec_global = (2 * modeNum * modeNum - 1) / (2 * modeNum * modeNum);
+    const double amp_local = 1.0 / (2 * modeNum);
+    const double amp_global = 1.0 / (4 * modeNum * modeNum);
+    const double dec_local = (2.0 * modeNum - 1) / (2 * modeNum);
+    const double dec_global = (2.0 * modeNum * modeNum - 1) / (2 * modeNum * modeNum);
     int P_global = RAND_MAX / modeNum;
     vector<int> P_local( modeNum, 0 );
 
-    for (; !timer.isTimeOut(); ++iterCount) {
+    for (; !timer.isTimeOut() && (objValue > 0); ++iterCount) {
         int modeSelect = startMode;
         Move::Mode moveMode = Move::Mode::NUM;
         Move bestMove;
@@ -885,25 +885,18 @@ NurseRostering::ObjValue NurseRostering::Solution::tryAddAssign( int weekday, Nu
     }
 
     // hard constraint check
-    if (!solver.problem.scenario.nurses[nurse].skills[a.skill]) {
-        delta += penalty.MissSkill();
-    }
+    delta += penalty.MissSkill() * (!solver.problem.scenario.nurses[nurse].skills[a.skill]);
 
-    if (!(isValidSuccession( nurse, a.shift, weekday )
-        && isValidPrior( nurse, a.shift, weekday ))) {
-        delta += penalty.Succession();
-    }
+    delta += penalty.Succession() * (!isValidSuccession( nurse, a.shift, weekday ));
+    delta += penalty.Succession() * (!isValidPrior( nurse, a.shift, weekday ));
 
     if (delta >= DefaultPenalty::MAX_OBJ_VALUE) {
         return delta;
     }
 
     const WeekData &weekData( solver.problem.weekData );
-    if (weekData.minNurseNums[weekday][a.shift][a.skill] >
-        (weekData.optNurseNums[weekday][a.shift][a.skill] -
-        missingNurseNums[weekday][a.shift][a.skill])) {
-        delta -= penalty.UnderStaff();
-    }
+    delta -= penalty.UnderStaff() * (weekData.minNurseNums[weekday][a.shift][a.skill] >
+        (weekData.optNurseNums[weekday][a.shift][a.skill] - missingNurseNums[weekday][a.shift][a.skill]));
 
     int prevDay = weekday - 1;
     int nextDay = weekday + 1;
@@ -1117,31 +1110,24 @@ NurseRostering::ObjValue NurseRostering::Solution::tryChangeAssign( int weekday,
         return DefaultPenalty::FORBIDDEN_MOVE;
     }
 
-    if (!solver.problem.scenario.nurses[nurse].skills[a.skill]) {
-        delta += penalty.MissSkill();
-    }
+    delta += penalty.MissSkill() * (!solver.problem.scenario.nurses[nurse].skills[a.skill]);
 
-    if (!(isValidSuccession( nurse, a.shift, weekday )
-        && isValidPrior( nurse, a.shift, weekday ))) {
-        delta += penalty.Succession();
-    }
+    delta += penalty.Succession() * (!isValidSuccession( nurse, a.shift, weekday ));
+    delta += penalty.Succession() * (!isValidPrior( nurse, a.shift, weekday ));
 
     const WeekData &weekData( solver.problem.weekData );
-    if (weekData.minNurseNums[weekday][oldShiftID][oldSkillID] >=
-        (weekData.optNurseNums[weekday][oldShiftID][oldSkillID] -
-        missingNurseNums[weekday][oldShiftID][oldSkillID])) {
-        delta += penalty.UnderStaff();
-    }
+    delta += penalty.UnderStaff() * (weekData.minNurseNums[weekday][oldShiftID][oldSkillID] >=
+        (weekData.optNurseNums[weekday][oldShiftID][oldSkillID] - missingNurseNums[weekday][oldShiftID][oldSkillID]));
 
     if (delta >= DefaultPenalty::MAX_OBJ_VALUE) {
         return delta;
     }
 
-    if (weekData.minNurseNums[weekday][a.shift][a.skill] >
-        (weekData.optNurseNums[weekday][a.shift][a.skill] -
-        missingNurseNums[weekday][a.shift][a.skill])) {
-        delta -= penalty.UnderStaff();
-    }
+    delta -= penalty.Succession() * (!isValidSuccession( nurse, oldShiftID, weekday ));
+    delta -= penalty.Succession() * (!isValidPrior( nurse, oldShiftID, weekday ));
+
+    delta -= penalty.UnderStaff() * (weekData.minNurseNums[weekday][a.shift][a.skill] >
+        (weekData.optNurseNums[weekday][a.shift][a.skill] - missingNurseNums[weekday][a.shift][a.skill]));
 
     int prevDay = weekday - 1;
     int nextDay = weekday + 1;
@@ -1290,15 +1276,15 @@ NurseRostering::ObjValue NurseRostering::Solution::tryRemoveAssign( int weekday,
     }
 
     const WeekData &weekData( solver.problem.weekData );
-    if (weekData.minNurseNums[weekday][oldShiftID][oldSkillID] >=
-        (weekData.optNurseNums[weekday][oldShiftID][oldSkillID] -
-        missingNurseNums[weekday][oldShiftID][oldSkillID])) {
-        delta += penalty.UnderStaff();
-    }
+    delta += penalty.UnderStaff() * (weekData.minNurseNums[weekday][oldShiftID][oldSkillID] >=
+        (weekData.optNurseNums[weekday][oldShiftID][oldSkillID] - missingNurseNums[weekday][oldShiftID][oldSkillID]));
 
     if (delta >= DefaultPenalty::MAX_OBJ_VALUE) {
         return delta;
     }
+
+    delta -= penalty.Succession() * (!isValidSuccession( nurse, oldShiftID, weekday ));
+    delta -= penalty.Succession() * (!isValidPrior( nurse, oldShiftID, weekday ));
 
     int prevDay = weekday - 1;
     int nextDay = weekday + 1;
