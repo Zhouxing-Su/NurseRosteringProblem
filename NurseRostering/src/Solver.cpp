@@ -32,7 +32,7 @@ NurseRostering::Solver::Solver( const NurseRostering &input, const Output &opt, 
 
 bool NurseRostering::Solver::check() const
 {
-    bool feasible = checkFeasibility();
+    bool feasible = (checkFeasibility() == 0);
     bool objValMatch = (checkObjValue() == optima.getObjValue());
 
     if (!feasible) {
@@ -45,8 +45,9 @@ bool NurseRostering::Solver::check() const
     return (feasible && objValMatch);
 }
 
-bool NurseRostering::Solver::checkFeasibility( const AssignTable &assign ) const
+NurseRostering::ObjValue NurseRostering::Solver::checkFeasibility( const AssignTable &assign ) const
 {
+    ObjValue objValue = 0;
     NurseNumsOnSingleAssign nurseNum( countNurseNums( assign ) );
 
     // check H1: Single assignment per day
@@ -57,7 +58,8 @@ bool NurseRostering::Solver::checkFeasibility( const AssignTable &assign ) const
         for (ShiftID shift = 0; shift < problem.scenario.shiftTypeNum; ++shift) {
             for (SkillID skill = 0; skill < problem.scenario.skillTypeNum; ++skill) {
                 if (nurseNum[weekday][shift][skill] < problem.weekData.minNurseNums[weekday][shift][skill]) {
-                    return false;
+                    objValue += DefaultPenalty::UnderStaff_Repair * 
+                        (problem.weekData.minNurseNums[weekday][shift][skill] - nurseNum[weekday][shift][skill]);
                 }
             }
         }
@@ -69,15 +71,15 @@ bool NurseRostering::Solver::checkFeasibility( const AssignTable &assign ) const
         if (assign.isWorking( nurse, Weekday::Mon )
             && (problem.history.lastShifts[nurse] != NurseRostering::Scenario::Shift::ID_NONE)) {
             if (!problem.scenario.shifts[problem.history.lastShifts[nurse]].legalNextShifts[assign[nurse][Weekday::Mon].shift]) {
-                return false;
+                objValue += DefaultPenalty::Succession_Repair;
             }
         }
     }
-    for (int weekday = Weekday::Tue; weekday < Weekday::SIZE; ++weekday) {
+    for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
         for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
             if (assign.isWorking( nurse, weekday ) && assign.isWorking( nurse, weekday - 1 )) {
                 if (!problem.scenario.shifts[assign[nurse][weekday - 1].shift].legalNextShifts[assign[nurse][weekday].shift]) {
-                    return false;
+                    objValue += DefaultPenalty::Succession_Repair;
                 }
             }
         }
@@ -88,16 +90,16 @@ bool NurseRostering::Solver::checkFeasibility( const AssignTable &assign ) const
         for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
             if (assign.isWorking( nurse, weekday )) {
                 if (!problem.scenario.nurses[nurse].skills[assign[nurse][weekday].skill]) {
-                    return false;
+                    return DefaultPenalty::FORBIDDEN_MOVE;
                 }
             }
         }
     }
 
-    return true;
+    return objValue;
 }
 
-bool NurseRostering::Solver::checkFeasibility() const
+NurseRostering::ObjValue NurseRostering::Solver::checkFeasibility() const
 {
     return checkFeasibility( optima.getAssignTable() );
 }

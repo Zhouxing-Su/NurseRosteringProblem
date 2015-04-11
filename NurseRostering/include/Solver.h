@@ -43,8 +43,6 @@
 class NurseRostering::Solver
 {
 public:
-    static const int ILLEGAL_SOLUTION = -1;
-
     static const int CHECK_TIME_INTERVAL_MASK_IN_ITER = ((1 << 10) - 1);
     static const clock_t SAVE_SOLUTION_TIME;    // 0.5 seconds
 
@@ -79,9 +77,10 @@ public:
     bool check() const;
 
     // use original input instead of auxiliary data structure
-    bool checkFeasibility( const AssignTable &assgin ) const;
-    bool checkFeasibility() const;  // check optima assign
-    // return objective value if solution is legal, else ILLEGAL_SOLUTION
+    // return 0 if no violation of hard constraints
+    ObjValue checkFeasibility( const AssignTable &assgin ) const;
+    ObjValue checkFeasibility() const;  // check optima assign
+    // return objective value if solution is legal
     ObjValue checkObjValue( const AssignTable &assign ) const;
     ObjValue checkObjValue() const;  // check optima assign
 

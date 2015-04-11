@@ -261,7 +261,7 @@ void NurseRostering::Solution::evaluateObjValue()
 bool NurseRostering::Solution::repair( const Timer &timer )
 {
     penalty.setRepairMode();
-    evaluateObjValue();
+    objValue = solver.checkFeasibility( assign );
 
     Solution::FindBestMoveTable fbmt = {
         &NurseRostering::Solution::findBestARBoth,
@@ -1716,7 +1716,7 @@ bool NurseRostering::Solution::checkIncrementalUpdate()
 {
     ObjValue incrementalVal = objValue;
     evaluateObjValue();
-    if (!solver.checkFeasibility( assign )) {
+    if (solver.checkFeasibility( assign ) != 0) {
         solver.errorLog( "infeasible solution." );
         return false;
     }
