@@ -49,6 +49,8 @@ public:
     };
 
 
+    typedef int IterCount;  // iteration count for meta heuristic solver
+
     typedef int ObjValue;   // unit of objective function
     typedef int NurseID;    // non-negative number for a certain nurse
     typedef int ContractID; // non-negative number for a certain contract
@@ -162,6 +164,16 @@ public:
         // the default constructor means there is no assignment
         Assign( ShiftID sh = Scenario::Shift::ID_NONE, SkillID sk = 0 ) :shift( sh ), skill( sk ) {}
 
+        static bool isWorking( ShiftID shift )
+        {
+            return (shift != NurseRostering::Scenario::Shift::ID_NONE);
+        }
+
+        bool isWorking() const
+        {
+            return (shift != NurseRostering::Scenario::Shift::ID_NONE);
+        }
+
         ShiftID shift;
         SkillID skill;
     };
@@ -173,15 +185,11 @@ public:
         AssignTable( int nurseNum, int weekdayNum = Weekday::SIZE, const Assign &singleAssign = Assign() )
             : std::vector< std::vector< Assign > >( nurseNum, std::vector< Assign >( weekdayNum, singleAssign ) ) {}
 
-        static bool isWorking( ShiftID shift )
-        {
-            return (shift != NurseRostering::Scenario::Shift::ID_NONE);
-        }
-
         bool isWorking( NurseID nurse, int weekday ) const
         {
-            return isWorking( at( nurse ).at( weekday ).shift );
+            return Assign::isWorking( at( nurse ).at( weekday ).shift );
         }
+
     private:
 
     };

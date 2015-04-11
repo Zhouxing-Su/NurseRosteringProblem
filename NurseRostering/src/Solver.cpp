@@ -30,11 +30,6 @@ NurseRostering::Solver::Solver( const NurseRostering &input, const Output &opt, 
 {
 }
 
-NurseRostering::History NurseRostering::Solver::genHistory() const
-{
-    return Solution( *this, optima.getAssignTable() ).genHistory();
-}
-
 bool NurseRostering::Solver::check() const
 {
     bool feasible = checkFeasibility();
@@ -173,7 +168,7 @@ NurseRostering::ObjValue NurseRostering::Solver::checkObjValue( const AssignTabl
     for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
         for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
             const ShiftID &shift = assign[nurse][weekday].shift;
-            if (AssignTable::isWorking( shift )) {
+            if (Assign::isWorking( shift )) {
                 objValue += DefaultPenalty::Preference *
                     problem.weekData.shiftOffs[weekday][shift][nurse];
             }
@@ -312,7 +307,7 @@ void NurseRostering::Solver::checkConsecutiveViolation( int &objValue,
     const ContractID &contractID = problem.scenario.nurses[nurse].contract;
     const Scenario::Contract &contract( problem.scenario.contracts[contractID] );
     const ShiftID &shift = assign[nurse][weekday].shift;
-    if (AssignTable::isWorking( shift )) {    // working day
+    if (Assign::isWorking( shift )) {    // working day
         if (consecutiveDay == 0) {  // switch from consecutive day off to working
             if (dayoffBegin) {
                 if (problem.history.consecutiveDayoffNums[nurse] > contract.maxConsecutiveDayoffNum) {
@@ -432,19 +427,34 @@ void NurseRostering::TabuSolver::init( const string &id )
 void NurseRostering::TabuSolver::solve()
 {
     //randomWalk();
-    iterativeLocalSearch( ModeSeq::ARLCS );
-    //tabuSearch();
+
+    //iterativeLocalSearch( ModeSeq::ARBCS );
+    //iterativeLocalSearch( ModeSeq::ARRCS );
+    //iterativeLocalSearch( ModeSeq::ARLCS );
+    //iterativeLocalSearch( ModeSeq::ACSR );
+
+    tabuSearch( ModeSeq::ARBCS );
+    //tabuSearch( ModeSeq::ARRCS );
+    //tabuSearch( ModeSeq::ARLCS );
+    //tabuSearch( ModeSeq::ACSR );
 }
 
 bool NurseRostering::TabuSolver::updateOptima( const Output &localOptima ) const
 {
-    if (localOptima.getObjValue() < optima.getObjValue()) {
+    if (localOptima.getObjValue() <= optima.getObjValue()) {
+        if (optima.getObjValue() == localOptima.getObjValue()) {
+            optimaFindTime = clock();
+        }
         optima = localOptima;
-        optimaFindTime = clock();
         return true;
     }
 
     return false;
+}
+
+NurseRostering::History NurseRostering::TabuSolver::genHistory() const
+{
+    return Solution( *this, optima.getAssignTable() ).genHistory();
 }
 
 void NurseRostering::TabuSolver::greedyInit()
@@ -469,9 +479,7 @@ void NurseRostering::TabuSolver::randomWalk()
 {
     algorithmName += "[RW]";
 
-    Timer timer( problem.timeout, startTime );
-
-    sln.randomWalk( timer, optima );
+    sln.randomWalk( timer, MAX_ITER_COUNT );
 }
 
 void NurseRostering::TabuSolver::iterativeLocalSearch( ModeSeq modeSeq )
@@ -489,27 +497,42 @@ void NurseRostering::TabuSolver::iterativeLocalSearch( ModeSeq modeSeq )
         fbmtobb[i] = Solution::findBestMoveOnBlockBorder[modeSeqPat[i]];
     }
 
-    Timer timer( problem.timeout, startTime );
-
-    const int timeForEachLoop = problem.timeout / PERTURB_COUNT_IN_ILS;
-    int loopCount = timer.restTime() / timeForEachLoop;
-    for (; !timer.isTimeOut() && loopCount > 0; --loopCount) {
-        Timer t( timer.restTime() / loopCount, clock() );
-        sln.randomWalk( t, optima );
+    int randomWalkStepCount = problem.scenario.nurseNum * Weekday::NUM;
+    while (!timer.isTimeOut()) {
+        ObjValue lastObj = optima.getObjValue();
         if (rand() % 2) {
-            sln.localSearch( timer, optima, fbmt );
+            sln.localSearch( timer, fbmt );
         } else {
-            sln.localSearch( timer, optima, fbmtobb );
+            sln.localSearch( timer, fbmtobb );
         }
+        sln.randomWalk( timer, randomWalkStepCount );
+        randomWalkStepCount += (optima.getObjValue() == lastObj) * Weekday::NUM;
     }
 }
 
-void NurseRostering::TabuSolver::tabuSearch()
+void NurseRostering::TabuSolver::tabuSearch( ModeSeq modeSeq )
 {
-    algorithmName += "[TS]";
+    algorithmName += "[TTD=0.5NN][TTS=0.8NN]" + modeSeqNames[modeSeq];
 
-    Timer timer( problem.timeout, startTime );
+    dayTabuTenureBase = problem.scenario.nurseNum / 2;
+    dayTabuTenureAmp = dayTabuTenureBase / 4;
+    shiftTabuTenureBase = problem.scenario.nurseNum * 4 / 5;
+    shiftTabuTenureAmp = shiftTabuTenureBase / 4;
 
-    // TODO : add perturb? findBestMoveOnBlockBorder?
-    sln.tabuSearch( timer, optima, Solution::findBestMove);
+    const vector<int> &modeSeqPat( modeSeqPatterns[modeSeq] );
+    int modeSeqLen = modeSeqPat.size();
+
+    Solution::FindBestMoveTable fbmt( modeSeqLen );
+
+    for (int i = 0; i < modeSeqLen; ++i) {
+        fbmt[i] = Solution::findBestMove[modeSeqPat[i]];
+    }
+
+    int randomWalkStepCount = problem.scenario.nurseNum * Weekday::NUM;
+    while (!timer.isTimeOut()) {
+        ObjValue lastObj = optima.getObjValue();
+        sln.tabuSearch( timer, fbmt );
+        sln.randomWalk( timer, randomWalkStepCount );
+        randomWalkStepCount += (optima.getObjValue() == lastObj) * Weekday::NUM;
+    }
 }

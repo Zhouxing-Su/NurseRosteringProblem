@@ -44,9 +44,11 @@ class NurseRostering::Solver
 {
 public:
     static const int ILLEGAL_SOLUTION = -1;
+
     static const int CHECK_TIME_INTERVAL_MASK_IN_ITER = ((1 << 10) - 1);
-    static const int RECORD_RETRY_INTERVAL = 50;    // in millisecond
     static const clock_t SAVE_SOLUTION_TIME;    // 0.5 seconds
+
+    static const int MAX_ITER_COUNT = (1 << 30);
 
     const NurseRostering &problem;
     const clock_t startTime;
@@ -63,11 +65,11 @@ public:
     virtual void solve() = 0;
     // return true if global optima or population is updated
     virtual bool updateOptima( const Output &localOptima ) const = 0;
+    // generate history for next week
+    virtual History genHistory() const = 0;
     // return const reference of the optima
     const Output& getOptima() const { return optima; }
     // print simple information of the solution to console
-    // generate history for next week
-    virtual History genHistory() const;
     void print() const;
     // record solution to specified file and create custom file if required
     void record( const std::string logFileName, const std::string &instanceName ) const;  // contain check()
@@ -76,10 +78,10 @@ public:
     // return true if the optima solution is feasible and objValue is the same
     bool check() const;
 
-    // calculate objective of optima with original input instead of auxiliary data structure
-    // return objective value if solution is legal, else ILLEGAL_SOLUTION
+    // use original input instead of auxiliary data structure
     bool checkFeasibility( const AssignTable &assgin ) const;
     bool checkFeasibility() const;  // check optima assign
+    // return objective value if solution is legal, else ILLEGAL_SOLUTION
     ObjValue checkObjValue( const AssignTable &assign ) const;
     ObjValue checkObjValue() const;  // check optima assign
 
@@ -124,11 +126,10 @@ private:    // forbidden operators
 class NurseRostering::TabuSolver : public NurseRostering::Solver
 {
 public:
-    static const int PERTURB_COUNT_IN_ILS = 1024;
-
     enum ModeSeq { ACSR, ASCR, ARLCS, ARRCS, ARBCS };
     static const std::vector<std::string> modeSeqNames;
     static const std::vector<std::vector<int> > modeSeqPatterns;
+
 
     TabuSolver( const NurseRostering &input, clock_t startTime = clock() );
     TabuSolver( const NurseRostering &input, const Output &optima, clock_t startTime = clock() );
@@ -137,19 +138,30 @@ public:
     virtual void init( const std::string &runID );
     virtual void solve();
 
-    virtual bool updateOptima( const Output &localOptima ) const;
+    virtual bool updateOptima( const Output &localOptima ) const; 
+    virtual History genHistory() const;
+
+    IterCount DayTabuTenureBase() const { return dayTabuTenureBase; }
+    IterCount DayTabuTenureAmp() const { return dayTabuTenureAmp; }
+    IterCount ShiftTabuTenureBase() const { return shiftTabuTenureBase; }
+    IterCount ShiftTabuTenureAmp() const { return shiftTabuTenureAmp; }
 
 private:
     void greedyInit();
     void exactInit();
 
     // search with tabu table
-    void tabuSearch();
+    void tabuSearch( ModeSeq modeSeq );
     // iteratively run local search and perturb
     void iterativeLocalSearch( ModeSeq modeSeq );
     // random walk until timeout
     void randomWalk();
 
+
+    IterCount dayTabuTenureBase;
+    IterCount dayTabuTenureAmp;
+    IterCount shiftTabuTenureBase;
+    IterCount shiftTabuTenureAmp;
 
     Solution sln;
 

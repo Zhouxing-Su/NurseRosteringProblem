@@ -92,20 +92,23 @@ public:
     typedef ObjValue( Solution::*TryMove )(const Move &move) const;
     typedef bool (Solution::*FindBestMove)(Move &move) const;
     typedef void (Solution::*ApplyMove)(const Move &move);
+    typedef void (Solution::*UpdateTabu)(const Move &move);
 
     typedef std::vector<TryMove> TryMoveTable;
     typedef std::vector<FindBestMove> FindBestMoveTable;
     typedef std::vector<ApplyMove> ApplyMoveTable;
+    typedef std::vector<UpdateTabu> UpdateTabuTable;
 
 
     static const TryMoveTable tryMove;
     static const FindBestMoveTable findBestMove;
     static const FindBestMoveTable findBestMoveOnBlockBorder;
     static const ApplyMoveTable applyMove;
+    static const UpdateTabuTable updateTabuTable;
 
 
-    Solution( const Solver &solver );
-    Solution( const Solver &solver, const AssignTable &assign );
+    Solution( const TabuSolver &solver );
+    Solution( const TabuSolver &solver, const AssignTable &assign );
     // there must not be self assignment and assign must be build from same problem
     void rebuildAssistData( const AssignTable &assign );
     History genHistory() const; // history for next week
@@ -131,15 +134,15 @@ public:
     // if no neighborhood has been selected, prepare a loop queue.
     // select the one by one in the queue until a valid move is found.
     // move the head to the tail of the queue if it makes no improvement.
-    long long tabuSearch( const Timer &timer, Output &optima, const FindBestMoveTable &findBestMoveTable );
+    void tabuSearch( const Timer &timer, const FindBestMoveTable &findBestMoveTable );
     // try add shift until there is no improvement , then try change shift,
     // then try remove shift, then try add shift again. if all of them
     // can't improve or time is out, return.
-    long long localSearch( const Timer &timer, Output &optima, const FindBestMoveTable &findBestMoveTable );
+    void localSearch( const Timer &timer, const FindBestMoveTable &findBestMoveTable );
     // change solution structure in certain complexity
-    void perturb( Output &optima, double strength );
+    void perturb( double strength );
     // randomly select add, change or remove shift until timeout
-    long long randomWalk( const Timer &timer, Output &optima );
+    void randomWalk( const Timer &timer, IterCount stepNum );
 
     const AssignTable& getAssignTable() const { return assign; }
     // shift must not be none shift
@@ -228,7 +231,7 @@ private:
         Consecutive() {}
         Consecutive( const History &his, NurseID nurse )
         {
-            if (AssignTable::isWorking( his.lastShifts[nurse] )) {
+            if (Assign::isWorking( his.lastShifts[nurse] )) {
                 std::fill( dayLow, dayLow + Weekday::SIZE, Weekday::Mon );
                 std::fill( dayHigh, dayHigh + Weekday::SIZE, Weekday::Sun );
                 std::fill( shiftLow, shiftLow + Weekday::SIZE, Weekday::Mon );
@@ -278,11 +281,12 @@ private:
 
     private:    // forbidden operators
     };
-
-    // (iterCount < RemoveTabu[nurse][weekday][shift][skill]) means forbid to be added
-    typedef std::vector< std::vector< std::vector< std::vector<int> > > > AddTabu;
-    // (iterCount < AddTabu[nurse][weekday]) means forbid to be removed
-    typedef std::vector< std::vector<int> > RemoveTabu;
+    // fine-grained tabu list for add or remove on each shift
+    // (iterCount < ShiftTabu[nurse][weekday][shift][skill]) means forbid to be added
+    typedef std::vector< std::vector< std::vector< std::vector<IterCount> > > > ShiftTabu;
+    // coarse-grained tabu list for add or remove on each day
+    // (iterCount < DayTabu[nurse][weekday]) means forbid to be removed
+    typedef std::vector< std::vector<IterCount> > DayTabu;
 
 
     // find day number to be punished for a single block
@@ -324,7 +328,7 @@ private:
     ObjValue tryRemoveAssign( int weekday, NurseID nurse ) const;
     ObjValue tryRemoveAssign( const Move &move ) const;
     // evaluate cost of swapping Assign of two nurses
-    ObjValue trySwapNurse( int weekday, NurseID nurse1, NurseID nurse2 ) const;
+    ObjValue trySwapNurse( int weekday, NurseID nurse, NurseID nurse2 ) const;
     ObjValue trySwapNurse( const Move &move ) const;
     // apply assigning a Assign to nurse without Assign in weekday
     void addAssign( int weekday, NurseID nurse, const Assign &a );
@@ -349,6 +353,76 @@ private:
     // the assignment is on a consecutive block with single slot
     void assignSingle( int weekday, int high[Weekday::SIZE], int low[Weekday::SIZE], bool affectRight, bool affectLeft );
 
+    bool noAddTabu( const Move &move ) const
+    {
+        return (iterCount > shiftTabu[move.nurse][move.weekday][move.assign.shift][move.assign.skill]);
+    }
+    bool noChangeTabu( const Move &move ) const
+    {
+        return (iterCount > shiftTabu[move.nurse][move.weekday][move.assign.shift][move.assign.skill]);
+    }
+    bool noRemoveTabu( const Move &move ) const
+    {
+        return (iterCount > dayTabu[move.nurse][move.weekday]);
+    }
+    bool noSwapTabu( const Move &move ) const
+    {
+        const Assign &a( assign[move.nurse][move.weekday] );
+        const Assign &a2( assign[move.nurse2][move.weekday] );
+
+        if (a.isWorking()) {
+            if (a2.isWorking()) {
+                return ((iterCount > shiftTabu[move.nurse][move.weekday][a.shift][a.skill])
+                    || (iterCount > shiftTabu[move.nurse2][move.weekday][a2.shift][a2.skill]));
+            } else {
+                return ((iterCount > dayTabu[move.nurse][move.weekday])
+                    || (iterCount > shiftTabu[move.nurse2][move.weekday][a2.shift][a2.skill]));
+            }
+        } else {
+            if (a2.isWorking()) {
+                return ((iterCount > shiftTabu[move.nurse][move.weekday][a.shift][a.skill])
+                    || (iterCount > dayTabu[move.nurse2][move.weekday]));
+            } else {    // no change
+                return true;
+            }
+        }
+    }
+
+    void updateDayTabu( NurseID nurse, int weekday );
+    void updateShiftTabu( NurseID nurse, int weekday, const Assign &a );
+    void updateAddTabu( const Move &move )
+    {
+        updateDayTabu( move.nurse, move.weekday );
+    }
+    void updateChangeTabu( const Move &move )
+    {
+        updateShiftTabu( move.nurse, move.weekday, assign[move.nurse][move.weekday] );
+    }
+    void updateRemoveTabu( const Move &move )
+    {
+        updateShiftTabu( move.nurse, move.weekday, assign[move.nurse][move.weekday] );
+    }
+    void updateSwapTabu( const Move &move )
+    {
+        const Assign &a( assign[move.nurse][move.weekday] );
+        const Assign &a2( assign[move.nurse][move.weekday] );
+
+        if (a.isWorking()) {
+            if (a2.isWorking()) {
+                updateShiftTabu( move.nurse, move.weekday, a );
+                updateShiftTabu( move.nurse2, move.weekday, a2 );
+            } else {
+                updateShiftTabu( move.nurse, move.weekday, a );
+                updateDayTabu( move.nurse2, move.weekday );
+            }
+        } else {
+            if (a2.isWorking()) {
+                updateDayTabu( move.nurse, move.weekday );
+                updateShiftTabu( move.nurse2, move.weekday, a2 );
+            }
+        }
+    }
+
     void evaluateInsufficientStaff();
     void evaluateConsecutiveShift();
     void evaluateConsecutiveDay();
@@ -358,7 +432,7 @@ private:
     void evaluateTotalAssign();
     void evaluateTotalWorkingWeekend();
 
-    const Solver &solver;
+    const TabuSolver &solver;
 
     mutable Penalty penalty;
 
@@ -367,8 +441,9 @@ private:
     mutable bool findBestARLoopFlag;
     mutable bool findBestARLoopOnBlockBorderFlag;
 
-    AddTabu addTabu;
-    RemoveTabu removeTabu;
+    ShiftTabu shiftTabu;
+    DayTabu dayTabu;
+    IterCount iterCount;
 
     // total assignments for each nurse
     std::vector<int> totalAssignNums;
