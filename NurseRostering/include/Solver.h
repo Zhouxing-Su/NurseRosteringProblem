@@ -47,6 +47,8 @@ public:
     static const clock_t SAVE_SOLUTION_TIME;    // 0.5 seconds
 
     static const int MAX_ITER_COUNT = (1 << 30);
+    static const double INIT_PERTURB_STRENGTH;
+    static const double PERTURB_STRENGTH_DELTA;
 
     const NurseRostering &problem;
     const clock_t startTime;

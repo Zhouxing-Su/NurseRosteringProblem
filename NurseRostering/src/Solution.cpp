@@ -263,10 +263,11 @@ bool NurseRostering::Solution::repair( const Timer &timer )
     penalty.setRepairMode();
     objValue = solver.checkFeasibility( assign );
 
+    // must not use swap for swap mode is not compatible with repair mode
+    // also, the repair procedure doesn't need the technique to jump through infeasible solutions
     Solution::FindBestMoveTable fbmt = {
         &NurseRostering::Solution::findBestARBoth,
-        &NurseRostering::Solution::findBestChange,
-        &NurseRostering::Solution::findBestSwap
+        &NurseRostering::Solution::findBestChange
     };
 
     tabuSearch( timer, fbmt );
@@ -387,7 +388,10 @@ void NurseRostering::Solution::localSearch( const Timer &timer, const FindBestMo
 void NurseRostering::Solution::perturb( double strength )
 {
     // TODO : make this change solution structure in certain complexity
+    int randomWalkStepCount = static_cast<int>(strength *
+        solver.problem.scenario.nurseNum * Weekday::NUM);
 
+    randomWalk( solver.timer, randomWalkStepCount );
 
     solver.updateOptima( *this );
 }
@@ -422,7 +426,7 @@ void NurseRostering::Solution::randomWalk( const Timer &timer, IterCount stepNum
         << "time: " << duration << ' '
         << "speed: " << iterCount * static_cast<double>(CLOCKS_PER_SEC) / (duration + 1) << endl;
 #endif
-}
+    }
 
 bool NurseRostering::Solution::findBestAdd( Move &bestMove ) const
 {
@@ -1465,10 +1469,7 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapNurse( int weekday, Nu
         return DefaultPenalty::FORBIDDEN_MOVE;
     }
 
-    bool isDefaultMode = (penalty.getMode() == Penalty::Mode::Default);
-    if (isDefaultMode) {
-        penalty.setSwapMode();
-    }
+    penalty.setSwapMode();
 
     ObjValue delta = 0;
 
@@ -1489,11 +1490,7 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapNurse( int weekday, Nu
         }
     }
 
-    if (isDefaultMode) {
-        // TODO :   if there is another Mode other than Default
-        //          this should be a recovery instead of reset default
-        penalty.setDefaultMode();
-    }
+    penalty.setDefaultMode();
 
     return delta;
 }

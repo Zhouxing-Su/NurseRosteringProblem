@@ -5,6 +5,8 @@ using namespace std;
 
 
 const clock_t NurseRostering::Solver::SAVE_SOLUTION_TIME = CLOCKS_PER_SEC / 2;
+const double NurseRostering::Solver::INIT_PERTURB_STRENGTH = 0.6;
+const double NurseRostering::Solver::PERTURB_STRENGTH_DELTA = 0.01;
 
 
 const std::vector<std::string> NurseRostering::TabuSolver::modeSeqNames = {
@@ -498,7 +500,7 @@ void NurseRostering::TabuSolver::iterativeLocalSearch( ModeSeq modeSeq )
         fbmtobb[i] = Solution::findBestMoveOnBlockBorder[modeSeqPat[i]];
     }
 
-    int randomWalkStepCount = problem.scenario.nurseNum * Weekday::NUM;
+    double perturbStrength = INIT_PERTURB_STRENGTH;
     while (!timer.isTimeOut()) {
         ObjValue lastObj = optima.getObjValue();
         if (rand() % 2) {
@@ -506,8 +508,10 @@ void NurseRostering::TabuSolver::iterativeLocalSearch( ModeSeq modeSeq )
         } else {
             sln.localSearch( timer, fbmtobb );
         }
-        sln.randomWalk( timer, randomWalkStepCount );
-        randomWalkStepCount += (optima.getObjValue() == lastObj) * Weekday::NUM;
+        sln.perturb( perturbStrength );
+        (optima.getObjValue() == lastObj)
+            ? (perturbStrength += PERTURB_STRENGTH_DELTA)
+            : (perturbStrength = INIT_PERTURB_STRENGTH);
     }
 }
 
@@ -524,11 +528,13 @@ void NurseRostering::TabuSolver::tabuSearch( ModeSeq modeSeq )
         fbmt[i] = Solution::findBestMove[modeSeqPat[i]];
     }
 
-    int randomWalkStepCount = problem.scenario.nurseNum * Weekday::NUM;
+    double perturbStrength = INIT_PERTURB_STRENGTH;
     while (!timer.isTimeOut()) {
         ObjValue lastObj = optima.getObjValue();
         sln.tabuSearch( timer, fbmt );
-        sln.randomWalk( timer, randomWalkStepCount );
-        randomWalkStepCount += (optima.getObjValue() == lastObj) * Weekday::NUM;
+        sln.perturb( perturbStrength );
+        (optima.getObjValue() == lastObj)
+            ? (perturbStrength += PERTURB_STRENGTH_DELTA)
+            : (perturbStrength = INIT_PERTURB_STRENGTH);
     }
 }

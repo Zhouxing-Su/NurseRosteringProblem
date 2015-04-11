@@ -197,12 +197,7 @@ public:
     class Penalty
     {
     public:
-        enum Mode { Default, Swap, Repair };
-
-
         Penalty() { setDefaultMode(); }
-
-        Mode getMode() const { return mode; }
 
         // hard constraints must be satisfied 
         // and soft constraints get their original penalty
@@ -234,8 +229,6 @@ public:
         ObjValue TotalWorkingWeekend() const { return totalWorkingWeekend; }
 
     private:
-        Mode mode;
-
         // hard constraint
         ObjValue singleAssign;
         ObjValue underStaff;
