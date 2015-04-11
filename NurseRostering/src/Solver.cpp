@@ -428,12 +428,12 @@ void NurseRostering::TabuSolver::solve()
 {
     //randomWalk();
 
-    //iterativeLocalSearch( ModeSeq::ARBCS );
+    iterativeLocalSearch( ModeSeq::ARBCS );
     //iterativeLocalSearch( ModeSeq::ARRCS );
     //iterativeLocalSearch( ModeSeq::ARLCS );
     //iterativeLocalSearch( ModeSeq::ACSR );
 
-    tabuSearch( ModeSeq::ARBCS );
+    //tabuSearch( ModeSeq::ARBCS );
     //tabuSearch( ModeSeq::ARRCS );
     //tabuSearch( ModeSeq::ARLCS );
     //tabuSearch( ModeSeq::ACSR );

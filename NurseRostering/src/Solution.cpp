@@ -261,16 +261,22 @@ void NurseRostering::Solution::evaluateObjValue()
 bool NurseRostering::Solution::repair( const Timer &timer )
 {
     penalty.setRepairMode();
+    evaluateObjValue();
 
-    // TODO
-    //tabuSearch( timer );
+    Solution::FindBestMoveTable fbmt = {
+        &NurseRostering::Solution::findBestARBoth,
+        &NurseRostering::Solution::findBestChange,
+        &NurseRostering::Solution::findBestSwap
+    };
+
+    tabuSearch( timer, fbmt );
+
+    bool feasible = (objValue == 0);
 
     penalty.setDefaultMode();
-
-    // TODO :   or make the tabuSearch procedure calculate
-    //          real delta every time a move is selected
     evaluateObjValue();
-    return false;
+
+    return feasible;
 }
 
 void NurseRostering::Solution::tabuSearch( const Timer &timer, const FindBestMoveTable &findBestMoveTable )
@@ -278,7 +284,6 @@ void NurseRostering::Solution::tabuSearch( const Timer &timer, const FindBestMov
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t startTime = clock();
 #endif
-
     int modeNum = findBestMoveTable.size();
     int startMode = 0;
 
@@ -322,9 +327,8 @@ void NurseRostering::Solution::tabuSearch( const Timer &timer, const FindBestMov
             modeSelect %= modeNum;
         }
 
-        // TODO : update tabu list
+        // update tabu list first because it requires original assignment
         (this->*updateTabuTable[bestMove.mode])(bestMove);
-
         (this->*applyMove[bestMove.mode])(bestMove);
         objValue += bestMove.delta;
 

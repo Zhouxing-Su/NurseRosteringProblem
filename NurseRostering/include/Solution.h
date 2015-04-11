@@ -109,15 +109,22 @@ public:
 
     Solution( const TabuSolver &solver );
     Solution( const TabuSolver &solver, const AssignTable &assign );
+
+    // allocate space for data structure and set default value
+    // must be called before generating initial solution
+    void resetAssign();     
+    // evaluate objective by assist data structure
+    // must be called after Penalty change or direct access to AssignTable
+    void evaluateObjValue();    
+    // must be called after direct access to AssignTable
     // there must not be self assignment and assign must be build from same problem
     void rebuildAssistData( const AssignTable &assign );
-    History genHistory() const; // history for next week
+    // get history for next week, only used for custom file
+    History genHistory() const; 
 
     bool genInitAssign( int greedyRetryCount );
     bool genInitAssign_Greedy();
     bool genInitAssign_BranchAndCut();
-    void resetAssign();     // reset all shift to Shift::ID_NONE
-    void evaluateObjValue();    // using assist data structure
     bool repair( const Timer &timer );  // make infeasible solution feasible
 
 
