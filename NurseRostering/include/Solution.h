@@ -379,15 +379,15 @@ private:
 
         if (a.isWorking()) {
             if (a2.isWorking()) {
-                return ((iterCount > shiftTabu[move.nurse][move.weekday][a.shift][a.skill])
-                    || (iterCount > shiftTabu[move.nurse2][move.weekday][a2.shift][a2.skill]));
+                return ((iterCount > shiftTabu[move.nurse][move.weekday][a2.shift][a2.skill])
+                    || (iterCount > shiftTabu[move.nurse2][move.weekday][a.shift][a.skill]));
             } else {
                 return ((iterCount > dayTabu[move.nurse][move.weekday])
-                    || (iterCount > shiftTabu[move.nurse2][move.weekday][a2.shift][a2.skill]));
+                    || (iterCount > shiftTabu[move.nurse2][move.weekday][a.shift][a.skill]));
             }
         } else {
             if (a2.isWorking()) {
-                return ((iterCount > shiftTabu[move.nurse][move.weekday][a.shift][a.skill])
+                return ((iterCount > shiftTabu[move.nurse][move.weekday][a2.shift][a2.skill])
                     || (iterCount > dayTabu[move.nurse2][move.weekday]));
             } else {    // no change
                 return true;
