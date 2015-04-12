@@ -19,6 +19,7 @@ void solutionAnalysis( const std::string &logFileName, const std::string &output
         int feasibleCount;
         double obj;
         double feasibleObj;
+        double accObj;
     };
 
     vector<Info> instInfo;
@@ -28,12 +29,11 @@ void solutionAnalysis( const std::string &logFileName, const std::string &output
     ofstream output( outputFileName );
 
     char buf[MaxLen::LINE];
-    char c;
 
     // clear first line of header
     csvFile.getline( buf, MaxLen::LINE );
     // create header
-    output << "Instance,Algorithm,Duration,InfeasibleCount,Obj,FeasibleObj" << endl;
+    output << "Instance,Algorithm,Duration,InfeasibleCount,Obj,FeasibleObj,FeasibleAccObj" << endl;
 
     while (true) {
         string instance;
@@ -41,6 +41,7 @@ void solutionAnalysis( const std::string &logFileName, const std::string &output
         double duration;
         bool feasible;
         double obj;
+        double accObj;
 
         csvFile.getline( buf, MaxLen::LINE, ',' );  // time
         csvFile.getline( buf, MaxLen::LINE, ',' );  // id
@@ -54,8 +55,10 @@ void solutionAnalysis( const std::string &logFileName, const std::string &output
         csvFile >> feasible;
         csvFile.getline( buf, MaxLen::LINE, ',' );  // clear
         csvFile.getline( buf, MaxLen::LINE, ',' );  // check obj
-        csvFile >> obj >> c;
-        csvFile.getline( buf, MaxLen::LINE );       // acc obj, solution
+        csvFile >> obj;
+        csvFile.getline( buf, MaxLen::LINE, ',' );  // clear
+        csvFile >> accObj;                          // acc obj
+        csvFile.getline( buf, MaxLen::LINE );       // solution
 
         if (csvFile.eof()) { break; }
 
@@ -68,6 +71,7 @@ void solutionAnalysis( const std::string &logFileName, const std::string &output
                 if (feasible) {
                     ++(iter->feasibleCount);
                     iter->feasibleObj += obj;
+                    iter->accObj += accObj;
                 }
                 break;
             }
@@ -82,6 +86,7 @@ void solutionAnalysis( const std::string &logFileName, const std::string &output
             instInfo.back().feasibleCount = feasible;
             instInfo.back().obj = obj;
             instInfo.back().feasibleObj = feasible ? obj : 0;
+            instInfo.back().accObj = feasible ? accObj : 0;
         }
     }
 
@@ -90,7 +95,8 @@ void solutionAnalysis( const std::string &logFileName, const std::string &output
             << iter->duration / iter->count << ','
             << iter->count - iter->feasibleCount << ','
             << iter->obj / iter->count << ','
-            << iter->feasibleObj / iter->feasibleCount << endl;
+            << iter->feasibleObj / iter->feasibleCount << ','
+            << iter->accObj / iter->feasibleCount << endl;
     }
 
     csvFile.close();
