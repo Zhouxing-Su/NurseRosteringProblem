@@ -411,14 +411,16 @@ void NurseRostering::TabuSolver::init( const string &id )
     srand( problem.randSeed );
 
     // 0.2, 0.5, 0.8, 1.2, 2.0
-    //setDayTabuTenure_TableSize( 0.5 );
-    setDayTabuTenure_NurseNum( 0.5 );
-    //setDayTabuTenure_DayNum( 0.5 );
-    //setDayTabuTenure_ShiftNum( 0.5 );
-    //setShiftTabuTenure_TableSize( 0.8 );
-    setShiftTabuTenure_NurseNum( 0.8 );
-    //setShiftTabuTenure_DayNum( 0.8 );
-    //setShiftTabuTenure_ShiftNum( 0.8 );
+    double dayTabuCoefficient = 0.5;
+    double shiftTabuCoefficient = 0.8;
+    //setDayTabuTenure_TableSize( dayTabuCoefficient );
+    setDayTabuTenure_NurseNum( dayTabuCoefficient );
+    //setDayTabuTenure_DayNum( dayTabuCoefficient );
+    //setDayTabuTenure_ShiftNum( dayTabuCoefficient );
+    //setShiftTabuTenure_TableSize( shiftTabuCoefficient );
+    setShiftTabuTenure_NurseNum( shiftTabuCoefficient );
+    //setShiftTabuTenure_DayNum( shiftTabuCoefficient );
+    //setShiftTabuTenure_ShiftNum( shiftTabuCoefficient );
 
     greedyInit();
     //exactInit();
