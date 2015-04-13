@@ -322,9 +322,9 @@ void NurseRostering::Solution::tabuSearch( const Timer &timer, const FindBestMov
         }
 
         // no one is selected
-        while (bestMove.delta >= DefaultPenalty::FORBIDDEN_MOVE) {
+        while (bestMove.delta >= DefaultPenalty::MAX_OBJ_VALUE) {
             (this->*findBestMoveTable[modeSelect])(bestMove);
-            modeSelect += (bestMove.delta >= DefaultPenalty::FORBIDDEN_MOVE);
+            modeSelect += (bestMove.delta >= DefaultPenalty::MAX_OBJ_VALUE);
             modeSelect %= modeNum;
         }
 
@@ -1697,20 +1697,22 @@ void NurseRostering::Solution::updateShiftTabu( NurseID nurse, int weekday, cons
 bool NurseRostering::Solution::checkIncrementalUpdate()
 {
     bool correct = true;
+    ostringstream oss;
+    oss << iterCount;
 
     ObjValue incrementalVal = objValue;
     evaluateObjValue();
     if (solver.checkFeasibility( assign ) != 0) {
-        solver.errorLog( "infeasible solution." );
+        solver.errorLog( "infeasible solution @" + oss.str() );
         correct = false;
     }
     ObjValue checkResult = solver.checkObjValue( assign );
     if (checkResult != objValue) {
-        solver.errorLog( "check conflict with evaluate." );
+        solver.errorLog( "check conflict with evaluate @" + oss.str() );
         correct = false;
     }
     if (objValue != incrementalVal) {
-        solver.errorLog( "evaluate conflict with incremental update." );
+        solver.errorLog( "evaluate conflict with incremental update @" + oss.str() );
         correct = false;
     }
 

@@ -18,7 +18,7 @@ int main()
     //int instIndex = 0;
     //char initHis = '0';
     //char weekdata[WEEKDATA_SEQ_SIZE] = "5533";
-    //int randSeed = 1427984165;
+    //int randSeed = 1429107988;
     //double runningTime = instTimeout[getNurseNum( instIndex )];
     //test_customIO( id.str(), outputDirPrefix + id.str(), instIndex, initHis, weekdata, runningTime, randSeed );
 
