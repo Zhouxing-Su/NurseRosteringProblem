@@ -435,10 +435,15 @@ void NurseRostering::TabuSolver::solve()
     //iterativeLocalSearch( ModeSeq::ARLCS );
     //iterativeLocalSearch( ModeSeq::ACSR );
 
-    tabuSearch( ModeSeq::ARBCS );
-    //tabuSearch( ModeSeq::ARRCS );
+    //tabuSearch( ModeSeq::ARBCS );
+    tabuSearch( ModeSeq::ARRCS );
     //tabuSearch( ModeSeq::ARLCS );
     //tabuSearch( ModeSeq::ACSR );
+
+    /// rebuild previous solution
+    //cout << optima.getObjValue() / DefaultPenalty::AMP << endl;
+    //AssignTable at( problem.scenario.nurseNum, Weekday::SIZE, "-1 0 -1 0 1 1 1 1 1 1 2 1 2 0 0 1 0 0 -1 0 0 1 0 0 1 1 1 0 1 0 1 1 2 0 2 1 2 1 2 0 2 1 1 1 -1 0 -1 0 -1 0 0 1 0 1 0 1 2 1 2 1 2 1 -1 0 -1 0 1 1 1 1" );
+    //optima = Output( 445 * DefaultPenalty::AMP, at );
 }
 
 bool NurseRostering::TabuSolver::updateOptima( const Output &localOptima ) const

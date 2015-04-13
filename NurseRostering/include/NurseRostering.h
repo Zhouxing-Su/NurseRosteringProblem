@@ -12,6 +12,7 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <sstream>
 #include <ctime>
 
 #include "DebugFlag.h"
@@ -182,8 +183,22 @@ public:
     {
     public:
         AssignTable() {}
+        // weekdayNum should be (actual weekday number + 1)
+        // to let it allocate an additional day for history
         AssignTable( int nurseNum, int weekdayNum = Weekday::SIZE, const Assign &singleAssign = Assign() )
             : std::vector< std::vector< Assign > >( nurseNum, std::vector< Assign >( weekdayNum, singleAssign ) ) {}
+        AssignTable( int nurseNum, int weekdayNum, const std::string &assignString )
+            : std::vector< std::vector< Assign > >( nurseNum, std::vector< Assign >( weekdayNum ) )
+        {
+            std::istringstream iss( assignString );
+
+            for (NurseID nurse = 0; nurse < nurseNum; ++nurse) {
+                for (int weekday = Weekday::Mon; weekday < weekdayNum; ++weekday) {
+                    iss >> at( nurse ).at( weekday ).shift
+                        >> at( nurse ).at( weekday ).skill;
+                }
+            }
+        }
 
         bool isWorking( NurseID nurse, int weekday ) const
         {
