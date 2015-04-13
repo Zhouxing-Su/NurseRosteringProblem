@@ -39,7 +39,7 @@ void solutionAnalysis( const std::string &logFileName, const std::string &output
         string instance;
         string algorithm;
         double duration;
-        bool feasible;
+        NurseRostering::ObjValue feasible;
         double obj;
         double accObj;
 
@@ -68,7 +68,7 @@ void solutionAnalysis( const std::string &logFileName, const std::string &output
                 iter->duration += duration;
                 iter->obj += obj;
                 ++(iter->count);
-                if (feasible) {
+                if (feasible == 0) {
                     ++(iter->feasibleCount);
                     iter->feasibleObj += obj;
                     iter->accObj += accObj;
@@ -83,10 +83,10 @@ void solutionAnalysis( const std::string &logFileName, const std::string &output
             instInfo.back().algorithm = algorithm;
             instInfo.back().duration = duration;
             instInfo.back().count = 1;
-            instInfo.back().feasibleCount = feasible;
+            instInfo.back().feasibleCount = (feasible == 0);
             instInfo.back().obj = obj;
-            instInfo.back().feasibleObj = feasible ? obj : 0;
-            instInfo.back().accObj = feasible ? accObj : 0;
+            instInfo.back().feasibleObj = (feasible == 0) ? obj : 0;
+            instInfo.back().accObj = (feasible == 0) ? accObj : 0;
         }
     }
 

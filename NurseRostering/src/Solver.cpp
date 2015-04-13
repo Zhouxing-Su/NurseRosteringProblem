@@ -395,12 +395,12 @@ void NurseRostering::Solver::discoverNurseSkillRelation()
 
 
 NurseRostering::TabuSolver::TabuSolver( const NurseRostering &input, clock_t st )
-    :Solver( input, st ), sln( *this )
+    :Solver( input, st ), sln( *this ), dayTabuTenureBase( 1 ), shiftTabuTenureBase( 1 )
 {
 }
 
 NurseRostering::TabuSolver::TabuSolver( const NurseRostering &input, const Output &opt, clock_t st )
-    : Solver( input, opt, st ), sln( *this )
+    : Solver( input, opt, st ), sln( *this ), dayTabuTenureBase( 1 ), shiftTabuTenureBase( 1 )
 {
 }
 
@@ -410,19 +410,18 @@ void NurseRostering::TabuSolver::init( const string &id )
     algorithmName = "Tabu";
     srand( problem.randSeed );
 
-    discoverNurseSkillRelation();
+    // 0.2, 0.5, 0.8, 1.2, 2.0
+    //setDayTabuTenure_TableSize( 0.5 );
+    setDayTabuTenure_NurseNum( 0.5 );
+    //setDayTabuTenure_DayNum( 0.5 );
+    //setDayTabuTenure_ShiftNum( 0.5 );
+    //setShiftTabuTenure_TableSize( 0.8 );
+    setShiftTabuTenure_NurseNum( 0.8 );
+    //setShiftTabuTenure_DayNum( 0.8 );
+    //setShiftTabuTenure_ShiftNum( 0.8 );
 
-    dayTabuTenureBase = problem.scenario.nurseNum / 2;
-    dayTabuTenureBase += (dayTabuTenureBase == 0);
-    dayTabuTenureAmp = dayTabuTenureBase / 4;
-    dayTabuTenureAmp += (dayTabuTenureAmp == 0);
-    shiftTabuTenureBase = problem.scenario.nurseNum * 4 / 5;
-    shiftTabuTenureBase += (shiftTabuTenureBase == 0);
-    shiftTabuTenureAmp = shiftTabuTenureBase / 4;
-    shiftTabuTenureAmp += (shiftTabuTenureAmp == 0);
-
-    //exactInit();
     greedyInit();
+    //exactInit();
 
     optima = sln;
 }
@@ -431,12 +430,12 @@ void NurseRostering::TabuSolver::solve()
 {
     //randomWalk();
 
-    iterativeLocalSearch( ModeSeq::ARBCS );
+    //iterativeLocalSearch( ModeSeq::ARBCS );
     //iterativeLocalSearch( ModeSeq::ARRCS );
     //iterativeLocalSearch( ModeSeq::ARLCS );
     //iterativeLocalSearch( ModeSeq::ACSR );
 
-    //tabuSearch( ModeSeq::ARBCS );
+    tabuSearch( ModeSeq::ARBCS );
     //tabuSearch( ModeSeq::ARRCS );
     //tabuSearch( ModeSeq::ARLCS );
     //tabuSearch( ModeSeq::ACSR );
@@ -460,9 +459,111 @@ NurseRostering::History NurseRostering::TabuSolver::genHistory() const
     return Solution( *this, optima.getAssignTable() ).genHistory();
 }
 
+void NurseRostering::TabuSolver::setDayTabuTenure_TableSize( double coefficient )
+{
+    std::ostringstream oss;
+    oss << "[DTT=" << coefficient << "TS]";
+
+    algorithmName += oss.str();
+
+    // plus 1 to make sure it will not be 0
+    dayTabuTenureBase *= static_cast<IterCount>(1 + coefficient *
+        problem.scenario.nurseNum * Weekday::NUM);
+    dayTabuTenureAmp = 1 + dayTabuTenureBase / TABU_BASE_TO_AMP;
+}
+
+void NurseRostering::TabuSolver::setShiftTabuTenure_TableSize( double coefficient )
+{
+    std::ostringstream oss;
+    oss << "[STT=" << coefficient << "TS]";
+
+    algorithmName += oss.str();
+
+    // plus 1 to make sure it will not be 0
+    shiftTabuTenureBase *= static_cast<IterCount>(1 + coefficient *
+        problem.scenario.nurseNum * Weekday::NUM * problem.scenario.shiftTypeNum * problem.scenario.skillTypeNum);
+    shiftTabuTenureAmp = 1 + shiftTabuTenureBase / TABU_BASE_TO_AMP;
+}
+
+void NurseRostering::TabuSolver::setDayTabuTenure_NurseNum( double coefficient )
+{
+    std::ostringstream oss;
+    oss << "[DTT=" << coefficient << "NN]";
+
+    algorithmName += oss.str();
+
+    // plus 1 to make sure it will not be 0
+    dayTabuTenureBase *= static_cast<IterCount>(1 + coefficient * problem.scenario.nurseNum);
+    dayTabuTenureAmp = 1 + dayTabuTenureBase / TABU_BASE_TO_AMP;
+}
+
+void NurseRostering::TabuSolver::setShiftTabuTenure_NurseNum( double coefficient )
+{
+    std::ostringstream oss;
+    oss << "[STT=" << coefficient << "NN]";
+
+    algorithmName += oss.str();
+
+    // plus 1 to make sure it will not be 0
+    shiftTabuTenureBase *= static_cast<IterCount>(1 + coefficient * problem.scenario.nurseNum);
+    shiftTabuTenureAmp = 1 + shiftTabuTenureBase / TABU_BASE_TO_AMP;
+}
+
+void NurseRostering::TabuSolver::setDayTabuTenure_DayNum( double coefficient )
+{
+    std::ostringstream oss;
+    oss << "[DTT=" << coefficient << "DN]";
+
+    algorithmName += oss.str();
+
+    // plus 1 to make sure it will not be 0
+    dayTabuTenureBase *= static_cast<IterCount>(1 + coefficient * Weekday::NUM);
+    dayTabuTenureAmp = 1 + dayTabuTenureBase / TABU_BASE_TO_AMP;
+}
+
+void NurseRostering::TabuSolver::setShiftTabuTenure_DayNum( double coefficient )
+{
+    std::ostringstream oss;
+    oss << "[STT=" << coefficient << "DN]";
+
+    algorithmName += oss.str();
+
+    // plus 1 to make sure it will not be 0
+    shiftTabuTenureBase *= static_cast<IterCount>(1 + coefficient * Weekday::NUM);
+    shiftTabuTenureAmp = 1 + shiftTabuTenureBase / TABU_BASE_TO_AMP;
+}
+
+void NurseRostering::TabuSolver::setDayTabuTenure_ShiftNum( double coefficient )
+{
+    std::ostringstream oss;
+    oss << "[DTT=" << coefficient << "SN]";
+
+    algorithmName += oss.str();
+
+    // plus 1 to make sure it will not be 0
+    dayTabuTenureBase *= static_cast<IterCount>(1 + coefficient *
+        problem.scenario.shiftTypeNum * problem.scenario.skillTypeNum);
+    dayTabuTenureAmp = 1 + dayTabuTenureBase / TABU_BASE_TO_AMP;
+}
+
+void NurseRostering::TabuSolver::setShiftTabuTenure_ShiftNum( double coefficient )
+{
+    std::ostringstream oss;
+    oss << "[STT=" << coefficient << "SN]";
+
+    algorithmName += oss.str();
+
+    // plus 1 to make sure it will not be 0
+    shiftTabuTenureBase *= static_cast<IterCount>(1 + coefficient *
+        problem.scenario.shiftTypeNum * problem.scenario.skillTypeNum);
+    shiftTabuTenureAmp = 1 + shiftTabuTenureBase / TABU_BASE_TO_AMP;
+}
+
 void NurseRostering::TabuSolver::greedyInit()
 {
     algorithmName += "[GreedyInit]";
+
+    discoverNurseSkillRelation();
 
     if (sln.genInitAssign( problem.scenario.nurseNum / 4 ) == false) {
         errorLog( "fail to generate feasible init solution." );
@@ -517,7 +618,7 @@ void NurseRostering::TabuSolver::iterativeLocalSearch( ModeSeq modeSeq )
 
 void NurseRostering::TabuSolver::tabuSearch( ModeSeq modeSeq )
 {
-    algorithmName += "[TTD=0.5NN][TTS=0.8NN]" + modeSeqNames[modeSeq];
+    algorithmName += modeSeqNames[modeSeq];
 
     const vector<int> &modeSeqPat( modeSeqPatterns[modeSeq] );
     int modeSeqLen = modeSeqPat.size();

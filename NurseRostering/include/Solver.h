@@ -27,6 +27,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <vector>
 #include <string>
 #include <thread>
@@ -131,6 +132,9 @@ public:
     static const std::vector<std::string> modeSeqNames;
     static const std::vector<std::vector<int> > modeSeqPatterns;
 
+    // ratio of tabuTenureBase to tabuTenureAmp
+    static const int TABU_BASE_TO_AMP = 4;
+
 
     TabuSolver( const NurseRostering &input, clock_t startTime = clock() );
     TabuSolver( const NurseRostering &input, const Output &optima, clock_t startTime = clock() );
@@ -139,7 +143,7 @@ public:
     virtual void init( const std::string &runID );
     virtual void solve();
 
-    virtual bool updateOptima( const Output &localOptima ) const; 
+    virtual bool updateOptima( const Output &localOptima ) const;
     virtual History genHistory() const;
 
     IterCount DayTabuTenureBase() const { return dayTabuTenureBase; }
@@ -157,6 +161,20 @@ private:
     void iterativeLocalSearch( ModeSeq modeSeq );
     // random walk until timeout
     void randomWalk();
+
+    // set tabu tenure according to certain feature
+    // set it multiple times will multiply the tenure
+    void setDayTabuTenure_TableSize( double coefficient );
+    void setShiftTabuTenure_TableSize( double coefficient );
+
+    void setDayTabuTenure_NurseNum( double coefficient );
+    void setShiftTabuTenure_NurseNum( double coefficient );
+
+    void setDayTabuTenure_DayNum( double coefficient );
+    void setShiftTabuTenure_DayNum( double coefficient );
+
+    void setDayTabuTenure_ShiftNum( double coefficient );
+    void setShiftTabuTenure_ShiftNum( double coefficient );
 
 
     IterCount dayTabuTenureBase;

@@ -289,10 +289,10 @@ private:
     private:    // forbidden operators
     };
     // fine-grained tabu list for add or remove on each shift
-    // (iterCount < ShiftTabu[nurse][weekday][shift][skill]) means forbid to be added
+    // (iterCount <= ShiftTabu[nurse][weekday][shift][skill]) means forbid to be added
     typedef std::vector< std::vector< std::vector< std::vector<IterCount> > > > ShiftTabu;
     // coarse-grained tabu list for add or remove on each day
-    // (iterCount < DayTabu[nurse][weekday]) means forbid to be removed
+    // (iterCount <= DayTabu[nurse][weekday]) means forbid to be removed
     typedef std::vector< std::vector<IterCount> > DayTabu;
 
 
@@ -458,7 +458,6 @@ private:
     NurseNumsOnSingleAssign missingNurseNums;
     // consecutive[nurse] is the consecutive assignments record for nurse
     std::vector<Consecutive> consecutives;
-
 
     ObjValue objInsufficientStaff;
     ObjValue objConsecutiveShift;
