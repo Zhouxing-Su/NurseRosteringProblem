@@ -410,15 +410,15 @@ void NurseRostering::TabuSolver::init( const string &id )
     algorithmName = "Tabu";
     srand( problem.randSeed );
 
-    // 0.2, 0.5, 0.8, 1.2, 2.0
-    double dayTabuCoefficient = 0.5;
-    double shiftTabuCoefficient = 0.8;
-    //setDayTabuTenure_TableSize( dayTabuCoefficient );
-    setDayTabuTenure_NurseNum( dayTabuCoefficient );
+    // 0.1, 0.2, 0.5, 0.8, 1.2, 2.0
+    double dayTabuCoefficient = 0.1;
+    double shiftTabuCoefficient = 0.1;
+    setDayTabuTenure_TableSize( dayTabuCoefficient );
+    //setDayTabuTenure_NurseNum( dayTabuCoefficient );
     //setDayTabuTenure_DayNum( dayTabuCoefficient );
     //setDayTabuTenure_ShiftNum( dayTabuCoefficient );
-    //setShiftTabuTenure_TableSize( shiftTabuCoefficient );
-    setShiftTabuTenure_NurseNum( shiftTabuCoefficient );
+    setShiftTabuTenure_TableSize( shiftTabuCoefficient );
+    //setShiftTabuTenure_NurseNum( shiftTabuCoefficient );
     //setShiftTabuTenure_DayNum( shiftTabuCoefficient );
     //setShiftTabuTenure_ShiftNum( shiftTabuCoefficient );
 
@@ -437,8 +437,8 @@ void NurseRostering::TabuSolver::solve()
     //iterativeLocalSearch( ModeSeq::ARLCS );
     //iterativeLocalSearch( ModeSeq::ACSR );
 
-    //tabuSearch( ModeSeq::ARBCS );
-    tabuSearch( ModeSeq::ARRCS );
+    tabuSearch( ModeSeq::ARBCS );
+    //tabuSearch( ModeSeq::ARRCS );
     //tabuSearch( ModeSeq::ARLCS );
     //tabuSearch( ModeSeq::ACSR );
 
