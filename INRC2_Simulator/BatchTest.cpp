@@ -56,6 +56,26 @@ const std::string cusPrefix( "/custom-week" );
 const char *FeasibleCheckerHost = "themis.playhost.be";
 
 
+void testHeterogeneousInstancesWithPreloadedInstSeq( const std::string &id, int runCount )
+{
+    unsigned instIndex;
+    int randSeed;
+
+    for (instIndex = 0; instIndex < instance.size(); ++instIndex) {
+        // instances which have no need for test
+        if ((instIndex == InstIndex::n120w8)
+            || (instIndex == InstIndex::n100w8)) {
+            continue;
+        }
+
+        for (int i = runCount; i > 0; --i) {
+            randSeed = static_cast<int>(rand() + time( NULL ) + clock());
+            test_customIO( id, outputDirPrefix + id, instIndex,
+                instInitHis[instIndex], instWeekdataSeq[instIndex].c_str(), instTimeout[getNurseNum( instIndex )], randSeed );
+        }
+    }
+}
+
 void testAllInstancesWithPreloadedInstSeq( const std::string &id, int runCount )
 {
     unsigned instIndex;

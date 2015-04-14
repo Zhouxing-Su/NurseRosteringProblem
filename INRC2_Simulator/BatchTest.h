@@ -42,6 +42,18 @@ enum ArgvIndex
     __timout, timeout, __randSeed, randSeed, __cusIn, cusIn, __cusOut, cusOut
 };
 
+enum InstIndex
+{
+    n005w4, n012w8, n021w4,
+    n030w4, n030w8,
+    n040w4, n040w8,
+    n050w4, n050w8,
+    n060w4, n060w8,
+    n080w4, n080w8,
+    n100w4, n100w8,
+    n120w4, n120w8
+};
+
 static const int MAX_ARGV_LEN = 256;
 static const int INIT_HIS_NUM = 3;
 static const int WEEKDATA_NUM = 10;
@@ -87,6 +99,7 @@ void genInstanceSequence( int instIndex, char &initHis, char weekdata[WEEKDATA_S
 
 void makeSureDirExist( const std::string &dir );
 
+void testHeterogeneousInstancesWithPreloadedInstSeq( const std::string &id, int runCount );
 void testAllInstancesWithPreloadedInstSeq( const std::string &id, int runCount );
 void testAllInstances( const std::string &id, int runCount, int seedForInstSeq );
 void test( const std::string &id, const std::string &outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec );
