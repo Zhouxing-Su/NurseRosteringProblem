@@ -47,6 +47,17 @@ NurseRostering::Solution::updateTabuTable = {
     &NurseRostering::Solution::updateRemoveTabu
 };
 
+const std::vector<std::string> NurseRostering::Solution::modeSeqNames = {
+    "[ARLCS]", "[ARRCS]", "[ARBCS]", "[ACSR]", "[ASCR]"
+};
+const std::vector<std::vector<int> > NurseRostering::Solution::modeSeqPatterns = {
+    { Solution::Move::Mode::ARLoop, Solution::Move::Mode::Change, Solution::Move::Mode::Swap },
+    { Solution::Move::Mode::ARRand, Solution::Move::Mode::Change, Solution::Move::Mode::Swap },
+    { Solution::Move::Mode::ARBoth, Solution::Move::Mode::Change, Solution::Move::Mode::Swap },
+    { Solution::Move::Mode::Add, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::Remove },
+    { Solution::Move::Mode::Add, Solution::Move::Mode::Swap, Solution::Move::Mode::Change, Solution::Move::Mode::Remove }
+};
+
 
 NurseRostering::Solution::Solution( const TabuSolver &s )
     : solver( s ), iterCount( 1 )
@@ -299,7 +310,7 @@ void NurseRostering::Solution::tabuSearch( const Timer &timer, const FindBestMov
 
     for (; !timer.isTimeOut() && (objValue > 0); ++iterCount) {
         int modeSelect = startMode;
-        Move::Mode moveMode = Move::Mode::NUM;
+        Move::Mode moveMode = Move::Mode::SIZE;
         Move bestMove;
         // judge every neighborhood whether to select and search when selected
         for (int i = startMode; i < modeNum; ++i) {
@@ -357,11 +368,11 @@ void NurseRostering::Solution::localSearch( const Timer &timer, const FindBestMo
     clock_t startTime = clock();
 #endif
     int modeNum = findBestMoveTable.size();
-    bitset<Move::Mode::NUM> improveFlag;
+    bitset<Move::Mode::SIZE> improveFlag;
     for (int i = 0; i < modeNum; ++i) {
         improveFlag.set( i );
     }
-    bitset<Move::Mode::NUM> improveFlagBackup( improveFlag );
+    bitset<Move::Mode::SIZE> improveFlagBackup( improveFlag );
 
     int moveMode = 0;
     while (!timer.isTimeOut() && improveFlag.any()) {
@@ -404,7 +415,7 @@ void NurseRostering::Solution::randomWalk( const Timer &timer, IterCount stepNum
 #endif
     ObjValue delta;
     while ((--stepNum > 0) && !timer.isTimeOut()) {
-        int moveMode = rand() % Move::Mode::BASIC_MOVE_NUM;
+        int moveMode = rand() % Move::Mode::BASIC_MOVE_SIZE;
         Move move;
         move.weekday = (rand() % Weekday::NUM) + Weekday::Mon;
         move.nurse = rand() % solver.problem.scenario.nurseNum;
@@ -426,7 +437,7 @@ void NurseRostering::Solution::randomWalk( const Timer &timer, IterCount stepNum
         << "time: " << duration << ' '
         << "speed: " << iterCount * static_cast<double>(CLOCKS_PER_SEC) / (duration + 1) << endl;
 #endif
-    }
+}
 
 bool NurseRostering::Solution::findBestAdd( Move &bestMove ) const
 {

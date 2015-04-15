@@ -26,7 +26,7 @@
 enum ArgcVal
 {
     single = 2,
-    full = 19,
+    full = 21,
     noRand = full - single,
     noCusIn = full - single,
     noCusOut = full - single,
@@ -38,7 +38,8 @@ enum ArgcVal
 
 enum ArgvIndex
 {
-    program = 0, __id, id, __sce, sce, __his, his, __week, week, __sol, sol,
+    program = 0, __id, id, __config, config,
+    __sce, sce, __his, his, __week, week, __sol, sol,
     __timout, timeout, __randSeed, randSeed, __cusIn, cusIn, __cusOut, cusOut
 };
 
@@ -72,6 +73,9 @@ extern const std::string instSeqFileName;
 extern std::vector<char> instInitHis;
 extern std::vector<std::string> instWeekdataSeq;
 
+extern const std::string configFileName;
+extern std::string configString;
+
 extern const std::string scePrefix;
 extern const std::string weekPrefix;
 extern const std::string initHisPrefix;
@@ -82,9 +86,12 @@ extern const std::string cusPrefix;
 
 extern const char *FeasibleCheckerHost;
 
-// load timeout from "timeout.txt"
+
+// load config from configFile
+void loadConfig();
+// load timeout from timoutFile
 void loadInstTimeOut();
-// load instance sequence from "seq.txt"
+// load instance sequence from instSeqFile
 void loadInstSeq();
 
 int getNurseNum( int instIndex );

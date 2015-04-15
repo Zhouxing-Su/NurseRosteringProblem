@@ -16,6 +16,7 @@ using boost::asio::ip::tcp;
 char *fullArgv[ArgcVal::full] = {
     "NurseRostering.exe",
     "--id", "",
+    "--config", "",
     "--sce", "",
     "--his", "",
     "--week", "",
@@ -44,6 +45,9 @@ std::map<int, double> instTimeout;
 const std::string instSeqFileName( "seq.txt" );
 std::vector<char> instInitHis;
 std::vector<std::string> instWeekdataSeq;
+
+const std::string configFileName( "config.txt" );
+std::string configString;
 
 const std::string scePrefix( "/Sc-" );
 const std::string weekPrefix( "/WD-" );
@@ -107,6 +111,15 @@ void testAllInstances( const std::string &id, int runCount, int seedForInstSeq )
                 initHis, weekdata, instTimeout[getNurseNum( instIndex )], randSeed );
         }
     }
+}
+
+void loadConfig()
+{
+    ifstream ifs( configFileName );
+
+    ifs >> configString;
+
+    ifs.close();
 }
 
 void loadInstTimeOut()
@@ -309,6 +322,9 @@ void prepareArgv_FirstWeek( const std::string &id, const std::string &outputDir,
     argv[++i] = fullArgv[ArgvIndex::__id];
     strcpy( argvBuf[++i], id.c_str() );
     argv[i] = argvBuf[i];
+    argv[++i] = fullArgv[ArgvIndex::__config];
+    strcpy( argvBuf[++i], configString.c_str() );
+    argv[i] = argvBuf[i];
     argv[++i] = fullArgv[ArgvIndex::__sce];
     strcpy( argvBuf[++i], sce.c_str() );
     argv[i] = argvBuf[i];
@@ -346,6 +362,9 @@ void prepareArgv( const std::string &id, const std::string &outputDir, char *arg
     argv[i] = fullArgv[ArgvIndex::program];
     argv[++i] = fullArgv[ArgvIndex::__id];
     strcpy( argvBuf[++i], id.c_str() );
+    argv[i] = argvBuf[i];
+    argv[++i] = fullArgv[ArgvIndex::__config];
+    strcpy( argvBuf[++i], configString.c_str() );
     argv[i] = argvBuf[i];
     argv[++i] = fullArgv[ArgvIndex::__sce];
     strcpy( argvBuf[++i], sce.c_str() );

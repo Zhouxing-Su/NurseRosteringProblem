@@ -51,9 +51,50 @@ public:
     static const double INIT_PERTURB_STRENGTH;
     static const double PERTURB_STRENGTH_DELTA;
 
+    enum InitAlgorithm
+    {
+        Greedy, Exact
+    };
+
+    enum SolveAlgorithm
+    {
+        RandomWalk, IterativeLocalSearch, TabuSearch
+    };
+
+    enum TabuTenureCoefficientIndex
+    {
+        TableSize, NurseNum, DayNum, ShiftNum, SIZE
+    };
+
     const NurseRostering &problem;
     const clock_t startTime;
     const Timer timer;
+
+
+    class Config
+    {
+    public:
+        Config() : initAlgorithm( InitAlgorithm::Greedy ),
+            solveAlgorithm( SolveAlgorithm::TabuSearch ),
+            modeSeq( Solution::ModeSeq::ARBCS )
+        {
+            dayTabuCoefficient[TabuTenureCoefficientIndex::TableSize] = 0;
+            dayTabuCoefficient[TabuTenureCoefficientIndex::NurseNum] = 0.5;
+            dayTabuCoefficient[TabuTenureCoefficientIndex::DayNum] = 0;
+            dayTabuCoefficient[TabuTenureCoefficientIndex::ShiftNum] = 0;
+            
+            shiftTabuCoefficient[TabuTenureCoefficientIndex::TableSize] = 0;
+            shiftTabuCoefficient[TabuTenureCoefficientIndex::NurseNum] = 0.8;
+            shiftTabuCoefficient[TabuTenureCoefficientIndex::DayNum] = 0;
+            shiftTabuCoefficient[TabuTenureCoefficientIndex::ShiftNum] = 0;
+        }
+
+        InitAlgorithm initAlgorithm;
+        SolveAlgorithm solveAlgorithm;
+        Solution::ModeSeq modeSeq;
+        double dayTabuCoefficient[TabuTenureCoefficientIndex::SIZE];
+        double shiftTabuCoefficient[TabuTenureCoefficientIndex::SIZE];
+    };
 
 
     Solver( const NurseRostering &input, clock_t startTime );
@@ -61,7 +102,7 @@ public:
     virtual ~Solver() {}
 
     // set algorithm name, set parameters, generate initial solution
-    virtual void init( const std::string &runID ) = 0;
+    virtual void init( const Config &cfg = Config(), const std::string &runID = std::string() ) = 0;
     // search for optima
     virtual void solve() = 0;
     // return true if global optima or population is updated
@@ -117,6 +158,7 @@ protected:
     mutable Output optima;
     mutable clock_t optimaFindTime;
 
+    Config config;
     std::string runID;
     std::string algorithmName;
 
@@ -128,10 +170,6 @@ private:    // forbidden operators
 class NurseRostering::TabuSolver : public NurseRostering::Solver
 {
 public:
-    enum ModeSeq { ACSR, ASCR, ARLCS, ARRCS, ARBCS };
-    static const std::vector<std::string> modeSeqNames;
-    static const std::vector<std::vector<int> > modeSeqPatterns;
-
     // ratio of tabuTenureBase to tabuTenureAmp
     static const int TABU_BASE_TO_AMP = 4;
 
@@ -140,7 +178,7 @@ public:
     TabuSolver( const NurseRostering &input, const Output &optima, clock_t startTime = clock() );
     virtual ~TabuSolver() {}
 
-    virtual void init( const std::string &runID );
+    virtual void init( const Config &cfg = Config(), const std::string &runID = std::string() );
     virtual void solve();
 
     virtual bool updateOptima( const Output &localOptima ) const;
@@ -156,23 +194,22 @@ private:
     void exactInit();
 
     // search with tabu table
-    void tabuSearch( ModeSeq modeSeq );
+    void tabuSearch( Solution::ModeSeq modeSeq );
     // iteratively run local search and perturb
-    void iterativeLocalSearch( ModeSeq modeSeq );
+    void iterativeLocalSearch( Solution::ModeSeq modeSeq );
     // random walk until timeout
     void randomWalk();
 
     // set tabu tenure according to certain feature
+    void setTabuTenure();
     // set it multiple times will multiply the tenure
+    // pass in 0 to leave out the relation
     void setDayTabuTenure_TableSize( double coefficient );
     void setShiftTabuTenure_TableSize( double coefficient );
-
     void setDayTabuTenure_NurseNum( double coefficient );
     void setShiftTabuTenure_NurseNum( double coefficient );
-
     void setDayTabuTenure_DayNum( double coefficient );
     void setShiftTabuTenure_DayNum( double coefficient );
-
     void setDayTabuTenure_ShiftNum( double coefficient );
     void setShiftTabuTenure_ShiftNum( double coefficient );
 

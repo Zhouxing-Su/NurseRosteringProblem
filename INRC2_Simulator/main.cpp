@@ -89,6 +89,7 @@ void sprintRun()
 
 int main()
 {
+    loadConfig();
     loadInstTimeOut();
     loadInstSeq();
     FileLock::unlock( LOG_FILE_NAME );

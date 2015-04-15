@@ -6,6 +6,61 @@ using namespace std;
 
 namespace INRC2
 {
+    const std::string LOG_FILE_NAME( "log.csv" );
+
+    const std::string ARGV_ID( "id" );
+    const std::string ARGV_SCENARIO( "sce" );
+    const std::string ARGV_HISTORY( "his" );
+    const std::string ARGV_WEEKDATA( "week" );
+    const std::string ARGV_SOLUTION( "sol" );
+    const std::string ARGV_CUSTOM_INPUT( "cusIn" );
+    const std::string ARGV_CUSTOM_OUTPUT( "cusOut" );
+    const std::string ARGV_RANDOM_SEED( "rand" );
+    const std::string ARGV_TIME( "timeout" );  // in seconds
+    const std::string ARGV_CONFIG( "config" );
+    const std::string ARGV_HELP( "help" );
+
+    const std::string weekdayNames[NurseRostering::Weekday::SIZE] = {
+        "HIS", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"
+    };
+    const std::map<std::string, int> weekdayMap = {
+        { weekdayNames[NurseRostering::Weekday::Mon], NurseRostering::Weekday::Mon },
+        { weekdayNames[NurseRostering::Weekday::Tue], NurseRostering::Weekday::Tue },
+        { weekdayNames[NurseRostering::Weekday::Wed], NurseRostering::Weekday::Wed },
+        { weekdayNames[NurseRostering::Weekday::Thu], NurseRostering::Weekday::Thu },
+        { weekdayNames[NurseRostering::Weekday::Fri], NurseRostering::Weekday::Fri },
+        { weekdayNames[NurseRostering::Weekday::Sat], NurseRostering::Weekday::Sat },
+        { weekdayNames[NurseRostering::Weekday::Sun], NurseRostering::Weekday::Sun }
+    };
+
+
+    void help()
+    {
+        cout <<
+            "command line arguments ([XXX] means XXX is optional) :\n"
+            " [id]      - identifier of the run which will be recorded in log file.\n"
+            " sce       - scenario file path.\n"
+            " his       - history file path.\n"
+            " week      - weekdata file path.\n"
+            " sol       - solution file path.\n"
+            " [cusIn]   - custom input file path.\n"
+            " cusOut]   - custom output file path.\n"
+            " [rand]    - rand seed for the solver.\n"
+            " [timeout] - max running time of the solver.\n"
+            " [config]  - specifies algorithm select and argument settings.\n"
+            "             format: cci;d,d,d,d;d,d,d,d\n"
+            "               c for char, d for real number, comma is used to separate numbers.\n"
+            "               the first char can be 'g'(for greedy init) or 'e'(for exact init).\n"
+            "               the second char can be 'r'(for RW), 'i'(for ILS) or 't'(for TS).\n"
+            "               i for a non-negative integer corresponding to Solution::ModeSeq.\n"
+            "               following 4 real numbers are coefficients for TableSize, NurseNum,\n"
+            "               WeekdayNum and ShiftNum used in day tabu tenure setting,\n"
+            "               non-positive number means there is no relation with that feature. while\n"
+            "               next 4 numbers are used in shift tabu tenure setting with same meaning.\n"
+            "             example: gt2;0,0.5,0,0;0,0.8,0,0 or gt3;0.1,0,0,0;0.1,0,0,0\n"
+            << endl;
+    }
+
     int run( int argc, char *argv[] )
     {
         clock_t startTime = clock();
@@ -14,6 +69,11 @@ namespace INRC2
         map<string, string> argvMap;
         for (int i = 1; i < argc; i += 2) {
             argvMap[argv[i] + 2] = argv[i + 1]; // (argv[i] + 2) to skip "--" before argument
+        }
+
+        // print help
+        if (argvMap.find( ARGV_HELP ) != argvMap.end()) {
+            help();
         }
 
         // read input
@@ -40,6 +100,14 @@ namespace INRC2
             return -1;
         }
 
+        // check solution file name
+        if (argvMap.find( ARGV_SOLUTION ) == argvMap.end()) {
+#ifdef INRC2_DEBUG
+            cerr << getTime() << " : missing obligate argument(solution file name)" << endl;
+#endif
+            return -1;
+        }
+
         // load random seed
         if (argvMap.find( ARGV_RANDOM_SEED ) != argvMap.end()) {
             istringstream iss( argvMap[ARGV_RANDOM_SEED] );
@@ -59,17 +127,9 @@ namespace INRC2
             input.timeout = NurseRostering::MAX_RUNNING_TIME;
         }
 
-        // check solution file name
-        if (argvMap.find( ARGV_SOLUTION ) == argvMap.end()) {
-#ifdef INRC2_DEBUG
-            cerr << getTime() << " : missing obligate argument(solution file name)" << endl;
-#endif
-            return -1;
-        }
-
         // start computation
         NurseRostering::TabuSolver solver( input, startTime );
-        solver.init( argvMap[ARGV_ID] );
+        solver.init( parseConfig( argvMap[ARGV_CONFIG] ), argvMap[ARGV_ID] );
         solver.solve();
 
         // write output
@@ -408,4 +468,49 @@ namespace INRC2
         ofs.close();
         return true;
     }
+
+    NurseRostering::Solver::Config parseConfig( const std::string &configString )
+    {
+        NurseRostering::Solver::Config config;
+        istringstream iss( configString );
+        char c;
+        int modeSeq;
+
+        iss >> c;
+        if (c == 'g') {
+            config.initAlgorithm = NurseRostering::Solver::InitAlgorithm::Greedy;
+        } else if (c == 'e') {
+            config.initAlgorithm = NurseRostering::Solver::InitAlgorithm::Exact;
+        } else {
+            return config;
+        }
+
+        iss >> c;
+        if (c == 'r') {
+            config.solveAlgorithm = NurseRostering::Solver::SolveAlgorithm::RandomWalk;
+        } else if (c == 'i') {
+            config.solveAlgorithm = NurseRostering::Solver::SolveAlgorithm::IterativeLocalSearch;
+        } else if (c == 't') {
+            config.solveAlgorithm = NurseRostering::Solver::SolveAlgorithm::TabuSearch;
+        } else {
+            return config;
+        }
+
+        iss >> modeSeq;
+        if ((modeSeq >= 0) && (modeSeq < NurseRostering::Solution::ModeSeq::SIZE)) {
+            config.modeSeq = static_cast<NurseRostering::Solution::ModeSeq>(modeSeq);
+        }
+
+        iss >> c >> config.dayTabuCoefficient[NurseRostering::Solver::TabuTenureCoefficientIndex::TableSize]
+            >> c >> config.dayTabuCoefficient[NurseRostering::Solver::TabuTenureCoefficientIndex::NurseNum]
+            >> c >> config.dayTabuCoefficient[NurseRostering::Solver::TabuTenureCoefficientIndex::DayNum]
+            >> c >> config.dayTabuCoefficient[NurseRostering::Solver::TabuTenureCoefficientIndex::ShiftNum]
+            >> c >> config.shiftTabuCoefficient[NurseRostering::Solver::TabuTenureCoefficientIndex::TableSize]
+            >> c >> config.shiftTabuCoefficient[NurseRostering::Solver::TabuTenureCoefficientIndex::NurseNum]
+            >> c >> config.shiftTabuCoefficient[NurseRostering::Solver::TabuTenureCoefficientIndex::DayNum]
+            >> c >> config.shiftTabuCoefficient[NurseRostering::Solver::TabuTenureCoefficientIndex::ShiftNum];
+
+        return config;
+    }
+
 }

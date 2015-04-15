@@ -54,13 +54,13 @@ public:
     class Move
     {
     public:
-        // fundamental move modes in local search, NUM is the number of move types
+        // fundamental move modes in local search, SIZE is the number of move types
         // AR stands for "Add and Remove", "Rand" means select one to search randomly,
         // "Both" means search both, "Loop" means switch to another when no improvement
         enum Mode
         {
-            Add, Change, Swap, Remove, BASIC_MOVE_NUM,
-            ARLoop = BASIC_MOVE_NUM, ARRand, ARBoth, NUM
+            Add, Change, Swap, Remove, BASIC_MOVE_SIZE,
+            ARLoop = BASIC_MOVE_SIZE, ARRand, ARBoth, SIZE
         };
 
         Move() : delta( DefaultPenalty::FORBIDDEN_MOVE ) {}
@@ -100,6 +100,14 @@ public:
     typedef std::vector<UpdateTabu> UpdateTabuTable;
 
 
+    enum ModeSeq
+    {
+        ARLCS, ARRCS, ARBCS, ACSR, ASCR, SIZE
+    };
+
+    static const std::vector<std::string> modeSeqNames;
+    static const std::vector<std::vector<int> > modeSeqPatterns;
+
     static const TryMoveTable tryMove;
     static const FindBestMoveTable findBestMove;
     static const FindBestMoveTable findBestMoveOnBlockBorder;
@@ -112,15 +120,15 @@ public:
 
     // allocate space for data structure and set default value
     // must be called before generating initial solution
-    void resetAssign();     
+    void resetAssign();
     // evaluate objective by assist data structure
     // must be called after Penalty change or direct access to AssignTable
-    void evaluateObjValue();    
+    void evaluateObjValue();
     // must be called after direct access to AssignTable
     // there must not be self assignment and assign must be build from same problem
     void rebuildAssistData( const AssignTable &assign );
     // get history for next week, only used for custom file
-    History genHistory() const; 
+    History genHistory() const;
 
     bool genInitAssign( int greedyRetryCount );
     bool genInitAssign_Greedy();

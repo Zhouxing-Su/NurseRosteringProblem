@@ -1,15 +1,6 @@
 /**
 *   usage : 1.  invoke solver interface to solve problem.
-*           2.  command line arguments:
-*               [id]        -   identifier of the run which will be recorded in log file.
-*               sce         -   scenario file path.
-*               his         -   history file path.
-*               week        -   weekdata file path.
-*               sol         -   solution file path.
-*               [cusIn]     -   custom input file path.
-*               [cusOut]    -   custom output file path.
-*               [rand]      -   rand seed for the solver.
-*               [timeout]   -   max running time of the solver.
+*           2.  command line arguments : see help()
 *
 *   note :  1.
 */
@@ -37,31 +28,25 @@ namespace INRC2
     const int MAX_BUF_SIZE = 1000;   // max size for char array buf
     const int MAX_BUF_LEN = MAX_BUF_SIZE - 1;   // max length for char array buf
 
-    const std::string LOG_FILE_NAME( "log.csv" );
+    extern const std::string LOG_FILE_NAME;
 
-    const std::string ARGV_ID( "id" );
-    const std::string ARGV_SCENARIO( "sce" );
-    const std::string ARGV_HISTORY( "his" );
-    const std::string ARGV_WEEKDATA( "week" );
-    const std::string ARGV_SOLUTION( "sol" );
-    const std::string ARGV_CUSTOM_INPUT( "cusIn" );
-    const std::string ARGV_CUSTOM_OUTPUT( "cusOut" );
-    const std::string ARGV_RANDOM_SEED( "rand" );
-    const std::string ARGV_TIME( "timeout" );  // in seconds
+    extern const std::string ARGV_ID;
+    extern const std::string ARGV_SCENARIO;
+    extern const std::string ARGV_HISTORY;
+    extern const std::string ARGV_WEEKDATA;
+    extern const std::string ARGV_SOLUTION;
+    extern const std::string ARGV_CUSTOM_INPUT;
+    extern const std::string ARGV_CUSTOM_OUTPUT;
+    extern const std::string ARGV_RANDOM_SEED;
+    extern const std::string ARGV_TIME;  // in seconds
+    extern const std::string ARGV_CONFIG;
+    extern const std::string ARGV_HELP;
 
-    const std::string weekdayNames[NurseRostering::Weekday::SIZE] = {
-        "HIS", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"
-    };
-    const std::map<std::string, int> weekdayMap = {
-        { weekdayNames[NurseRostering::Weekday::Mon], NurseRostering::Weekday::Mon },
-        { weekdayNames[NurseRostering::Weekday::Tue], NurseRostering::Weekday::Tue },
-        { weekdayNames[NurseRostering::Weekday::Wed], NurseRostering::Weekday::Wed },
-        { weekdayNames[NurseRostering::Weekday::Thu], NurseRostering::Weekday::Thu },
-        { weekdayNames[NurseRostering::Weekday::Fri], NurseRostering::Weekday::Fri },
-        { weekdayNames[NurseRostering::Weekday::Sat], NurseRostering::Weekday::Sat },
-        { weekdayNames[NurseRostering::Weekday::Sun], NurseRostering::Weekday::Sun }
-    };
+    extern const std::string weekdayNames[NurseRostering::Weekday::SIZE];
+    extern const std::map<std::string, int> weekdayMap;
 
+
+    void help();
 
     int run( int argc, char *argv[] );
 
@@ -71,6 +56,7 @@ namespace INRC2
     bool readCustomInput( const std::string &customInputFileName, NurseRostering &input );
     bool writeSolution( const std::string &solutionFileName, const NurseRostering::Solver &solver );
     bool writeCustomOutput( const std::string &customOutputFileName, const NurseRostering::Solver &solver );
+    NurseRostering::Solver::Config parseConfig( const std::string &configString );
 }
 
 
