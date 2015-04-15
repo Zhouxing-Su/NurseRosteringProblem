@@ -67,23 +67,27 @@ NurseRostering::Solution::Solution( const TabuSolver &s )
 NurseRostering::Solution::Solution( const TabuSolver &s, const AssignTable &at )
     : solver( s ), iterCount( 1 )
 {
-    resetAssign();
-    rebuildAssistData( at );
+    rebuild( at );
 }
 
-void NurseRostering::Solution::rebuildAssistData( const AssignTable &at )
+void NurseRostering::Solution::rebuild( const AssignTable &at )
 {
-    if (&at == &assign) {
-        solver.errorLog( "self assignment is not allowed!" );
-    }
+    assign = at;
+    rebuildAssistData();
+}
+
+void NurseRostering::Solution::rebuildAssistData()
+{
+    resetAssistData();
 
     for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
         for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
-            if (at[nurse][weekday].isWorking()) {
-                addAssign( weekday, nurse, at[nurse][weekday] );
+            if (assign[nurse][weekday].isWorking()) {
+                addAssign( weekday, nurse, assign[nurse][weekday] );
             }
         }
     }
+
     evaluateObjValue();
 }
 
@@ -105,6 +109,7 @@ bool NurseRostering::Solution::genInitAssign( int greedyRetryCount )
 bool NurseRostering::Solution::genInitAssign_Greedy()
 {
     resetAssign();
+    resetAssistData();
 
     AvailableNurses availableNurse( *this );
     const NurseNumOfSkill &nurseNumOfSkill( solver.getNurseNumOfSkill() );
@@ -166,8 +171,9 @@ bool NurseRostering::Solution::genInitAssign_BranchAndCut()
     resetAssign();
 
     bool feasible = fillAssign( Weekday::Mon, 0, 0, 0, 0 );
-    AssignTable at( assign );
-    rebuildAssistData( at );
+
+    rebuildAssistData();
+
     return feasible;
 }
 
@@ -226,15 +232,20 @@ bool NurseRostering::Solution::fillAssign( int weekday, ShiftID shift, SkillID s
 
 void NurseRostering::Solution::resetAssign()
 {
-    // output
     assign = AssignTable( solver.problem.scenario.nurseNum, Weekday::SIZE );
+    for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
+        assign[nurse][Weekday::HIS] = Assign( solver.problem.history.lastShifts[nurse] );
+    }
+}
+
+void NurseRostering::Solution::resetAssistData()
+{
     // assist data structure
     missingNurseNums = solver.problem.weekData.optNurseNums;
     totalAssignNums = solver.problem.history.totalAssignNums;
     consecutives = vector<Consecutive>( solver.problem.scenario.nurseNum );
     for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
         consecutives[nurse] = Consecutive( solver.problem.history, nurse );
-        assign[nurse][Weekday::HIS] = Assign( solver.problem.history.lastShifts[nurse] );
     }
     // tabu table
     shiftTabu = ShiftTabu( solver.problem.scenario.nurseNum,
@@ -354,9 +365,11 @@ void NurseRostering::Solution::tabuSearch( const Timer &timer, const FindBestMov
             P_local[modeSelect] = static_cast<int>(P_local[modeSelect] * dec_local);
         }
     }
+
+    rebuild( solver.getOptima().getAssignTable() );
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t duration = clock() - startTime;
-    cout << "[LS] iter: " << iterCount << ' '
+    cout << "[TS] iter: " << iterCount << ' '
         << "time: " << duration << ' '
         << "speed: " << iterCount * static_cast<double>(CLOCKS_PER_SEC) / (duration + 1) << endl;
 #endif
@@ -1519,7 +1532,7 @@ void NurseRostering::Solution::addAssign( int weekday, NurseID nurse, const Assi
 
     ++totalAssignNums[nurse];
 
-    assign[nurse][weekday] = Assign( a );
+    assign[nurse][weekday] = a;
 }
 
 void NurseRostering::Solution::addAssign( const Move &move )
@@ -1536,7 +1549,7 @@ void NurseRostering::Solution::changeAssign( int weekday, NurseID nurse, const A
     --missingNurseNums[weekday][a.shift][a.skill];
     ++missingNurseNums[weekday][assign[nurse][weekday].shift][assign[nurse][weekday].skill];
 
-    assign[nurse][weekday] = Assign( a );
+    assign[nurse][weekday] = a;
 }
 
 void NurseRostering::Solution::changeAssign( const Move &move )

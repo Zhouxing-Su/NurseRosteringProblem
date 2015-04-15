@@ -453,6 +453,87 @@ NurseRostering::History NurseRostering::TabuSolver::genHistory() const
     return Solution( *this, optima.getAssignTable() ).genHistory();
 }
 
+void NurseRostering::TabuSolver::greedyInit()
+{
+    algorithmName += "[GreedyInit]";
+
+    discoverNurseSkillRelation();
+
+    if (sln.genInitAssign( problem.scenario.nurseNum / 4 ) == false) {
+        errorLog( "fail to generate feasible init solution." );
+    }
+}
+
+void NurseRostering::TabuSolver::exactInit()
+{
+    algorithmName += "[ExactInit]";
+
+    if (sln.genInitAssign_BranchAndCut() == false) {
+        errorLog( "no feasible solution!" );
+    }
+}
+
+void NurseRostering::TabuSolver::randomWalk()
+{
+    algorithmName += "[RW]";
+
+    sln.randomWalk( timer, MAX_ITER_COUNT );
+}
+
+void NurseRostering::TabuSolver::iterativeLocalSearch( Solution::ModeSeq modeSeq )
+{
+    algorithmName += "[ILS]" + Solution::modeSeqNames[modeSeq];
+
+    const vector<int> &modeSeqPat( Solution::modeSeqPatterns[modeSeq] );
+    int modeSeqLen = modeSeqPat.size();
+
+    Solution::FindBestMoveTable fbmt( modeSeqLen );
+    Solution::FindBestMoveTable fbmtobb( modeSeqLen );
+
+    for (int i = 0; i < modeSeqLen; ++i) {
+        fbmt[i] = Solution::findBestMove[modeSeqPat[i]];
+        fbmtobb[i] = Solution::findBestMoveOnBlockBorder[modeSeqPat[i]];
+    }
+
+    double perturbStrength = INIT_PERTURB_STRENGTH;
+    while (!timer.isTimeOut()) {
+        ObjValue lastObj = optima.getObjValue();
+        if (rand() % 2) {
+            sln.localSearch( timer, fbmt );
+        } else {
+            sln.localSearch( timer, fbmtobb );
+        }
+        sln.perturb( perturbStrength );
+        (optima.getObjValue() == lastObj)
+            ? (perturbStrength += PERTURB_STRENGTH_DELTA)
+            : (perturbStrength = INIT_PERTURB_STRENGTH);
+    }
+}
+
+void NurseRostering::TabuSolver::tabuSearch( Solution::ModeSeq modeSeq )
+{
+    algorithmName += Solution::modeSeqNames[modeSeq];
+
+    const vector<int> &modeSeqPat( Solution::modeSeqPatterns[modeSeq] );
+    int modeSeqLen = modeSeqPat.size();
+
+    Solution::FindBestMoveTable fbmt( modeSeqLen );
+
+    for (int i = 0; i < modeSeqLen; ++i) {
+        fbmt[i] = Solution::findBestMove[modeSeqPat[i]];
+    }
+
+    double perturbStrength = INIT_PERTURB_STRENGTH;
+    while (!timer.isTimeOut()) {
+        ObjValue lastObj = optima.getObjValue();
+        sln.tabuSearch( timer, fbmt );
+        sln.perturb( perturbStrength );
+        (optima.getObjValue() == lastObj)
+            ? (perturbStrength += PERTURB_STRENGTH_DELTA)
+            : (perturbStrength = INIT_PERTURB_STRENGTH);
+    }
+}
+
 void NurseRostering::TabuSolver::setTabuTenure()
 {
     setDayTabuTenure_TableSize( config.dayTabuCoefficient[TabuTenureCoefficientIndex::TableSize] );
@@ -579,86 +660,5 @@ void NurseRostering::TabuSolver::setShiftTabuTenure_ShiftNum( double coefficient
         shiftTabuTenureBase *= static_cast<IterCount>(1 + coefficient *
             problem.scenario.shiftTypeNum * problem.scenario.skillTypeNum);
         shiftTabuTenureAmp = 1 + shiftTabuTenureBase / TABU_BASE_TO_AMP;
-    }
-}
-
-void NurseRostering::TabuSolver::greedyInit()
-{
-    algorithmName += "[GreedyInit]";
-
-    discoverNurseSkillRelation();
-
-    if (sln.genInitAssign( problem.scenario.nurseNum / 4 ) == false) {
-        errorLog( "fail to generate feasible init solution." );
-    }
-}
-
-void NurseRostering::TabuSolver::exactInit()
-{
-    algorithmName += "[ExactInit]";
-
-    if (sln.genInitAssign_BranchAndCut() == false) {
-        errorLog( "no feasible solution!" );
-    }
-}
-
-void NurseRostering::TabuSolver::randomWalk()
-{
-    algorithmName += "[RW]";
-
-    sln.randomWalk( timer, MAX_ITER_COUNT );
-}
-
-void NurseRostering::TabuSolver::iterativeLocalSearch( Solution::ModeSeq modeSeq )
-{
-    algorithmName += "[ILS]" + Solution::modeSeqNames[modeSeq];
-
-    const vector<int> &modeSeqPat( Solution::modeSeqPatterns[modeSeq] );
-    int modeSeqLen = modeSeqPat.size();
-
-    Solution::FindBestMoveTable fbmt( modeSeqLen );
-    Solution::FindBestMoveTable fbmtobb( modeSeqLen );
-
-    for (int i = 0; i < modeSeqLen; ++i) {
-        fbmt[i] = Solution::findBestMove[modeSeqPat[i]];
-        fbmtobb[i] = Solution::findBestMoveOnBlockBorder[modeSeqPat[i]];
-    }
-
-    double perturbStrength = INIT_PERTURB_STRENGTH;
-    while (!timer.isTimeOut()) {
-        ObjValue lastObj = optima.getObjValue();
-        if (rand() % 2) {
-            sln.localSearch( timer, fbmt );
-        } else {
-            sln.localSearch( timer, fbmtobb );
-        }
-        sln.perturb( perturbStrength );
-        (optima.getObjValue() == lastObj)
-            ? (perturbStrength += PERTURB_STRENGTH_DELTA)
-            : (perturbStrength = INIT_PERTURB_STRENGTH);
-    }
-}
-
-void NurseRostering::TabuSolver::tabuSearch( Solution::ModeSeq modeSeq )
-{
-    algorithmName += Solution::modeSeqNames[modeSeq];
-
-    const vector<int> &modeSeqPat( Solution::modeSeqPatterns[modeSeq] );
-    int modeSeqLen = modeSeqPat.size();
-
-    Solution::FindBestMoveTable fbmt( modeSeqLen );
-
-    for (int i = 0; i < modeSeqLen; ++i) {
-        fbmt[i] = Solution::findBestMove[modeSeqPat[i]];
-    }
-
-    double perturbStrength = INIT_PERTURB_STRENGTH;
-    while (!timer.isTimeOut()) {
-        ObjValue lastObj = optima.getObjValue();
-        sln.tabuSearch( timer, fbmt );
-        sln.perturb( perturbStrength );
-        (optima.getObjValue() == lastObj)
-            ? (perturbStrength += PERTURB_STRENGTH_DELTA)
-            : (perturbStrength = INIT_PERTURB_STRENGTH);
     }
 }

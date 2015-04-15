@@ -2,7 +2,7 @@
 *   usage : 1. contain data for identifying a Nurse Rostering Problem.
 *           2. provide solver interface.
 *
-*   note :  1. move DefaultPenalty into Penalty and change enum to ObjValue.
+*   note :  v1. move DefaultPenalty into Penalty and change enum to ObjValue.
 */
 
 #ifndef NURSE_ROSTERING_H

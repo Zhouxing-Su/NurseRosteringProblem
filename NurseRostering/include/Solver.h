@@ -2,7 +2,7 @@
 *   usage : 1. provide solver for Nurse Rostering Problem.
 *
 *   note :  1.  [optimizable] Solver has virtual function.
-*           2.  set algorithm arguments in run().
+*           v2.  set algorithm arguments in run().
 *           3.  use a priority queue to manage available nurse when assigning?
 *           v4. record 8 day which the first day is last day of last week to unify
 *               the succession judgment.
@@ -17,7 +17,7 @@
 *               leave out (weekday >= Weekday::Sun) in isValidPrior()
 *           9.  timeout may overflow in POSIX system since CLOCKS_PER_SEC is 1000000 which
 *               makes clock_t can only count to about 4000 seconds.
-*           10. record() uses c style function to check file open state, change it to c++ style.
+*           v10. record() uses c style function to check file open state, change it to c++ style.
 *
 */
 
@@ -91,6 +91,7 @@ public:
 
         InitAlgorithm initAlgorithm;
         SolveAlgorithm solveAlgorithm;
+        IterCount maxNoImproveCount;
         Solution::ModeSeq modeSeq;
         double dayTabuCoefficient[TabuTenureCoefficientIndex::SIZE];
         double shiftTabuCoefficient[TabuTenureCoefficientIndex::SIZE];

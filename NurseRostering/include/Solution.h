@@ -2,12 +2,13 @@
 *   usage : 1.  provide interface to be manipulated by
 *               solver for Nurse Rostering Problem.
 *
-*   note :  1.  use repair mode of penalty to fix infeasible solution in repaire().
+*   note :  v1.  use repair mode of penalty to fix infeasible solution in repair().
 *           v2.  merge add and remove to a single neighborhood, abreast of swap and change.
 *           3.  const solver will not be able to call updateOptima,
 *               but none-const solver will stub the construction in solver.genHistory().
 *           4.  create a fastRepair() which is separate repair and local search
-*               to improve efficiency since repair process in more like generate initial assignment?
+*               to improve efficiency since repair process is more similar to generating initial assignment?
+*           5.  perturb() should start from optima?
 *
 */
 
@@ -118,15 +119,11 @@ public:
     Solution( const TabuSolver &solver );
     Solution( const TabuSolver &solver, const AssignTable &assign );
 
-    // allocate space for data structure and set default value
-    // must be called before generating initial solution
-    void resetAssign();
+    // set assign to at and rebuild assist data, at must be build from same problem
+    void rebuild( const AssignTable &at );
     // evaluate objective by assist data structure
     // must be called after Penalty change or direct access to AssignTable
     void evaluateObjValue();
-    // must be called after direct access to AssignTable
-    // there must not be self assignment and assign must be build from same problem
-    void rebuildAssistData( const AssignTable &assign );
     // get history for next week, only used for custom file
     History genHistory() const;
 
@@ -315,6 +312,14 @@ private:
 
     // depth first search to fill assign
     bool fillAssign( int weekday, ShiftID shift, SkillID skill, NurseID nurse, int nurseNum );
+
+    // allocate space for data structure and set default value
+    // must be called before generating initial solution
+    void resetAssign();
+    void resetAssistData();
+    // must be called after direct access to AssignTable
+    void rebuildAssistData();
+
 
     // return true if the solution will be improved (delta < 0)
     // BlockBorder means the start or end day of a consecutive block
