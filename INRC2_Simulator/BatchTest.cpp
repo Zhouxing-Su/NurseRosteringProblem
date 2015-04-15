@@ -116,8 +116,11 @@ void testAllInstances( const std::string &id, int runCount, int seedForInstSeq )
 void loadConfig()
 {
     ifstream ifs( configFileName );
+    string s;
 
-    ifs >> configString;
+    while (ifs >> s) {
+        configString += s;
+    }
 
     ifs.close();
 }
