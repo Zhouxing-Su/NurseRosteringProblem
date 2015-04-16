@@ -79,7 +79,8 @@ public:
     public:
         Config() : initAlgorithm( InitAlgorithm::Greedy ),
             solveAlgorithm( SolveAlgorithm::TabuSearch ),
-            modeSeq( Solution::ModeSeq::ARBCS )
+            modeSeq( Solution::ModeSeq::ARBCS ),
+            maxNoImproveCoefficient( 1 )
         {
             dayTabuCoefficient[TabuTenureCoefficientIndex::TableSize] = 0;
             dayTabuCoefficient[TabuTenureCoefficientIndex::NurseNum] = 0.5;
@@ -95,6 +96,7 @@ public:
         InitAlgorithm initAlgorithm;
         SolveAlgorithm solveAlgorithm;
         Solution::ModeSeq modeSeq;
+        double maxNoImproveCoefficient;
         double dayTabuCoefficient[TabuTenureCoefficientIndex::SIZE];
         double shiftTabuCoefficient[TabuTenureCoefficientIndex::SIZE];
     };

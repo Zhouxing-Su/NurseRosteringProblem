@@ -54,10 +54,11 @@ namespace INRC2
             "               the second char can be 'r'(for RW), 'i'(for ILS) or 't'(for TS).\n"
             "               i for a non-negative integer corresponding to Solution::ModeSeq.\n"
             "               following 4 real numbers are coefficients for TableSize, NurseNum,\n"
+            "               next real number is the coefficient of no improve count.\n"
             "               WeekdayNum and ShiftNum used in day tabu tenure setting,\n"
             "               non-positive number means there is no relation with that feature. while\n"
             "               next 4 numbers are used in shift tabu tenure setting with same meaning.\n"
-            "             example: gt2;0,0.5,0,0;0,0.8,0,0 or gt3;0.1,0,0,0;0.1,0,0,0\n"
+            "             example: gt2;1.5;0,0.5,0,0;0,0.8,0,0 or gt3;0.8;0.1,0,0,0;0.1,0,0,0\n"
             << endl;
     }
 
@@ -500,6 +501,9 @@ namespace INRC2
         if ((modeSeq >= 0) && (modeSeq < NurseRostering::Solution::ModeSeq::SIZE)) {
             config.modeSeq = static_cast<NurseRostering::Solution::ModeSeq>(modeSeq);
         }
+
+        iss >> c;
+        iss >> config.maxNoImproveCoefficient;
 
         iss >> c >> config.dayTabuCoefficient[NurseRostering::Solver::TabuTenureCoefficientIndex::TableSize]
             >> c >> config.dayTabuCoefficient[NurseRostering::Solver::TabuTenureCoefficientIndex::NurseNum]

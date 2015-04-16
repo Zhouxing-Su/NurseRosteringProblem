@@ -400,6 +400,7 @@ void NurseRostering::TabuSolver::init( const Config &cfg, const std::string &id 
     srand( problem.randSeed );
 
     setTabuTenure();
+    setMaxNoImprove( config.maxNoImproveCoefficient );
 
     switch (config.initAlgorithm) {
         case InitAlgorithm::Exact:
