@@ -240,7 +240,7 @@ void NurseRostering::Solver::record( const std::string logFileName, const std::s
         << instanceName << ","
         << algorithmName << ","
         << problem.randSeed << ","
-        << (optimaFindTime - startTime) / static_cast<double>(CLOCKS_PER_SEC) << "s,"
+        << (optima.getFindTime() - startTime) / static_cast<double>(CLOCKS_PER_SEC) << "s,"
         << checkFeasibility() << ","
         << (checkObjValue() - optima.getObjValue()) / static_cast<double>(DefaultPenalty::AMP) << ","
         << optima.getObjValue() / static_cast<double>(DefaultPenalty::AMP) << ","
@@ -435,12 +435,9 @@ void NurseRostering::TabuSolver::solve()
     //optima = Output( 445 * DefaultPenalty::AMP, at );
 }
 
-bool NurseRostering::TabuSolver::updateOptima( const Output &localOptima ) const
+bool NurseRostering::TabuSolver::updateOptima( const Output &localOptima )
 {
     if (localOptima.getObjValue() <= optima.getObjValue()) {
-        if (optima.getObjValue() == localOptima.getObjValue()) {
-            optimaFindTime = clock();
-        }
         optima = localOptima;
         return true;
     }
@@ -478,6 +475,7 @@ void NurseRostering::TabuSolver::randomWalk()
     algorithmName += "[RW]";
 
     sln.randomWalk( timer, MAX_ITER_COUNT );
+    updateOptima( sln.getOptima() );
 }
 
 void NurseRostering::TabuSolver::iterativeLocalSearch( Solution::ModeSeq modeSeq )
@@ -503,10 +501,11 @@ void NurseRostering::TabuSolver::iterativeLocalSearch( Solution::ModeSeq modeSeq
         } else {
             sln.localSearch( timer, fbmtobb );
         }
-        sln.perturb( perturbStrength );
+        updateOptima( sln.getOptima() );
         (optima.getObjValue() == lastObj)
             ? (perturbStrength += PERTURB_STRENGTH_DELTA)
             : (perturbStrength = INIT_PERTURB_STRENGTH);
+        sln.perturb( perturbStrength );
     }
 }
 
@@ -527,10 +526,14 @@ void NurseRostering::TabuSolver::tabuSearch( Solution::ModeSeq modeSeq )
     while (!timer.isTimeOut()) {
         ObjValue lastObj = optima.getObjValue();
         sln.tabuSearch( timer, fbmt );
-        sln.perturb( perturbStrength );
+        updateOptima( sln.getOptima() );
+        sln.rebuild( (rand() % PERTURB_ORIGIN_SELECT)
+            ? optima.getAssignTable()
+            : sln.getOptima().getAssignTable() );
         (optima.getObjValue() == lastObj)
             ? (perturbStrength += PERTURB_STRENGTH_DELTA)
             : (perturbStrength = INIT_PERTURB_STRENGTH);
+        sln.perturb( perturbStrength );
     }
 }
 

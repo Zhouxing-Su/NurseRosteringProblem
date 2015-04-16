@@ -29,9 +29,9 @@
 class NurseRostering::Output
 {
 public:
-    Output() :objValue( -1 ) {}
+    Output() : objValue( DefaultPenalty::FORBIDDEN_MOVE ) {}
     Output( ObjValue objVal, const AssignTable &assignment )
-        :objValue( objVal ), assign( assignment )
+        : objValue( objVal ), assign( assignment ), findTime( clock() )
     {
     }
 
@@ -41,10 +41,12 @@ public:
     }
     const AssignTable& getAssignTable() const { return assign; }
     ObjValue getObjValue() const { return objValue; }
+    clock_t getFindTime() const { return findTime; }
 
 protected:
     AssignTable assign;
     ObjValue objValue;
+    clock_t findTime;
 };
 
 
@@ -119,6 +121,19 @@ public:
     Solution( const TabuSolver &solver );
     Solution( const TabuSolver &solver, const AssignTable &assign );
 
+    // get local optima in the search trajectory
+    const Output& getOptima() const { return optima; }
+    // return true if update succeed
+    bool updateOptima()
+    {
+        if (objValue <= optima.getObjValue()) {
+            findTime = clock();
+            optima = *this;
+            return true;
+        }
+
+        return false;
+    }
     // set assign to at and rebuild assist data, at must be build from same problem
     void rebuild( const AssignTable &at );
     // evaluate objective by assist data structure
@@ -480,6 +495,9 @@ private:
     ObjValue objCompleteWeekend;
     ObjValue objTotalAssign;
     ObjValue objTotalWorkingWeekend;
+
+    // set optima to *this before every search
+    Output optima;
 
 private:    // forbidden operators
     Solution& operator=(const Solution &) { return *this; }

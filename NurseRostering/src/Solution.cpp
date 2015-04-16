@@ -307,6 +307,8 @@ void NurseRostering::Solution::tabuSearch( const Timer &timer, const FindBestMov
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t startTime = clock();
 #endif
+    optima = *this;
+
     int modeNum = findBestMoveTable.size();
     int startMode = 0;
 
@@ -319,7 +321,8 @@ void NurseRostering::Solution::tabuSearch( const Timer &timer, const FindBestMov
     int P_global = RAND_MAX / modeNum;
     vector<int> P_local( modeNum, 0 );
 
-    for (; !timer.isTimeOut() && (objValue > 0); ++iterCount) {
+    IterCount noImprove = solver.MaxNoImproveForAllNeighborhood();
+    for (; !timer.isTimeOut() && (noImprove > 0); ++iterCount) {
         int modeSelect = startMode;
         Move::Mode moveMode = Move::Mode::SIZE;
         Move bestMove;
@@ -356,17 +359,17 @@ void NurseRostering::Solution::tabuSearch( const Timer &timer, const FindBestMov
         objValue += bestMove.delta;
 
         if (bestMove.delta < 0) {   // improved
-            solver.updateOptima( *this );
+            noImprove = solver.MaxNoImproveForAllNeighborhood();
+            updateOptima();
             P_global = static_cast<int>(P_global * dec_global);
             P_local[modeSelect] += static_cast<int>(amp_local * (maxP_local - P_local[modeSelect]));
         } else {    // not improved
+            --noImprove;
             (++startMode) %= modeNum;
             P_global += static_cast<int>(amp_global * (maxP_global - P_global));
             P_local[modeSelect] = static_cast<int>(P_local[modeSelect] * dec_local);
         }
     }
-
-    rebuild( solver.getOptima().getAssignTable() );
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t duration = clock() - startTime;
     cout << "[TS] iter: " << iterCount << ' '
@@ -380,6 +383,8 @@ void NurseRostering::Solution::localSearch( const Timer &timer, const FindBestMo
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t startTime = clock();
 #endif
+    optima = *this;
+
     int modeNum = findBestMoveTable.size();
     bitset<Move::Mode::SIZE> improveFlag;
     for (int i = 0; i < modeNum; ++i) {
@@ -393,7 +398,7 @@ void NurseRostering::Solution::localSearch( const Timer &timer, const FindBestMo
         if ((this->*findBestMoveTable[moveMode])(bestMove)) {
             (this->*applyMove[bestMove.mode])(bestMove);
             objValue += bestMove.delta;
-            solver.updateOptima( *this );
+            updateOptima();
             ++iterCount;
             improveFlag = improveFlagBackup;
         } else {
@@ -417,7 +422,7 @@ void NurseRostering::Solution::perturb( double strength )
 
     randomWalk( solver.timer, randomWalkStepCount );
 
-    solver.updateOptima( *this );
+    updateOptima();
 }
 
 
@@ -426,6 +431,8 @@ void NurseRostering::Solution::randomWalk( const Timer &timer, IterCount stepNum
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t startTime = clock();
 #endif
+    optima = *this;
+
     ObjValue delta;
     while ((--stepNum > 0) && !timer.isTimeOut()) {
         int moveMode = rand() % Move::Mode::BASIC_MOVE_SIZE;
@@ -442,7 +449,7 @@ void NurseRostering::Solution::randomWalk( const Timer &timer, IterCount stepNum
             (this->*applyMove[moveMode])(move);
         }
 
-        solver.updateOptima( *this );
+        updateOptima();
     }
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t duration = clock() - startTime;

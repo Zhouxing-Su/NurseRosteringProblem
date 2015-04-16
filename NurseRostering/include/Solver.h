@@ -18,6 +18,7 @@
 *           9.  timeout may overflow in POSIX system since CLOCKS_PER_SEC is 1000000 which
 *               makes clock_t can only count to about 4000 seconds.
 *           v10. record() uses c style function to check file open state, change it to c++ style.
+*           11. reset solution to global optima or last local optima after each tabuSearch?
 *
 */
 
@@ -48,6 +49,8 @@ public:
     static const clock_t SAVE_SOLUTION_TIME;    // 0.5 seconds
 
     static const int MAX_ITER_COUNT = (1 << 30);
+    // inverse possibility of perturb from optima in last search
+    static const int PERTURB_ORIGIN_SELECT = 4;
     static const double INIT_PERTURB_STRENGTH;
     static const double PERTURB_STRENGTH_DELTA;
 
@@ -82,7 +85,7 @@ public:
             dayTabuCoefficient[TabuTenureCoefficientIndex::NurseNum] = 0.5;
             dayTabuCoefficient[TabuTenureCoefficientIndex::DayNum] = 0;
             dayTabuCoefficient[TabuTenureCoefficientIndex::ShiftNum] = 0;
-            
+
             shiftTabuCoefficient[TabuTenureCoefficientIndex::TableSize] = 0;
             shiftTabuCoefficient[TabuTenureCoefficientIndex::NurseNum] = 0.8;
             shiftTabuCoefficient[TabuTenureCoefficientIndex::DayNum] = 0;
@@ -91,7 +94,6 @@ public:
 
         InitAlgorithm initAlgorithm;
         SolveAlgorithm solveAlgorithm;
-        IterCount maxNoImproveCount;
         Solution::ModeSeq modeSeq;
         double dayTabuCoefficient[TabuTenureCoefficientIndex::SIZE];
         double shiftTabuCoefficient[TabuTenureCoefficientIndex::SIZE];
@@ -107,7 +109,7 @@ public:
     // search for optima
     virtual void solve() = 0;
     // return true if global optima or population is updated
-    virtual bool updateOptima( const Output &localOptima ) const = 0;
+    virtual bool updateOptima( const Output &localOptima ) = 0;
     // generate history for next week
     virtual History genHistory() const = 0;
     // return const reference of the optima
@@ -156,8 +158,7 @@ protected:
     NurseNumOfSkill nurseNumOfSkill;
     NurseWithSkill nurseWithSkill;
 
-    mutable Output optima;
-    mutable clock_t optimaFindTime;
+    Output optima;
 
     Config config;
     std::string runID;
@@ -182,13 +183,16 @@ public:
     virtual void init( const Config &cfg = Config(), const std::string &runID = std::string() );
     virtual void solve();
 
-    virtual bool updateOptima( const Output &localOptima ) const;
+    virtual bool updateOptima( const Output &localOptima );
     virtual History genHistory() const;
 
     IterCount DayTabuTenureBase() const { return dayTabuTenureBase; }
     IterCount DayTabuTenureAmp() const { return dayTabuTenureAmp; }
     IterCount ShiftTabuTenureBase() const { return shiftTabuTenureBase; }
     IterCount ShiftTabuTenureAmp() const { return shiftTabuTenureAmp; }
+
+    IterCount MaxNoImproveForSingleNeighborhood() const { return maxNoImproveForSingleNeighborhood; }
+    IterCount MaxNoImproveForAllNeighborhood() const { return maxNoImproveForAllNeighborhood; }
 
 private:
     void greedyInit();
@@ -214,11 +218,22 @@ private:
     void setDayTabuTenure_ShiftNum( double coefficient );
     void setShiftTabuTenure_ShiftNum( double coefficient );
 
+    // set the max no improve count
+    void setMaxNoImprove( double coefficient )
+    {
+        maxNoImproveForSingleNeighborhood = static_cast<IterCount>(
+            coefficient * problem.scenario.nurseNum * Weekday::NUM);
+        maxNoImproveForAllNeighborhood = maxNoImproveForSingleNeighborhood *
+            problem.scenario.shiftTypeNum * problem.scenario.skillTypeNum;
+    }
 
     IterCount dayTabuTenureBase;
     IterCount dayTabuTenureAmp;
     IterCount shiftTabuTenureBase;
     IterCount shiftTabuTenureAmp;
+
+    IterCount maxNoImproveForSingleNeighborhood;
+    IterCount maxNoImproveForAllNeighborhood;
 
     Solution sln;
 
