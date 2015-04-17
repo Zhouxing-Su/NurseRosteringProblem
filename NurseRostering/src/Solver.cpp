@@ -8,6 +8,9 @@ const clock_t NurseRostering::Solver::SAVE_SOLUTION_TIME = CLOCKS_PER_SEC / 2;
 const double NurseRostering::Solver::INIT_PERTURB_STRENGTH = 0.6;
 const double NurseRostering::Solver::PERTURB_STRENGTH_DELTA = 0.01;
 
+const vector<string> NurseRostering::Solver::solveAlgorithmName = {
+    "[RW]", "[ILS]", "[TSP]", "[TSL]"
+};
 
 
 NurseRostering::Solver::Solver( const NurseRostering &input, clock_t st )
@@ -424,9 +427,12 @@ void NurseRostering::TabuSolver::solve()
         case SolveAlgorithm::IterativeLocalSearch:
             iterativeLocalSearch( config.modeSeq );
             break;
-        case SolveAlgorithm::TabuSearch:
+        case SolveAlgorithm::TabuSearch_Loop:
+            tabuSearch( config.modeSeq, &Solution::tabuSearch_Loop );
+            break;
+        case SolveAlgorithm::TabuSearch_Possibility:
         default:
-            tabuSearch( config.modeSeq );
+            tabuSearch( config.modeSeq, &Solution::tabuSearch_Possibility );
             break;
     }
 
@@ -438,7 +444,7 @@ void NurseRostering::TabuSolver::solve()
 
 bool NurseRostering::TabuSolver::updateOptima( const Output &localOptima )
 {
-    if (localOptima.getObjValue() <= optima.getObjValue()) {
+    if (localOptima.getObjValue() < optima.getObjValue()) {
         optima = localOptima;
         return true;
     }
@@ -473,7 +479,7 @@ void NurseRostering::TabuSolver::exactInit()
 
 void NurseRostering::TabuSolver::randomWalk()
 {
-    algorithmName += "[RW]";
+    algorithmName += solveAlgorithmName[config.solveAlgorithm];
 
     sln.randomWalk( timer, MAX_ITER_COUNT );
     updateOptima( sln.getOptima() );
@@ -481,7 +487,8 @@ void NurseRostering::TabuSolver::randomWalk()
 
 void NurseRostering::TabuSolver::iterativeLocalSearch( Solution::ModeSeq modeSeq )
 {
-    algorithmName += "[ILS]" + Solution::modeSeqNames[modeSeq];
+    algorithmName += solveAlgorithmName[config.solveAlgorithm];
+    algorithmName += Solution::modeSeqNames[modeSeq];
 
     const vector<int> &modeSeqPat( Solution::modeSeqPatterns[modeSeq] );
     int modeSeqLen = modeSeqPat.size();
@@ -510,8 +517,9 @@ void NurseRostering::TabuSolver::iterativeLocalSearch( Solution::ModeSeq modeSeq
     }
 }
 
-void NurseRostering::TabuSolver::tabuSearch( Solution::ModeSeq modeSeq )
+void NurseRostering::TabuSolver::tabuSearch( Solution::ModeSeq modeSeq, Solution::Search search )
 {
+    algorithmName += solveAlgorithmName[config.solveAlgorithm];
     algorithmName += Solution::modeSeqNames[modeSeq];
 
     const vector<int> &modeSeqPat( Solution::modeSeqPatterns[modeSeq] );
@@ -526,7 +534,7 @@ void NurseRostering::TabuSolver::tabuSearch( Solution::ModeSeq modeSeq )
     double perturbStrength = INIT_PERTURB_STRENGTH;
     while (!timer.isTimeOut()) {
         ObjValue lastObj = optima.getObjValue();
-        sln.tabuSearch( timer, fbmt );
+        (sln.*search)(timer, fbmt);
         updateOptima( sln.getOptima() );
         sln.rebuild( (rand() % PERTURB_ORIGIN_SELECT)
             ? optima.getAssignTable()

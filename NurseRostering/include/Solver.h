@@ -61,13 +61,16 @@ public:
 
     enum SolveAlgorithm
     {
-        RandomWalk, IterativeLocalSearch, TabuSearch
+        RandomWalk, IterativeLocalSearch,
+        TabuSearch_Possibility, TabuSearch_Loop
     };
 
     enum TabuTenureCoefficientIndex
     {
         TableSize, NurseNum, DayNum, ShiftNum, SIZE
     };
+
+    static const std::vector<std::string> solveAlgorithmName;
 
     const NurseRostering &problem;
     const clock_t startTime;
@@ -78,7 +81,7 @@ public:
     {
     public:
         Config() : initAlgorithm( InitAlgorithm::Greedy ),
-            solveAlgorithm( SolveAlgorithm::TabuSearch ),
+            solveAlgorithm( SolveAlgorithm::TabuSearch_Possibility ),
             modeSeq( Solution::ModeSeq::ARBCS ),
             maxNoImproveCoefficient( 1 )
         {
@@ -201,7 +204,7 @@ private:
     void exactInit();
 
     // search with tabu table
-    void tabuSearch( Solution::ModeSeq modeSeq );
+    void tabuSearch( Solution::ModeSeq modeSeq, Solution::Search search );
     // iteratively run local search and perturb
     void iterativeLocalSearch( Solution::ModeSeq modeSeq );
     // random walk until timeout
@@ -223,6 +226,11 @@ private:
     // set the max no improve count
     void setMaxNoImprove( double coefficient )
     {
+        std::ostringstream oss;
+        oss << "[MNI=" << coefficient << "]";
+
+        algorithmName += oss.str();
+
         maxNoImproveForSingleNeighborhood = static_cast<IterCount>(
             coefficient * problem.scenario.nurseNum * Weekday::NUM);
         maxNoImproveForAllNeighborhood = maxNoImproveForSingleNeighborhood *

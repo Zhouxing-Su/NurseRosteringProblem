@@ -51,7 +51,7 @@ namespace INRC2
             "             format: cci;d,d,d,d;d,d,d,d\n"
             "               c for char, d for real number, comma is used to separate numbers.\n"
             "               the first char can be 'g'(for greedy init) or 'e'(for exact init).\n"
-            "               the second char can be 'r'(for RW), 'i'(for ILS) or 't'(for TS).\n"
+            "               the second char can be 'r'(RW), 'i'(ILS), 'p'(TSP) or 'l'(TSL).\n"
             "               i for a non-negative integer corresponding to Solution::ModeSeq.\n"
             "               following 4 real numbers are coefficients for TableSize, NurseNum,\n"
             "               next real number is the coefficient of no improve count.\n"
@@ -491,8 +491,10 @@ namespace INRC2
             config.solveAlgorithm = NurseRostering::Solver::SolveAlgorithm::RandomWalk;
         } else if (c == 'i') {
             config.solveAlgorithm = NurseRostering::Solver::SolveAlgorithm::IterativeLocalSearch;
-        } else if (c == 't') {
-            config.solveAlgorithm = NurseRostering::Solver::SolveAlgorithm::TabuSearch;
+        } else if (c == 'p') {
+            config.solveAlgorithm = NurseRostering::Solver::SolveAlgorithm::TabuSearch_Possibility;
+        } else if (c == 'l') {
+            config.solveAlgorithm = NurseRostering::Solver::SolveAlgorithm::TabuSearch_Loop;
         } else {
             return config;
         }

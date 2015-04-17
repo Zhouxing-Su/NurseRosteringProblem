@@ -47,10 +47,10 @@ NurseRostering::Solution::updateTabuTable = {
     &NurseRostering::Solution::updateRemoveTabu
 };
 
-const std::vector<std::string> NurseRostering::Solution::modeSeqNames = {
+const vector<string> NurseRostering::Solution::modeSeqNames = {
     "[ARLCS]", "[ARRCS]", "[ARBCS]", "[ACSR]", "[ASCR]"
 };
-const std::vector<std::vector<int> > NurseRostering::Solution::modeSeqPatterns = {
+const vector<vector<int> > NurseRostering::Solution::modeSeqPatterns = {
     { Solution::Move::Mode::ARLoop, Solution::Move::Mode::Change, Solution::Move::Mode::Swap },
     { Solution::Move::Mode::ARRand, Solution::Move::Mode::Change, Solution::Move::Mode::Swap },
     { Solution::Move::Mode::ARBoth, Solution::Move::Mode::Change, Solution::Move::Mode::Swap },
@@ -292,7 +292,7 @@ bool NurseRostering::Solution::repair( const Timer &timer )
         &NurseRostering::Solution::findBestChange
     };
 
-    tabuSearch( timer, fbmt );
+    tabuSearch_Possibility( timer, fbmt );
 
     bool feasible = (objValue == 0);
 
@@ -302,7 +302,59 @@ bool NurseRostering::Solution::repair( const Timer &timer )
     return feasible;
 }
 
-void NurseRostering::Solution::tabuSearch( const Timer &timer, const FindBestMoveTable &findBestMoveTable )
+void NurseRostering::Solution::tabuSearch_Loop( const Timer &timer, const FindBestMoveTable &findBestMoveTable )
+{
+#ifdef INRC2_PERFORMANCE_TEST
+    clock_t startTime = clock();
+#endif
+    optima = *this;
+
+    int modeNum = findBestMoveTable.size();
+
+    int failCount = modeNum;
+    int modeSelect = 0;
+    while (!timer.isTimeOut()) {
+        // reset current solution to best solution found in last neighborhood
+        rebuild( optima.getAssignTable() );
+
+        IterCount noImprove_Single = solver.MaxNoImproveForSingleNeighborhood();
+        for (; !timer.isTimeOut() && (noImprove_Single > 0); ++iterCount) {
+            Move bestMove;
+            (this->*findBestMoveTable[modeSelect])(bestMove);
+
+            // update tabu list first because it requires original assignment
+            (this->*updateTabuTable[bestMove.mode])(bestMove);
+            (this->*applyMove[bestMove.mode])(bestMove);
+            objValue += bestMove.delta;
+
+            if (objValue < optima.getObjValue()) {   // improved
+                failCount = modeNum;
+                noImprove_Single = solver.MaxNoImproveForSingleNeighborhood();
+                updateOptima();
+            } else {    // not improved
+                --noImprove_Single;
+            }
+        }
+
+        // since there is randomness on the search trajectory,
+        // there will be chance to make a difference on neighborhoods
+        // which have been searched. so search two more times
+        if (failCount >= 0) {   // repeat (modeNum + 2)
+            --failCount;
+            (++modeSelect) %= modeNum;
+        } else {
+            break;
+        }
+    }
+#ifdef INRC2_PERFORMANCE_TEST
+    clock_t duration = clock() - startTime;
+    cout << "[TS] iter: " << iterCount << ' '
+        << "time: " << duration << ' '
+        << "speed: " << iterCount * static_cast<double>(CLOCKS_PER_SEC) / (duration + 1) << endl;
+#endif
+}
+
+void NurseRostering::Solution::tabuSearch_Possibility( const Timer &timer, const FindBestMoveTable &findBestMoveTable )
 {
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t startTime = clock();
@@ -358,7 +410,7 @@ void NurseRostering::Solution::tabuSearch( const Timer &timer, const FindBestMov
         (this->*applyMove[bestMove.mode])(bestMove);
         objValue += bestMove.delta;
 
-        if (bestMove.delta < 0) {   // improved
+        if (objValue < optima.getObjValue()) {   // improved
             noImprove = solver.MaxNoImproveForAllNeighborhood();
             updateOptima();
             P_global = static_cast<int>(P_global * dec_global);
@@ -386,24 +438,20 @@ void NurseRostering::Solution::localSearch( const Timer &timer, const FindBestMo
     optima = *this;
 
     int modeNum = findBestMoveTable.size();
-    bitset<Move::Mode::SIZE> improveFlag;
-    for (int i = 0; i < modeNum; ++i) {
-        improveFlag.set( i );
-    }
-    bitset<Move::Mode::SIZE> improveFlagBackup( improveFlag );
 
-    int moveMode = 0;
-    while (!timer.isTimeOut() && improveFlag.any()) {
+    int failCount = modeNum;
+    int modeSelect = 0;
+    while (!timer.isTimeOut() && (failCount > 0)) {
         Move bestMove;
-        if ((this->*findBestMoveTable[moveMode])(bestMove)) {
+        if ((this->*findBestMoveTable[modeSelect])(bestMove)) {
             (this->*applyMove[bestMove.mode])(bestMove);
             objValue += bestMove.delta;
             updateOptima();
             ++iterCount;
-            improveFlag = improveFlagBackup;
+            failCount = modeNum;
         } else {
-            improveFlag.reset( moveMode );
-            (++moveMode) %= modeNum;
+            --failCount;
+            (++modeSelect) %= modeNum;
         }
     }
 #ifdef INRC2_PERFORMANCE_TEST

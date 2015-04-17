@@ -102,6 +102,8 @@ public:
     typedef std::vector<ApplyMove> ApplyMoveTable;
     typedef std::vector<UpdateTabu> UpdateTabuTable;
 
+    typedef void (Solution::*Search)( const Timer &timer, const FindBestMoveTable &findBestMoveTable );
+
 
     enum ModeSeq
     {
@@ -148,7 +150,13 @@ public:
     bool repair( const Timer &timer );  // make infeasible solution feasible
 
 
-    // randomly select neighborhood to search until timeout.
+    // loop to select neighborhood to search until timeout or there is no
+    // improvement on (NeighborhoodNum + 2) neighborhood consecutively.
+    // switch neighborhood when maxNoImproveForSingleNeighborhood has
+    // been reach, then restart from optima in current trajectory.
+    void tabuSearch_Loop( const Timer &timer, const FindBestMoveTable &findBestMoveTable );
+    // randomly select neighborhood to search until timeout or
+    // no improve move count reaches maxNoImproveForAllNeighborhood.
     // for each neighborhood i, the possibility to select is P[i].
     // increase the possibility to select when no improvement.
     // in detail, the P[i] contains two part, local and global.
@@ -161,15 +169,16 @@ public:
     // if no neighborhood has been selected, prepare a loop queue.
     // select the one by one in the queue until a valid move is found.
     // move the head to the tail of the queue if it makes no improvement.
-    void tabuSearch( const Timer &timer, const FindBestMoveTable &findBestMoveTable );
+    void tabuSearch_Possibility( const Timer &timer, const FindBestMoveTable &findBestMoveTable );
     // try add shift until there is no improvement , then try change shift,
     // then try remove shift, then try add shift again. if all of them
     // can't improve or time is out, return.
     void localSearch( const Timer &timer, const FindBestMoveTable &findBestMoveTable );
-    // change solution structure in certain complexity
-    void perturb( double strength );
     // randomly select add, change or remove shift until timeout
     void randomWalk( const Timer &timer, IterCount stepNum );
+
+    // change solution structure in certain complexity
+    void perturb( double strength );
 
     const AssignTable& getAssignTable() const { return assign; }
     // shift must not be none shift
@@ -496,8 +505,8 @@ private:
     ObjValue objTotalAssign;
     ObjValue objTotalWorkingWeekend;
 
-    // set optima to *this before every search
-    Output optima;
+    // local optima in the trajectory of current search call
+    Output optima;  // set optima to *this before every search
 
 private:    // forbidden operators
     Solution& operator=(const Solution &) { return *this; }
