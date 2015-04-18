@@ -102,7 +102,7 @@ public:
     typedef std::vector<ApplyMove> ApplyMoveTable;
     typedef std::vector<UpdateTabu> UpdateTabuTable;
 
-    typedef void (Solution::*Search)( const Timer &timer, const FindBestMoveTable &findBestMoveTable );
+    typedef void (Solution::*Search)(const Timer &timer, const FindBestMoveTable &findBestMoveTable);
 
 
     enum ModeSeq
@@ -129,7 +129,9 @@ public:
     bool updateOptima()
     {
         if (objValue <= optima.getObjValue()) {
-            findTime = clock();
+            if (objValue != optima.getObjValue()) {
+                findTime = clock();
+            }
             optima = *this;
             return true;
         }
@@ -138,6 +140,7 @@ public:
     }
     // set assign to at and rebuild assist data, at must be build from same problem
     void rebuild( const AssignTable &at );
+    void rebuild(); // must be called after direct access to AssignTable
     // evaluate objective by assist data structure
     // must be called after Penalty change or direct access to AssignTable
     void evaluateObjValue();
@@ -341,8 +344,6 @@ private:
     // must be called before generating initial solution
     void resetAssign();
     void resetAssistData();
-    // must be called after direct access to AssignTable
-    void rebuildAssistData();
 
 
     // return true if the solution will be improved (delta < 0)
@@ -430,6 +431,12 @@ private:
                 return true;
             }
         }
+    }
+    bool aspirationCritiera( const Move &bestMove, const Move &bestMove_tabu ) const
+    {
+        return ((bestMove.delta >= DefaultPenalty::MAX_OBJ_VALUE)
+            || ((objValue + bestMove_tabu.delta < optima.getObjValue())
+            && (bestMove_tabu.delta < bestMove.delta)));
     }
 
     void updateDayTabu( NurseID nurse, int weekday );

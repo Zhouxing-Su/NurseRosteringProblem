@@ -72,23 +72,25 @@ NurseRostering::Solution::Solution( const TabuSolver &s, const AssignTable &at )
 
 void NurseRostering::Solution::rebuild( const AssignTable &at )
 {
-    assign = at;
-    rebuildAssistData();
-}
+    const AssignTable assignTable( (&at != &assign) ? at : AssignTable( at ) );
 
-void NurseRostering::Solution::rebuildAssistData()
-{
+    resetAssign();
     resetAssistData();
 
     for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
         for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
-            if (assign[nurse][weekday].isWorking()) {
-                addAssign( weekday, nurse, assign[nurse][weekday] );
+            if (assignTable[nurse][weekday].isWorking()) {
+                addAssign( weekday, nurse, assignTable[nurse][weekday] );
             }
         }
     }
 
     evaluateObjValue();
+}
+
+void NurseRostering::Solution::rebuild()
+{
+    rebuild( assign );
 }
 
 bool NurseRostering::Solution::genInitAssign( int greedyRetryCount )
@@ -172,7 +174,7 @@ bool NurseRostering::Solution::genInitAssign_BranchAndCut()
 
     bool feasible = fillAssign( Weekday::Mon, 0, 0, 0, 0 );
 
-    rebuildAssistData();
+    rebuild( assign );
 
     return feasible;
 }
@@ -321,6 +323,10 @@ void NurseRostering::Solution::tabuSearch_Loop( const Timer &timer, const FindBe
         for (; !timer.isTimeOut() && (noImprove_Single > 0); ++iterCount) {
             Move bestMove;
             (this->*findBestMoveTable[modeSelect])(bestMove);
+
+            if (bestMove.delta >= DefaultPenalty::MAX_OBJ_VALUE) {
+                break;
+            }
 
             // update tabu list first because it requires original assignment
             (this->*updateTabuTable[bestMove.mode])(bestMove);
@@ -536,8 +542,7 @@ bool NurseRostering::Solution::findBestAdd( Move &bestMove ) const
         }
     }
 
-    if ((objValue + bestMove_tabu.delta < solver.getOptima().getObjValue())
-        && (bestMove_tabu.delta < bestMove.delta)) {
+    if (aspirationCritiera( bestMove, bestMove_tabu )) {
         bestMove = bestMove_tabu;
     }
 
@@ -573,8 +578,7 @@ bool NurseRostering::Solution::findBestChange( Move &bestMove ) const
         }
     }
 
-    if ((objValue + bestMove_tabu.delta < solver.getOptima().getObjValue())
-        && (bestMove_tabu.delta < bestMove.delta)) {
+    if (aspirationCritiera( bestMove, bestMove_tabu )) {
         bestMove = bestMove_tabu;
     }
 
@@ -606,8 +610,7 @@ bool NurseRostering::Solution::findBestRemove( Move &bestMove ) const
         }
     }
 
-    if ((objValue + bestMove_tabu.delta < solver.getOptima().getObjValue())
-        && (bestMove_tabu.delta < bestMove.delta)) {
+    if (aspirationCritiera( bestMove, bestMove_tabu )) {
         bestMove = bestMove_tabu;
     }
 
@@ -639,8 +642,7 @@ bool NurseRostering::Solution::findBestSwap( Move &bestMove ) const
         }
     }
 
-    if ((objValue + bestMove_tabu.delta < solver.getOptima().getObjValue())
-        && (bestMove_tabu.delta < bestMove.delta)) {
+    if (aspirationCritiera( bestMove, bestMove_tabu )) {
         bestMove = bestMove_tabu;
     }
 
@@ -710,8 +712,7 @@ bool NurseRostering::Solution::findBestARBoth( Move &bestMove ) const
         }
     }
 
-    if ((objValue + bestMove_tabu.delta < solver.getOptima().getObjValue())
-        && (bestMove_tabu.delta < bestMove.delta)) {
+    if (aspirationCritiera( bestMove, bestMove_tabu )) {
         bestMove = bestMove_tabu;
     }
 
@@ -751,8 +752,7 @@ bool NurseRostering::Solution::findBestAddOnBlockBorder( Move &bestMove ) const
         }
     }
 
-    if ((objValue + bestMove_tabu.delta < solver.getOptima().getObjValue())
-        && (bestMove_tabu.delta < bestMove.delta)) {
+    if (aspirationCritiera( bestMove, bestMove_tabu )) {
         bestMove = bestMove_tabu;
     }
 
@@ -792,8 +792,7 @@ bool NurseRostering::Solution::findBestChangeOnBlockBorder( Move &bestMove ) con
         }
     }
 
-    if ((objValue + bestMove_tabu.delta < solver.getOptima().getObjValue())
-        && (bestMove_tabu.delta < bestMove.delta)) {
+    if (aspirationCritiera( bestMove, bestMove_tabu )) {
         bestMove = bestMove_tabu;
     }
 
@@ -829,8 +828,7 @@ bool NurseRostering::Solution::findBestRemoveOnBlockBorder( Move &bestMove ) con
         }
     }
 
-    if ((objValue + bestMove_tabu.delta < solver.getOptima().getObjValue())
-        && (bestMove_tabu.delta < bestMove.delta)) {
+    if (aspirationCritiera( bestMove, bestMove_tabu )) {
         bestMove = bestMove_tabu;
     }
 
@@ -864,8 +862,7 @@ bool NurseRostering::Solution::findBestSwapOnBlockBorder( Move &bestMove ) const
         }
     }
 
-    if ((objValue + bestMove_tabu.delta < solver.getOptima().getObjValue())
-        && (bestMove_tabu.delta < bestMove.delta)) {
+    if (aspirationCritiera( bestMove, bestMove_tabu )) {
         bestMove = bestMove_tabu;
     }
 
@@ -937,8 +934,7 @@ bool NurseRostering::Solution::findBestARBothOnBlockBorder( Move &bestMove ) con
         }
     }
 
-    if ((objValue + bestMove_tabu.delta < solver.getOptima().getObjValue())
-        && (bestMove_tabu.delta < bestMove.delta)) {
+    if (aspirationCritiera( bestMove, bestMove_tabu )) {
         bestMove = bestMove_tabu;
     }
 
