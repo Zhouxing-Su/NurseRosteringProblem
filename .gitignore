@@ -197,3 +197,6 @@ ModelManifest.xml
 /Analysis/log.csv
 /Analysis/checkResult.csv
 /Analysis/Validator-results.txt
+/BatchRun/checkResult.csv
+/BatchRun/log.csv
+/BatchRun/output

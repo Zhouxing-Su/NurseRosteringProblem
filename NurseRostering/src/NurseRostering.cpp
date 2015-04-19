@@ -58,6 +58,23 @@ void NurseRostering::Penalty::setSwapMode()
     totalWorkingWeekend = DefaultPenalty::TotalWorkingWeekend;
 }
 
+void NurseRostering::Penalty::setExchangeMode()
+{
+    singleAssign = DefaultPenalty::FORBIDDEN_MOVE;
+    underStaff = DefaultPenalty::FORBIDDEN_MOVE;
+    succession = DefaultPenalty::FORBIDDEN_MOVE;
+    missSkill = DefaultPenalty::FORBIDDEN_MOVE;
+
+    insufficientStaff = DefaultPenalty::InsufficientStaff;
+    consecutiveShift = DefaultPenalty::ConsecutiveShift;
+    consecutiveDay = DefaultPenalty::ConsecutiveDay;
+    consecutiveDayOff = DefaultPenalty::ConsecutiveDayOff;
+    preference = DefaultPenalty::Preference;
+    completeWeekend = DefaultPenalty::CompleteWeekend;
+    totalAssign = 0;
+    totalWorkingWeekend = DefaultPenalty::TotalWorkingWeekend;
+}
+
 void NurseRostering::Penalty::setRepairMode( ObjValue WeightOnUnderStaff, ObjValue WeightOnSuccesion, ObjValue softConstraintDecay )
 {
     singleAssign = DefaultPenalty::FORBIDDEN_MOVE;

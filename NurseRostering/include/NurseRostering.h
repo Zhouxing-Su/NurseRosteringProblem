@@ -218,8 +218,11 @@ public:
         // and soft constraints get their original penalty
         void setDefaultMode();
         // UnderStaff and InsufficientStaff is not considered
-        // due to nurse number will not change
+        // due to nurse number will not change on each shift
         void setSwapMode();
+        // TotalAssign is not considered due to total assign will not change
+        // succession should be 
+        void setExchangeMode();
         // allow hard constraints UnderStaff and Succession being violated
         // but with much greater penalty than soft constraints
         // set softConstraintDecay to MAX_OBJ_VALUE to make them does not count

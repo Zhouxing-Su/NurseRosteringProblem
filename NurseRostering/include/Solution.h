@@ -9,6 +9,7 @@
 *           4.  create a fastRepair() which is separate repair and local search
 *               to improve efficiency since repair process is more similar to generating initial assignment?
 *           5.  perturb() should start from optima?
+*           6.  move mode setting to findBest rather than try.
 *
 */
 
@@ -20,6 +21,7 @@
 #include <vector>
 #include <bitset>
 #include <ctime>
+#include <cmath>
 
 #include "DebugFlag.h"
 #include "NurseRostering.h"
@@ -62,7 +64,7 @@ public:
         // "Both" means search both, "Loop" means switch to another when no improvement
         enum Mode
         {
-            Add, Change, Swap, Remove, BASIC_MOVE_SIZE,
+            Add, Change, Swap, Exchange, Remove, BASIC_MOVE_SIZE,
             ARLoop = BASIC_MOVE_SIZE, ARRand, ARBoth, SIZE
         };
 
@@ -79,8 +81,8 @@ public:
             : delta( d ), weekday( w ), nurse( n ), assign( sh, sk ), mode( m )
         {
         }
-        Move( ObjValue d, int w, NurseID n, NurseID  n2, Mode m = Mode::Swap )
-            : delta( d ), weekday( w ), nurse( n ), nurse2( n2 ), mode( m )
+        Move( ObjValue d, int w, NurseID n, int s, Mode m )
+            : delta( d ), weekday( w ), nurse( n ), swapSlot( s ), mode( m )
         {
         }
 
@@ -88,7 +90,7 @@ public:
         Mode mode;
         int weekday;
         NurseID nurse;
-        NurseID nurse2;
+        int swapSlot; // the other weekday or nurse in swap or exchange
         Assign assign;
     };
 
@@ -107,7 +109,8 @@ public:
 
     enum ModeSeq
     {
-        ARLCS, ARRCS, ARBCS, ACSR, ASCR, SIZE
+        ARLCS, ARRCS, ARBCS, ACSR,
+        ARLCSE, ARRCSE, ARBCSE, ACSER, SIZE
     };
 
     static const std::vector<std::string> modeSeqNames;
@@ -352,6 +355,7 @@ private:
     bool findBestChange( Move &bestMove ) const;
     bool findBestRemove( Move &bestMove ) const;
     bool findBestSwap( Move &bestMove ) const;
+    bool findBestExchange( Move &bestMove ) const;
     bool findBestARLoop( Move &bestMove ) const;
     bool findBestARRand( Move &bestMove ) const;
     bool findBestARBoth( Move &bestMove ) const;
@@ -359,6 +363,7 @@ private:
     bool findBestChangeOnBlockBorder( Move &bestMove ) const;
     bool findBestRemoveOnBlockBorder( Move &bestMove ) const;
     bool findBestSwapOnBlockBorder( Move &bestMove ) const;
+    bool findBestExchangeOnBlockBorder( Move &bestMove ) const;
     bool findBestARLoopOnBlockBorder( Move &bestMove ) const;
     bool findBestARRandOnBlockBorder( Move &bestMove ) const;
     bool findBestARBothOnBlockBorder( Move &bestMove ) const;
@@ -372,9 +377,12 @@ private:
     // evaluate cost of removing the Assign from nurse already assigned in weekday
     ObjValue tryRemoveAssign( int weekday, NurseID nurse ) const;
     ObjValue tryRemoveAssign( const Move &move ) const;
-    // evaluate cost of swapping Assign of two nurses
+    // evaluate cost of swapping Assign of two nurses in the same day
     ObjValue trySwapNurse( int weekday, NurseID nurse, NurseID nurse2 ) const;
     ObjValue trySwapNurse( const Move &move ) const;
+    // evaluate cost of exchanging Assign of a nurse on two days
+    ObjValue tryExchangeDay( int weekday, NurseID nurse, int weekday2 ) const;
+    ObjValue tryExchangeDay( const Move &move ) const;
     // apply assigning a Assign to nurse without Assign in weekday
     void addAssign( int weekday, NurseID nurse, const Assign &a );
     void addAssign( const Move &move );
@@ -384,9 +392,12 @@ private:
     // apply removing a Assign to nurse in weekday
     void removeAssign( int weekday, NurseID nurse );
     void removeAssign( const Move &move );
-    // apply swapping Assign of two nurses
-    void swapNurse( int weekday, NurseID nurse1, NurseID nurse2 );
+    // apply swapping Assign of two nurses in the same day
+    void swapNurse( int weekday, NurseID nurse, NurseID nurse2 );
     void swapNurse( const Move &move );
+    // apply exchanging Assign of a nurse on two days
+    void exchangeDay( int weekday, NurseID nurse, int weekday2 );
+    void exchangeDay( const Move &move );
 
     void updateConsecutive( int weekday, NurseID nurse, ShiftID shift );
     // the assignment is on the right side of a consecutive block
@@ -413,25 +424,48 @@ private:
     bool noSwapTabu( const Move &move ) const
     {
         const Assign &a( assign[move.nurse][move.weekday] );
-        const Assign &a2( assign[move.nurse2][move.weekday] );
+        const Assign &a2( assign[move.swapSlot][move.weekday] );
 
         if (a.isWorking()) {
             if (a2.isWorking()) {
                 return ((iterCount > shiftTabu[move.nurse][move.weekday][a2.shift][a2.skill])
-                    || (iterCount > shiftTabu[move.nurse2][move.weekday][a.shift][a.skill]));
+                    || (iterCount > shiftTabu[move.swapSlot][move.weekday][a.shift][a.skill]));
             } else {
                 return ((iterCount > dayTabu[move.nurse][move.weekday])
-                    || (iterCount > shiftTabu[move.nurse2][move.weekday][a.shift][a.skill]));
+                    || (iterCount > shiftTabu[move.swapSlot][move.weekday][a.shift][a.skill]));
             }
         } else {
             if (a2.isWorking()) {
                 return ((iterCount > shiftTabu[move.nurse][move.weekday][a2.shift][a2.skill])
-                    || (iterCount > dayTabu[move.nurse2][move.weekday]));
+                    || (iterCount > dayTabu[move.swapSlot][move.weekday]));
             } else {    // no change
                 return true;
             }
         }
     }
+    bool noExchangeTabu( const Move &move ) const
+    {
+        const Assign &a( assign[move.nurse][move.weekday] );
+        const Assign &a2( assign[move.nurse][move.swapSlot] );
+
+        if (a.isWorking()) {
+            if (a2.isWorking()) {
+                return ((iterCount > shiftTabu[move.nurse][move.weekday][a2.shift][a2.skill])
+                    || (iterCount > shiftTabu[move.nurse][move.swapSlot][a.shift][a.skill]));
+            } else {
+                return ((iterCount > dayTabu[move.nurse][move.weekday])
+                    || (iterCount > shiftTabu[move.nurse][move.swapSlot][a.shift][a.skill]));
+            }
+        } else {
+            if (a2.isWorking()) {
+                return ((iterCount > shiftTabu[move.nurse][move.weekday][a2.shift][a2.skill])
+                    || (iterCount > dayTabu[move.nurse][move.swapSlot]));
+            } else {    // no change
+                return true;
+            }
+        }
+    }
+
     bool aspirationCritiera( const Move &bestMove, const Move &bestMove_tabu ) const
     {
         return ((bestMove.delta >= DefaultPenalty::MAX_OBJ_VALUE)
@@ -456,20 +490,40 @@ private:
     void updateSwapTabu( const Move &move )
     {
         const Assign &a( assign[move.nurse][move.weekday] );
-        const Assign &a2( assign[move.nurse][move.weekday] );
+        const Assign &a2( assign[move.swapSlot][move.weekday] );
 
         if (a.isWorking()) {
             if (a2.isWorking()) {
                 updateShiftTabu( move.nurse, move.weekday, a );
-                updateShiftTabu( move.nurse2, move.weekday, a2 );
+                updateShiftTabu( move.swapSlot, move.weekday, a2 );
             } else {
                 updateShiftTabu( move.nurse, move.weekday, a );
-                updateDayTabu( move.nurse2, move.weekday );
+                updateDayTabu( move.swapSlot, move.weekday );
             }
         } else {
             if (a2.isWorking()) {
                 updateDayTabu( move.nurse, move.weekday );
-                updateShiftTabu( move.nurse2, move.weekday, a2 );
+                updateShiftTabu( move.swapSlot, move.weekday, a2 );
+            }
+        }
+    }
+    void updateExchangeTabu( const Move &move )
+    {
+        const Assign &a( assign[move.nurse][move.weekday] );
+        const Assign &a2( assign[move.nurse][move.swapSlot] );
+
+        if (a.isWorking()) {
+            if (a2.isWorking()) {
+                updateShiftTabu( move.nurse, move.weekday, a );
+                updateShiftTabu( move.nurse, move.swapSlot, a2 );
+            } else {
+                updateShiftTabu( move.nurse, move.weekday, a );
+                updateDayTabu( move.nurse, move.swapSlot );
+            }
+        } else {
+            if (a2.isWorking()) {
+                updateDayTabu( move.nurse, move.weekday );
+                updateShiftTabu( move.nurse, move.swapSlot, a2 );
             }
         }
     }
