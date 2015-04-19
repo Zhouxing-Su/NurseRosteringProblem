@@ -498,7 +498,7 @@ void NurseRostering::Solution::randomWalk( const Timer &timer, IterCount stepNum
     optima = *this;
 
     ObjValue delta;
-    while ((--stepNum > 0) && !timer.isTimeOut()) {
+    while ((stepNum > 0) && !timer.isTimeOut()) {
         int moveMode = rand() % Move::Mode::BASIC_MOVE_SIZE;
         Move move;
         move.weekday = (rand() % Weekday::NUM) + Weekday::Mon;
@@ -515,6 +515,7 @@ void NurseRostering::Solution::randomWalk( const Timer &timer, IterCount stepNum
         if (delta < DefaultPenalty::MAX_OBJ_VALUE) {
             objValue += delta;
             (this->*applyMove[moveMode])(move);
+            --stepNum;
         }
 
         updateOptima();
@@ -1668,6 +1669,7 @@ NurseRostering::ObjValue NurseRostering::Solution::tryExchangeDay( int weekday, 
 
     // TODO : rewrite entirely? ExchangeMode?
     nurse;
+    delta = DefaultPenalty::FORBIDDEN_MOVE;
 
     penalty.setDefaultMode();
 
