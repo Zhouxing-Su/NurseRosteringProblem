@@ -69,28 +69,17 @@ public:
         };
 
         Move() : delta( DefaultPenalty::FORBIDDEN_MOVE ) {}
-        Move( ObjValue d, int w, NurseID n, Mode m = Mode::Remove )
-            : delta( d ), weekday( w ), nurse( n ), mode( m )
-        {
-        }
-        Move( ObjValue d, int w, NurseID n, const Assign &a, Mode m )
-            : delta( d ), weekday( w ), nurse( n ), assign( a ), mode( m )
-        {
-        }
-        Move( ObjValue d, int w, NurseID n, ShiftID sh, SkillID sk, Mode m )
-            : delta( d ), weekday( w ), nurse( n ), assign( sh, sk ), mode( m )
-        {
-        }
-        Move( ObjValue d, int w, NurseID n, int s, Mode m )
-            : delta( d ), weekday( w ), nurse( n ), swapSlot( s ), mode( m )
+        Move( ObjValue d, int w, int w2, NurseID n, NurseID n2, Mode m )
+            : delta( d ), weekday( w ), weekday2( w2 ), nurse( n ), nurse2( n2 ), mode( m )
         {
         }
 
         ObjValue delta;
         Mode mode;
         int weekday;
+        int weekday2;
         NurseID nurse;
-        int swapSlot; // the other weekday or nurse in swap or exchange
+        int nurse2;
         Assign assign;
     };
 
@@ -424,20 +413,20 @@ private:
     bool noSwapTabu( const Move &move ) const
     {
         const Assign &a( assign[move.nurse][move.weekday] );
-        const Assign &a2( assign[move.swapSlot][move.weekday] );
+        const Assign &a2( assign[move.nurse2][move.weekday] );
 
         if (a.isWorking()) {
             if (a2.isWorking()) {
                 return ((iterCount > shiftTabu[move.nurse][move.weekday][a2.shift][a2.skill])
-                    || (iterCount > shiftTabu[move.swapSlot][move.weekday][a.shift][a.skill]));
+                    || (iterCount > shiftTabu[move.nurse2][move.weekday][a.shift][a.skill]));
             } else {
                 return ((iterCount > dayTabu[move.nurse][move.weekday])
-                    || (iterCount > shiftTabu[move.swapSlot][move.weekday][a.shift][a.skill]));
+                    || (iterCount > shiftTabu[move.nurse2][move.weekday][a.shift][a.skill]));
             }
         } else {
             if (a2.isWorking()) {
                 return ((iterCount > shiftTabu[move.nurse][move.weekday][a2.shift][a2.skill])
-                    || (iterCount > dayTabu[move.swapSlot][move.weekday]));
+                    || (iterCount > dayTabu[move.nurse2][move.weekday]));
             } else {    // no change
                 return true;
             }
@@ -446,20 +435,20 @@ private:
     bool noExchangeTabu( const Move &move ) const
     {
         const Assign &a( assign[move.nurse][move.weekday] );
-        const Assign &a2( assign[move.nurse][move.swapSlot] );
+        const Assign &a2( assign[move.nurse][move.weekday2] );
 
         if (a.isWorking()) {
             if (a2.isWorking()) {
                 return ((iterCount > shiftTabu[move.nurse][move.weekday][a2.shift][a2.skill])
-                    || (iterCount > shiftTabu[move.nurse][move.swapSlot][a.shift][a.skill]));
+                    || (iterCount > shiftTabu[move.nurse][move.weekday2][a.shift][a.skill]));
             } else {
                 return ((iterCount > dayTabu[move.nurse][move.weekday])
-                    || (iterCount > shiftTabu[move.nurse][move.swapSlot][a.shift][a.skill]));
+                    || (iterCount > shiftTabu[move.nurse][move.weekday2][a.shift][a.skill]));
             }
         } else {
             if (a2.isWorking()) {
                 return ((iterCount > shiftTabu[move.nurse][move.weekday][a2.shift][a2.skill])
-                    || (iterCount > dayTabu[move.nurse][move.swapSlot]));
+                    || (iterCount > dayTabu[move.nurse][move.weekday2]));
             } else {    // no change
                 return true;
             }
@@ -490,40 +479,40 @@ private:
     void updateSwapTabu( const Move &move )
     {
         const Assign &a( assign[move.nurse][move.weekday] );
-        const Assign &a2( assign[move.swapSlot][move.weekday] );
+        const Assign &a2( assign[move.nurse2][move.weekday] );
 
         if (a.isWorking()) {
             if (a2.isWorking()) {
                 updateShiftTabu( move.nurse, move.weekday, a );
-                updateShiftTabu( move.swapSlot, move.weekday, a2 );
+                updateShiftTabu( move.nurse2, move.weekday, a2 );
             } else {
                 updateShiftTabu( move.nurse, move.weekday, a );
-                updateDayTabu( move.swapSlot, move.weekday );
+                updateDayTabu( move.nurse2, move.weekday );
             }
         } else {
             if (a2.isWorking()) {
                 updateDayTabu( move.nurse, move.weekday );
-                updateShiftTabu( move.swapSlot, move.weekday, a2 );
+                updateShiftTabu( move.nurse2, move.weekday, a2 );
             }
         }
     }
     void updateExchangeTabu( const Move &move )
     {
         const Assign &a( assign[move.nurse][move.weekday] );
-        const Assign &a2( assign[move.nurse][move.swapSlot] );
+        const Assign &a2( assign[move.nurse][move.weekday2] );
 
         if (a.isWorking()) {
             if (a2.isWorking()) {
                 updateShiftTabu( move.nurse, move.weekday, a );
-                updateShiftTabu( move.nurse, move.swapSlot, a2 );
+                updateShiftTabu( move.nurse, move.weekday2, a2 );
             } else {
                 updateShiftTabu( move.nurse, move.weekday, a );
-                updateDayTabu( move.nurse, move.swapSlot );
+                updateDayTabu( move.nurse, move.weekday2 );
             }
         } else {
             if (a2.isWorking()) {
                 updateDayTabu( move.nurse, move.weekday );
-                updateShiftTabu( move.nurse, move.swapSlot, a2 );
+                updateShiftTabu( move.nurse, move.weekday2, a2 );
             }
         }
     }
