@@ -79,7 +79,7 @@ public:
         int weekday;
         int weekday2;
         NurseID nurse;
-        int nurse2;
+        NurseID nurse2;
         Assign assign;
     };
 
@@ -120,10 +120,8 @@ public:
     // return true if update succeed
     bool updateOptima()
     {
-        if (objValue <= optima.getObjValue()) {
-            if (objValue != optima.getObjValue()) {
-                findTime = clock();
-            }
+        if (objValue < optima.getObjValue()) {
+            findTime = clock();
             optima = *this;
             return true;
         }

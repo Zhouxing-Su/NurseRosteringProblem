@@ -395,16 +395,7 @@ void NurseRostering::Solution::tabuSearch_Possibility( const Timer &timer, const
         Move::Mode moveMode = Move::Mode::SIZE;
         Move bestMove;
         // judge every neighborhood whether to select and search when selected
-        for (int i = startMode; i < modeNum; ++i) {
-            if (rand() < (P_global + P_local[i])) { // selected
-                (this->*findBestMoveTable[i])(bestMove);
-                if (moveMode != bestMove.mode) {
-                    moveMode = bestMove.mode;
-                    modeSelect = i;
-                }
-            }
-        }
-        for (int i = 0; i < startMode; ++i) {
+        for (int i = 0; i < modeNum; ++i) {
             if (rand() < (P_global + P_local[i])) { // selected
                 (this->*findBestMoveTable[i])(bestMove);
                 if (moveMode != bestMove.mode) {
