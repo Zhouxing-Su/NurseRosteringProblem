@@ -71,7 +71,7 @@ void sprintRun()
 {
     ostringstream id;
 
-    int runCount = 2;
+    int runCount = 3;
     int threadBeginInterval = 3;
     int threadNum = thread::hardware_concurrency() / 2;
     threadNum += (threadNum == 0);

@@ -82,7 +82,7 @@ NurseRostering::Solution::Solution( const TabuSolver &s, const AssignTable &at )
 
 void NurseRostering::Solution::rebuild( const AssignTable &at )
 {
-    const AssignTable assignTable( (&at != &assign) ? at : AssignTable( at ) );
+    const AssignTable &assignTable( (&at != &assign) ? at : AssignTable( at ) );
 
     resetAssign();
     resetAssistData();
