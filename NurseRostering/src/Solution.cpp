@@ -668,19 +668,14 @@ bool NurseRostering::Solution::findBestBlockSwap( Move &bestMove ) const
     for (move.nurse = 0; move.nurse < solver.problem.scenario.nurseNum; ++move.nurse) {
         for (move.nurse2 = move.nurse + 1; move.nurse2 < solver.problem.scenario.nurseNum; ++move.nurse2) {
             for (move.weekday = Weekday::Mon; move.weekday < Weekday::SIZE; ++move.weekday) {
-
-                // TODO : reduce duplicated calculation
-
-                for (move.weekday2 = move.weekday; move.weekday2 < Weekday::SIZE; ++move.weekday2) {
-                    move.delta = trySwapBlock( move );
-                    if (noBlockSwapTabu( move )) {
-                        if (rs.isMinimal( move.delta, bestMove.delta )) {
-                            bestMove = move;
-                        }
-                    } else {    // tabu
-                        if (rs_tabu.isMinimal( move.delta, bestMove_tabu.delta )) {
-                            bestMove_tabu = move;
-                        }
+                move.delta = trySwapBlock( move );
+                if (noBlockSwapTabu( move )) {
+                    if (rs.isMinimal( move.delta, bestMove.delta )) {
+                        bestMove = move;
+                    }
+                } else {    // tabu
+                    if (rs_tabu.isMinimal( move.delta, bestMove_tabu.delta )) {
+                        bestMove_tabu = move;
                     }
                 }
             }
@@ -1686,7 +1681,7 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapNurse( const Move &mov
     return trySwapNurse( move.weekday, move.nurse, move.nurse2 );
 }
 
-NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock( int weekday, int weekday2, NurseID nurse, NurseID nurse2 ) const
+NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock( int weekday, int &weekday2, NurseID nurse, NurseID nurse2 ) const
 {
     // TODO : make sure they won't be the same and leave out this
     if (nurse == nurse2) {
@@ -1722,6 +1717,9 @@ NurseRostering::ObjValue NurseRostering::Solution::tryExchangeDay( int weekday, 
     penalty.setExchangeMode();
 
     // TODO :
+
+    // HOWTO : modify data members in const function
+    // (const_cast<Solution*>(this))->removeAssign( weekday, nurse );
 
     // return DefaultPenalty::FORBIDDEN_MOVE before finishing
     // in case the call in randomWalk()

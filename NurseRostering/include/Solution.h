@@ -77,7 +77,8 @@ public:
         ObjValue delta;
         Mode mode;
         int weekday;
-        int weekday2;   // weekday2 should always be greater than weekday in block swap
+        // weekday2 should always be greater than weekday in block swap
+        mutable int weekday2;   // tryBlockSwap() will modify it
         NurseID nurse;
         NurseID nurse2;
         Assign assign;
@@ -370,12 +371,14 @@ private:
     // evaluate cost of swapping Assign of two nurses in the same day
     ObjValue trySwapNurse( int weekday, NurseID nurse, NurseID nurse2 ) const;
     ObjValue trySwapNurse( const Move &move ) const;
-    // evaluate cost of swapping Assign of two nurses in consecutive days
-    ObjValue trySwapBlock( int weekday, int weekday2, NurseID nurse, NurseID nurse2 ) const;
+    // evaluate cost of swapping Assign of two nurses in consecutive days start from weekday
+    // and record the selected end of the block into weekday2
+    ObjValue trySwapBlock( int weekday, int &weekday2, NurseID nurse, NurseID nurse2 ) const;
     ObjValue trySwapBlock( const Move &move ) const;
     // evaluate cost of exchanging Assign of a nurse on two days
     ObjValue tryExchangeDay( int weekday, NurseID nurse, int weekday2 ) const;
     ObjValue tryExchangeDay( const Move &move ) const;
+    
     // apply assigning a Assign to nurse without Assign in weekday
     void addAssign( int weekday, NurseID nurse, const Assign &a );
     void addAssign( const Move &move );
@@ -388,7 +391,7 @@ private:
     // apply swapping Assign of two nurses in the same day
     void swapNurse( int weekday, NurseID nurse, NurseID nurse2 );
     void swapNurse( const Move &move );
-    // apply swapping Assign of two nurses in consecutive days
+    // apply swapping Assign of two nurses in consecutive days within [weekday, weekday2]
     void swapBlock( int weekday, int weekday2, NurseID nurse, NurseID nurse2 );
     void swapBlock( const Move &move );
     // apply exchanging Assign of a nurse on two days
@@ -551,12 +554,12 @@ private:
 
     const TabuSolver &solver;
 
-    mutable Penalty penalty;
+    mutable Penalty penalty;    // trySwapNurse() will modify it
 
     // for switching between add and remove
     // 1 for no improvement which is opposite in localSearch
-    mutable bool findBestARLoopFlag;
-    mutable bool findBestARLoopOnBlockBorderFlag;
+    mutable bool findBestARLoopFlag;    // findBestARLoop() will modify it
+    mutable bool findBestARLoopOnBlockBorderFlag;   // findBestARLoopOnBlockBorder() will modify it
 
     ShiftTabu shiftTabu;
     DayTabu dayTabu;
