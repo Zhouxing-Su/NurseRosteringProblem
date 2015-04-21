@@ -43,12 +43,29 @@ void NurseRostering::Penalty::setDefaultMode()
 
 void NurseRostering::Penalty::setSwapMode()
 {
-    singleAssign = DefaultPenalty::FORBIDDEN_MOVE;
-    underStaff = 0;
+    singleAssign = 0;   // due to no extra assignments
+    underStaff = 0;     // due to no extra assignments
     succession = DefaultPenalty::FORBIDDEN_MOVE;
     missSkill = DefaultPenalty::FORBIDDEN_MOVE;
 
-    insufficientStaff = 0;
+    insufficientStaff = 0;  // due to no extra assignments
+    consecutiveShift = DefaultPenalty::ConsecutiveShift;
+    consecutiveDay = DefaultPenalty::ConsecutiveDay;
+    consecutiveDayOff = DefaultPenalty::ConsecutiveDayOff;
+    preference = DefaultPenalty::Preference;
+    completeWeekend = DefaultPenalty::CompleteWeekend;
+    totalAssign = DefaultPenalty::TotalAssign;
+    totalWorkingWeekend = DefaultPenalty::TotalWorkingWeekend;
+}
+
+void NurseRostering::Penalty::setBlockSwapMode()
+{
+    singleAssign = 0;   // due to no extra assignments
+    underStaff = 0;     // due to no extra assignments
+    succession = 0; // due to it is calculated outside the try
+    missSkill = 0;  // due to it is calculated outside the try
+
+    insufficientStaff = 0;  // due to no extra assignments
     consecutiveShift = DefaultPenalty::ConsecutiveShift;
     consecutiveDay = DefaultPenalty::ConsecutiveDay;
     consecutiveDayOff = DefaultPenalty::ConsecutiveDayOff;
@@ -60,10 +77,10 @@ void NurseRostering::Penalty::setSwapMode()
 
 void NurseRostering::Penalty::setExchangeMode()
 {
-    singleAssign = DefaultPenalty::FORBIDDEN_MOVE;
+    singleAssign = 0;   // due to no extra assignments
     underStaff = DefaultPenalty::FORBIDDEN_MOVE;
     succession = DefaultPenalty::FORBIDDEN_MOVE;
-    missSkill = DefaultPenalty::FORBIDDEN_MOVE;
+    missSkill = 0;      // due to it is the same nurse
 
     insufficientStaff = DefaultPenalty::InsufficientStaff;
     consecutiveShift = DefaultPenalty::ConsecutiveShift;

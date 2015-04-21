@@ -63,9 +63,9 @@ public:
         // AR stands for "Add and Remove", "Rand" means select one to search randomly,
         // "Both" means search both, "Loop" means switch to another when no improvement
         enum Mode
-        {
+        {   // basic move are used in randomWalk()
             Add, Change, Swap, Exchange, Remove, BASIC_MOVE_SIZE,
-            ARLoop = BASIC_MOVE_SIZE, ARRand, ARBoth, SIZE
+            BlockSwap = BASIC_MOVE_SIZE, ARLoop, ARRand, ARBoth, SIZE
         };
 
         Move() : delta( DefaultPenalty::FORBIDDEN_MOVE ) {}
@@ -77,7 +77,7 @@ public:
         ObjValue delta;
         Mode mode;
         int weekday;
-        int weekday2;
+        int weekday2;   // weekday2 should always be greater than weekday in block swap
         NurseID nurse;
         NurseID nurse2;
         Assign assign;
@@ -98,13 +98,15 @@ public:
 
     enum ModeSeq
     {
-        ARLCS, ARRCS, ARBCS, ACSR,
-        ARLCSE, ARRCSE, ARBCSE, ACSER, SIZE
+        ARlCS, ARrCS, ARbCS, ACSR,
+        ARlCSEB, ARrCSEB, ARbCSEB, ACSEBR, SIZE
     };
 
     static const std::vector<std::string> modeSeqNames;
     static const std::vector<std::vector<int> > modeSeqPatterns;
 
+    // entrance in this table should have the same sequence
+    // as move mode enum defined in Move::Mode
     static const TryMoveTable tryMove;
     static const FindBestMoveTable findBestMove;
     static const FindBestMoveTable findBestMoveOnBlockBorder;
@@ -342,6 +344,7 @@ private:
     bool findBestChange( Move &bestMove ) const;
     bool findBestRemove( Move &bestMove ) const;
     bool findBestSwap( Move &bestMove ) const;
+    bool findBestBlockSwap( Move &bestMove ) const;
     bool findBestExchange( Move &bestMove ) const;
     bool findBestARLoop( Move &bestMove ) const;
     bool findBestARRand( Move &bestMove ) const;
@@ -367,6 +370,9 @@ private:
     // evaluate cost of swapping Assign of two nurses in the same day
     ObjValue trySwapNurse( int weekday, NurseID nurse, NurseID nurse2 ) const;
     ObjValue trySwapNurse( const Move &move ) const;
+    // evaluate cost of swapping Assign of two nurses in consecutive days
+    ObjValue trySwapBlock( int weekday, int weekday2, NurseID nurse, NurseID nurse2 ) const;
+    ObjValue trySwapBlock( const Move &move ) const;
     // evaluate cost of exchanging Assign of a nurse on two days
     ObjValue tryExchangeDay( int weekday, NurseID nurse, int weekday2 ) const;
     ObjValue tryExchangeDay( const Move &move ) const;
@@ -382,6 +388,9 @@ private:
     // apply swapping Assign of two nurses in the same day
     void swapNurse( int weekday, NurseID nurse, NurseID nurse2 );
     void swapNurse( const Move &move );
+    // apply swapping Assign of two nurses in consecutive days
+    void swapBlock( int weekday, int weekday2, NurseID nurse, NurseID nurse2 );
+    void swapBlock( const Move &move );
     // apply exchanging Assign of a nurse on two days
     void exchangeDay( int weekday, NurseID nurse, int weekday2 );
     void exchangeDay( const Move &move );
@@ -452,6 +461,15 @@ private:
             }
         }
     }
+    bool noBlockSwapTabu( const Move &move ) const
+    {
+        int tabuCount = (move.weekday2 - move.weekday + 1) / 2;
+        for (int w = move.weekday; w <= move.weekday2; ++w) {
+            --tabuCount;
+        }
+
+        return (tabuCount > 0);
+    }
 
     bool aspirationCritiera( const Move &bestMove, const Move &bestMove_tabu ) const
     {
@@ -512,6 +530,13 @@ private:
                 updateDayTabu( move.nurse, move.weekday );
                 updateShiftTabu( move.nurse, move.weekday2, a2 );
             }
+        }
+    }
+    void updateBlockSwapTabu( const Move &move )
+    {
+        Move m( move );
+        for (; m.weekday <= m.weekday2; ++m.weekday) {
+            updateSwapTabu( move );
         }
     }
 

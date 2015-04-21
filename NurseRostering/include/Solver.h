@@ -82,7 +82,7 @@ public:
     public:
         Config() : initAlgorithm( InitAlgorithm::Greedy ),
             solveAlgorithm( SolveAlgorithm::TabuSearch_Possibility ),
-            modeSeq( Solution::ModeSeq::ARBCS ),
+            modeSeq( Solution::ModeSeq::ARbCS ),
             maxNoImproveCoefficient( 1 )
         {
             dayTabuCoefficient[TabuTenureCoefficientIndex::TableSize] = 0;

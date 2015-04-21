@@ -220,6 +220,8 @@ public:
         // UnderStaff and InsufficientStaff is not considered
         // due to nurse number will not change on each shift
         void setSwapMode();
+        // 
+        void setBlockSwapMode();
         // TotalAssign is not considered due to total assign will not change
         // succession should be 
         void setExchangeMode();
