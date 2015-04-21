@@ -63,8 +63,12 @@ public:
         // AR stands for "Add and Remove", "Rand" means select one to search randomly,
         // "Both" means search both, "Loop" means switch to another when no improvement
         enum Mode
-        {   // basic move are used in randomWalk()
-            Add, Change, Swap, Exchange, Remove, BASIC_MOVE_SIZE,
+        {
+            // atomic moves are not composed by other moves
+            Add, Remove, Change, ATOMIC_MOVE_SIZE,
+            // basic moves are used in randomWalk()
+            Swap = ATOMIC_MOVE_SIZE, Exchange, BASIC_MOVE_SIZE,
+            // compound moves
             BlockSwap = BASIC_MOVE_SIZE, ARLoop, ARRand, ARBoth, SIZE
         };
 
@@ -378,7 +382,7 @@ private:
     // evaluate cost of exchanging Assign of a nurse on two days
     ObjValue tryExchangeDay( int weekday, NurseID nurse, int weekday2 ) const;
     ObjValue tryExchangeDay( const Move &move ) const;
-    
+
     // apply assigning a Assign to nurse without Assign in weekday
     void addAssign( int weekday, NurseID nurse, const Assign &a );
     void addAssign( const Move &move );

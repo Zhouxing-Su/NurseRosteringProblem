@@ -8,19 +8,19 @@ using namespace std;
 const NurseRostering::Solution::TryMoveTable
 NurseRostering::Solution::tryMove = {
     &NurseRostering::Solution::tryAddAssign,
+    &NurseRostering::Solution::tryRemoveAssign,
     &NurseRostering::Solution::tryChangeAssign,
     &NurseRostering::Solution::trySwapNurse,
     &NurseRostering::Solution::tryExchangeDay,
-    &NurseRostering::Solution::tryRemoveAssign,
     &NurseRostering::Solution::trySwapBlock
 };
 const NurseRostering::Solution::FindBestMoveTable
 NurseRostering::Solution::findBestMove = {
     &NurseRostering::Solution::findBestAdd,
+    &NurseRostering::Solution::findBestRemove,
     &NurseRostering::Solution::findBestChange,
     &NurseRostering::Solution::findBestSwap,
     &NurseRostering::Solution::findBestExchange,
-    &NurseRostering::Solution::findBestRemove,
     &NurseRostering::Solution::findBestBlockSwap,
     &NurseRostering::Solution::findBestARLoop,
     &NurseRostering::Solution::findBestARRand,
@@ -29,10 +29,10 @@ NurseRostering::Solution::findBestMove = {
 const NurseRostering::Solution::FindBestMoveTable
 NurseRostering::Solution::findBestMoveOnBlockBorder = {
     &NurseRostering::Solution::findBestAddOnBlockBorder,
+    &NurseRostering::Solution::findBestRemoveOnBlockBorder,
     &NurseRostering::Solution::findBestChangeOnBlockBorder,
     &NurseRostering::Solution::findBestSwapOnBlockBorder,
     &NurseRostering::Solution::findBestExchangeOnBlockBorder,
-    &NurseRostering::Solution::findBestRemoveOnBlockBorder,
     &NurseRostering::Solution::findBestBlockSwap,   // TODO : keep/break consecutive block swap?
     &NurseRostering::Solution::findBestARLoopOnBlockBorder,
     &NurseRostering::Solution::findBestARRandOnBlockBorder,
@@ -41,19 +41,19 @@ NurseRostering::Solution::findBestMoveOnBlockBorder = {
 const NurseRostering::Solution::ApplyMoveTable
 NurseRostering::Solution::applyMove = {
     &NurseRostering::Solution::addAssign,
+    &NurseRostering::Solution::removeAssign,
     &NurseRostering::Solution::changeAssign,
     &NurseRostering::Solution::swapNurse,
     &NurseRostering::Solution::exchangeDay,
-    &NurseRostering::Solution::removeAssign,
     &NurseRostering::Solution::swapBlock
 };
 const NurseRostering::Solution::UpdateTabuTable
 NurseRostering::Solution::updateTabuTable = {
     &NurseRostering::Solution::updateAddTabu,
+    &NurseRostering::Solution::updateRemoveTabu,
     &NurseRostering::Solution::updateChangeTabu,
     &NurseRostering::Solution::updateSwapTabu,
     &NurseRostering::Solution::updateExchangeTabu,
-    &NurseRostering::Solution::updateRemoveTabu,
     &NurseRostering::Solution::updateBlockSwapTabu
 };
 
@@ -1692,8 +1692,9 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock( int weekday, in
 
     penalty.setBlockSwapMode();
 
-    // TODO :
+    for (int w = weekday; w < Weekday::SIZE; ++w) {
 
+    }
 
     penalty.setDefaultMode();
 
