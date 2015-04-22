@@ -9,11 +9,14 @@ const clock_t NurseRostering::MAX_RUNNING_TIME = (1 << 30);
 
 const NurseRostering::NurseID NurseRostering::Scenario::Nurse::ID_NONE = -1;
 
-const NurseRostering::ShiftID NurseRostering::Scenario::Shift::ID_ANY = -2;
+const NurseRostering::ShiftID NurseRostering::Scenario::Shift::ID_ANY = -1;
 const std::string NurseRostering::Scenario::Shift::NAME_ANY( "Any" );
-const NurseRostering::ShiftID NurseRostering::Scenario::Shift::ID_NONE = -1;
+const NurseRostering::ShiftID NurseRostering::Scenario::Shift::ID_NONE = 0;
 const std::string NurseRostering::Scenario::Shift::NAME_NONE( "None" );
+const NurseRostering::ShiftID NurseRostering::Scenario::Shift::ID_BEGIN = NurseRostering::Scenario::Shift::ID_NONE + 1;
 
+const NurseRostering::SkillID NurseRostering::Scenario::Skill::ID_NONE = 0;
+const NurseRostering::SkillID NurseRostering::Scenario::Skill::ID_BEGIN = NurseRostering::Scenario::Skill::ID_NONE + 1;
 
 
 

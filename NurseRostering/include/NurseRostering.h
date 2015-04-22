@@ -67,8 +67,10 @@ public:
         // if there are weekNum weeks in the planning horizon, maxWeekCount = (weekNum - 1) 
         int maxWeekCount;   // count from 0
         int totalWeekNum;   // count from 1
-        int shiftTypeNum;
-        int skillTypeNum;
+        int shiftTypeNum;   // actual type number
+        int shiftSize;      // type number in data structure
+        int skillTypeNum;   // actual type number
+        int skillSize;      // type number in data structure
         int nurseNum;
 
         class Shift
@@ -78,6 +80,7 @@ public:
             static const std::string NAME_ANY;
             static const ShiftID ID_NONE;
             static const std::string NAME_NONE;
+            static const ShiftID ID_BEGIN;
 
             int minConsecutiveShiftNum;
             int maxConsecutiveShiftNum;
@@ -86,6 +89,13 @@ public:
             std::vector<bool> legalNextShifts;
         };
         std::vector<Shift> shifts;
+
+        class Skill
+        {
+        public:
+            static const SkillID ID_NONE;
+            static const SkillID ID_BEGIN;
+        };
 
         class Contract
         {
@@ -163,7 +173,7 @@ public:
     {
     public:
         // the default constructor means there is no assignment
-        Assign( ShiftID sh = Scenario::Shift::ID_NONE, SkillID sk = 0 ) :shift( sh ), skill( sk ) {}
+        Assign( ShiftID sh = Scenario::Shift::ID_NONE, SkillID sk = NurseRostering::Scenario::Skill::ID_NONE ) :shift( sh ), skill( sk ) {}
 
         static bool isWorking( ShiftID shift )
         {

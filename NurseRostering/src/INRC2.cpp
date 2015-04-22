@@ -181,8 +181,9 @@ namespace INRC2
         ifs.getline( buf, MAX_BUF_LEN );        // empty line
         ifs.getline( buf, MAX_BUF_LEN, '=' );   // SKILLS =
         ifs >> scenario.skillTypeNum;
-        input.names.skillNames.resize( scenario.skillTypeNum );
-        for (int i = 0; i < scenario.skillTypeNum; ++i) {
+        scenario.skillSize = scenario.skillTypeNum + NurseRostering::Scenario::Skill::ID_BEGIN;
+        input.names.skillNames.resize( scenario.skillSize );
+        for (int i = NurseRostering::Scenario::Skill::ID_BEGIN; i < scenario.skillSize; ++i) {
             ifs >> input.names.skillNames[i];
             input.names.skillMap[input.names.skillNames[i]] = i;
         }
@@ -191,9 +192,10 @@ namespace INRC2
         ifs.getline( buf, MAX_BUF_LEN );        // empty line
         ifs.getline( buf, MAX_BUF_LEN, '=' );   // SHIFT_TYPES =
         ifs >> scenario.shiftTypeNum;
-        scenario.shifts.resize( scenario.shiftTypeNum );
-        input.names.shiftNames.resize( scenario.shiftTypeNum );
-        for (int i = 0; i < scenario.shiftTypeNum; ++i) {
+        scenario.shiftSize = scenario.shiftTypeNum + NurseRostering::Scenario::Shift::ID_BEGIN;
+        scenario.shifts.resize( scenario.shiftSize );
+        input.names.shiftNames.resize( scenario.shiftSize );
+        for (int i = NurseRostering::Scenario::Shift::ID_BEGIN; i < scenario.shiftSize; ++i) {
             NurseRostering::Scenario::Shift &shift = scenario.shifts[i];
             ifs >> input.names.shiftNames[i] >> c    // name (
                 >> shift.minConsecutiveShiftNum >> c   // XX,
@@ -204,12 +206,14 @@ namespace INRC2
 
         ifs.getline( buf, MAX_BUF_LEN );        // empty line
         ifs.getline( buf, MAX_BUF_LEN );        // FORBIDDEN_SHIFT_TYPES_SUCCESSIONS
-        for (int i = 0; i < scenario.shiftTypeNum; ++i) {
+        scenario.shifts[NurseRostering::Scenario::Shift::ID_NONE].legalNextShifts
+            = vector<bool>( scenario.shiftSize, true );
+        for (int i = NurseRostering::Scenario::Shift::ID_BEGIN; i < scenario.shiftSize; ++i) {
             NurseRostering::Scenario::Shift &shift = scenario.shifts[i];
             string shiftName, nextShiftName;
             int succesionNum;
             ifs >> shiftName >> succesionNum;
-            shift.legalNextShifts = vector<bool>( scenario.shiftTypeNum, true );
+            shift.legalNextShifts = vector<bool>( scenario.shiftSize, true );
             for (int j = 0; j < succesionNum; ++j) {
                 ifs >> nextShiftName;
                 shift.legalNextShifts[input.names.shiftMap[nextShiftName]] = false;
@@ -225,13 +229,13 @@ namespace INRC2
         input.names.contractNames.resize( contractNum );
         for (int i = 0; i < contractNum; ++i) {
             NurseRostering::Scenario::Contract &contract = scenario.contracts[i];
-            ifs >> input.names.contractNames[i] >> c            // name (
-                >> contract.minShiftNum >> c                        // XX,
-                >> contract.maxShiftNum >> c >> c                   // XX) (
+            ifs >> input.names.contractNames[i] >> c         // name (
+                >> contract.minShiftNum >> c                 // XX,
+                >> contract.maxShiftNum >> c >> c            // XX) (
                 >> contract.minConsecutiveDayNum >> c        // XX,
                 >> contract.maxConsecutiveDayNum >> c >> c   // XX) (
-                >> contract.minConsecutiveDayoffNum >> c            // XX,
-                >> contract.maxConsecutiveDayoffNum >> c            // )
+                >> contract.minConsecutiveDayoffNum >> c     // XX,
+                >> contract.maxConsecutiveDayoffNum >> c     // )
                 >> contract.maxWorkingWeekendNum
                 >> contract.completeWeekend;
             input.names.contractMap[input.names.contractNames[i]] = i;
@@ -245,14 +249,13 @@ namespace INRC2
         input.names.nurseNames.resize( scenario.nurseNum );
         for (int i = 0; i < scenario.nurseNum; ++i) {
             NurseRostering::Scenario::Nurse &nurse = scenario.nurses[i];
-            int skillNum;
             string contractName, skillName;
-            ifs >> input.names.nurseNames[i] >> contractName >> skillNum;
+            ifs >> input.names.nurseNames[i] >> contractName >> nurse.skillNum;
             input.names.nurseMap[input.names.nurseNames[i]] = i;
             nurse.contract = input.names.contractMap[contractName];
-            nurse.skillNum = skillNum;
-            nurse.skills = vector<bool>( scenario.skillTypeNum, false );
-            for (int j = 0; j < skillNum; ++j) {
+            nurse.skills = vector<bool>( scenario.skillSize, false );
+            nurse.skills[NurseRostering::Scenario::Skill::ID_NONE] = true;
+            for (int j = 0; j < nurse.skillNum; ++j) {
                 ifs >> skillName;
                 nurse.skills[input.names.skillMap[skillName]] = true;
             }
@@ -289,7 +292,7 @@ namespace INRC2
         history.consecutiveShiftNums.resize( input.scenario.nurseNum );
         history.consecutiveDayNums.resize( input.scenario.nurseNum );
         history.consecutiveDayoffNums.resize( input.scenario.nurseNum );
-        for (int i = input.scenario.nurseNum; i > 0; --i) {
+        for (int i = 0; i < input.scenario.nurseNum; ++i) {
             string nurseName, lastShiftName;
             ifs >> nurseName;
             NurseRostering::NurseID nurse = input.names.nurseMap[nurseName];
@@ -306,9 +309,12 @@ namespace INRC2
     bool readWeekData( const std::string &weekDataFileName, NurseRostering &input )
     {
         NurseRostering::WeekData &weekdata = input.weekData;
-        weekdata.minNurseNums = vector< vector< vector<int> > >( NurseRostering::Weekday::SIZE, vector< vector<int> >( input.scenario.shifts.size(), vector<int>( input.scenario.skillTypeNum ) ) );
-        weekdata.optNurseNums = vector< vector< vector<int> > >( NurseRostering::Weekday::SIZE, vector< vector<int> >( input.scenario.shifts.size(), vector<int>( input.scenario.skillTypeNum ) ) );
-        weekdata.shiftOffs = vector< vector< vector<bool> > >( NurseRostering::Weekday::SIZE, vector< vector<bool> >( input.scenario.shifts.size(), vector<bool>( input.scenario.nurseNum, false ) ) );
+        weekdata.minNurseNums = vector< vector< vector<int> > >( NurseRostering::Weekday::SIZE,
+            vector< vector<int> >( input.scenario.shiftSize, vector<int>( input.scenario.skillSize ) ) );
+        weekdata.optNurseNums = vector< vector< vector<int> > >( NurseRostering::Weekday::SIZE,
+            vector< vector<int> >( input.scenario.shiftSize, vector<int>( input.scenario.skillSize ) ) );
+        weekdata.shiftOffs = vector< vector< vector<bool> > >( NurseRostering::Weekday::SIZE,
+            vector< vector<bool> >( input.scenario.shiftSize, vector<bool>( input.scenario.nurseNum, false ) ) );
         char c;
         char buf[MAX_BUF_SIZE];
         ifstream ifs( weekDataFileName );
@@ -333,7 +339,8 @@ namespace INRC2
             }
             NurseRostering::ShiftID shift = input.names.shiftMap[shiftName];
             NurseRostering::SkillID skill = input.names.skillMap[skillName];
-            for (int weekday = NurseRostering::Weekday::Mon; weekday < NurseRostering::Weekday::SIZE; ++weekday) {
+            for (int weekday = NurseRostering::Weekday::Mon;
+                weekday < NurseRostering::Weekday::SIZE; ++weekday) {
                 ifs >> c >> weekdata.minNurseNums[weekday][shift][skill]
                     >> c >> weekdata.optNurseNums[weekday][shift][skill] >> c;
             }
@@ -348,7 +355,8 @@ namespace INRC2
             NurseRostering::ShiftID shift = input.names.shiftMap[shiftName];
             NurseRostering::NurseID nurse = input.names.nurseMap[nurseName];
             if (shift == NurseRostering::Scenario::Shift::ID_ANY) {
-                for (int s = input.scenario.shifts.size() - 1; s >= 0; --s) {
+                for (int s = NurseRostering::Scenario::Shift::ID_BEGIN;
+                    s < input.scenario.shiftSize; ++s) {
                     weekdata.shiftOffs[weekday][s][nurse] = true;
                 }
             } else {
@@ -427,7 +435,7 @@ namespace INRC2
         ostringstream oss;
         for (NurseRostering::NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
             for (int weekday = NurseRostering::Weekday::Mon; weekday < NurseRostering::Weekday::SIZE; ++weekday) {
-                if (assign[nurse][weekday].shift != NurseRostering::Scenario::Shift::ID_NONE) {
+                if (assign.isWorking( nurse, weekday )) {
                     ++totalAssign;
                     oss << names.nurseNames[nurse] << ' '
                         << weekdayNames[weekday] << ' '

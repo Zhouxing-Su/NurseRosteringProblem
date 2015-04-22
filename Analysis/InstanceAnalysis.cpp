@@ -23,11 +23,11 @@ void analyzeInstance()
         string scenarioName( instanceDir + instance[i] + scePrefix + instance[i] + fileSuffix );
         readScenario( scenarioName, p );
         csv << header1_prefix0;
-        for (int sk = 0; sk < p.scenario.skillTypeNum; sk++) {
+        for (int sk = NurseRostering::Scenario::Skill::ID_BEGIN; sk < p.scenario.skillSize; sk++) {
             csv << header1_suffix;
         }
         csv << endl << header1_prefix1 << ',';
-        for (int sk = 0; sk < p.scenario.skillTypeNum; sk++) {
+        for (int sk = NurseRostering::Scenario::Skill::ID_BEGIN; sk < p.scenario.skillSize; sk++) {
             csv << p.names.skillNames[sk] << ',';
         }
         csv << endl;
@@ -36,14 +36,14 @@ void analyzeInstance()
         int maxNurseNum = 0;
         int maxNurseOnWeekend = 0;
         int totalNurseNum = p.scenario.nurseNum * 7;
-        vector<int> nurseNumPerSkill( p.scenario.skillTypeNum, 0 );
-        vector<double> averageNurseNumPerSkill( p.scenario.skillTypeNum, 0 );
+        vector<int> nurseNumPerSkill( p.scenario.skillSize, 0 );
+        vector<double> averageNurseNumPerSkill( p.scenario.skillSize, 0 );
         for (int n = 0; n < p.scenario.nurseNum; n++) {
             minNurseNum += p.scenario.contracts[p.scenario.nurses[n].contract].minShiftNum;
             maxNurseNum += p.scenario.contracts[p.scenario.nurses[n].contract].maxShiftNum;
             maxNurseOnWeekend += p.scenario.contracts[p.scenario.nurses[n].contract].maxWorkingWeekendNum;
             const vector<bool> &skills = p.scenario.nurses[n].skills;
-            for (int skill = 0; skill < p.scenario.skillTypeNum; skill++) {
+            for (int skill = NurseRostering::Scenario::Skill::ID_BEGIN; skill < p.scenario.skillSize; skill++) {
                 if (skills[skill]) {
                     nurseNumPerSkill[skill]++;
                     averageNurseNumPerSkill[skill] += (1.0 / skills.size());
@@ -55,18 +55,18 @@ void analyzeInstance()
             << minNurseNum / (p.scenario.maxWeekCount + 1.0)
             << '|' << maxNurseNum / (p.scenario.maxWeekCount + 1.0)
             << '|' << totalNurseNum << ',' << maxNurseOnWeekend * 2 / (p.scenario.maxWeekCount + 1.0);
-        for (int sk = 0; sk < p.scenario.skillTypeNum; sk++) {
+        for (int sk = NurseRostering::Scenario::Skill::ID_BEGIN; sk < p.scenario.skillSize; sk++) {
             csv << ',' << averageNurseNumPerSkill[sk] * 7 << '|' << nurseNumPerSkill[sk] * 7;
         }
         csv << endl;
 
         // print weekdata header
         csv << header2_prefix0;
-        for (int sk = 0; sk < p.scenario.skillTypeNum; sk++) {
+        for (int sk = NurseRostering::Scenario::Skill::ID_BEGIN; sk < p.scenario.skillSize; sk++) {
             csv << header2_suffix;
         }
         csv << endl << header2_prefix1 << ',';
-        for (int sk = 0; sk < p.scenario.skillTypeNum; sk++) {
+        for (int sk = NurseRostering::Scenario::Skill::ID_BEGIN; sk < p.scenario.skillSize; sk++) {
             csv << p.names.skillNames[sk] << ',';
         }
         csv << endl;
@@ -81,18 +81,18 @@ void analyzeInstance()
             int totalOptNurseRequire = 0;
             int minNurseRequireOnWeekend = 0;
             int optNurseRequireOnWeekend = 0;
-            vector<int> minRequirePerSkill( p.scenario.skillTypeNum, 0 );
-            vector<int> optRequirePerSkill( p.scenario.skillTypeNum, 0 );
-            for (int weekday = 0; weekday < 7; weekday++) {
-                for (int sh = 0; sh < p.scenario.shiftTypeNum; sh++) {
-                    for (int sk = 0; sk < p.scenario.skillTypeNum; sk++) {
+            vector<int> minRequirePerSkill( p.scenario.skillSize, 0 );
+            vector<int> optRequirePerSkill( p.scenario.skillSize, 0 );
+            for (int weekday = NurseRostering::Weekday::Mon; weekday < NurseRostering::Weekday::SIZE; ++weekday) {
+                for (int sh = NurseRostering::Scenario::Shift::ID_BEGIN; sh < p.scenario.shiftSize; sh++) {
+                    for (int sk = NurseRostering::Scenario::Skill::ID_BEGIN; sk < p.scenario.skillSize; sk++) {
                         int minn = p.weekData.minNurseNums[weekday][sh][sk];
                         int optn = p.weekData.optNurseNums[weekday][sh][sk];
                         totalMinNurseRequire += minn;
                         totalOptNurseRequire += optn;
                         minRequirePerSkill[sk] += minn;
                         optRequirePerSkill[sk] += optn;
-                        if (weekday >= 5) {
+                        if (weekday >= NurseRostering::Weekday::Sat) {
                             minNurseRequireOnWeekend += minn;
                             optNurseRequireOnWeekend += optn;
                         }
@@ -102,7 +102,7 @@ void analyzeInstance()
             // print weekdata info
             csv << w << ',' << totalMinNurseRequire << '|' << totalOptNurseRequire << ','
                 << minNurseRequireOnWeekend << '|' << optNurseRequireOnWeekend;
-            for (int sk = 0; sk < p.scenario.skillTypeNum; sk++) {
+            for (int sk = NurseRostering::Scenario::Skill::ID_BEGIN; sk < p.scenario.skillSize; sk++) {
                 csv << ',' << minRequirePerSkill[sk] << '|' << optRequirePerSkill[sk];
             }
             csv << endl;

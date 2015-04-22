@@ -48,8 +48,8 @@ NurseRostering::ObjValue NurseRostering::Solver::checkFeasibility( const AssignT
 
     // check H2: Under-staffing
     for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
-        for (ShiftID shift = 0; shift < problem.scenario.shiftTypeNum; ++shift) {
-            for (SkillID skill = 0; skill < problem.scenario.skillTypeNum; ++skill) {
+        for (ShiftID shift = NurseRostering::Scenario::Shift::ID_BEGIN; shift < problem.scenario.shiftSize; ++shift) {
+            for (SkillID skill = NurseRostering::Scenario::Skill::ID_BEGIN; skill < problem.scenario.skillSize; ++skill) {
                 if (nurseNum[weekday][shift][skill] < problem.weekData.minNurseNums[weekday][shift][skill]) {
                     objValue += DefaultPenalty::UnderStaff_Repair *
                         (problem.weekData.minNurseNums[weekday][shift][skill] - nurseNum[weekday][shift][skill]);
@@ -61,20 +61,16 @@ NurseRostering::ObjValue NurseRostering::Solver::checkFeasibility( const AssignT
     // check H3: Shift type successions
     for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
         for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
-            if (assign.isWorking( nurse, weekday ) && assign.isWorking( nurse, weekday - 1 )) {
-                objValue += DefaultPenalty::Succession_Repair *
-                    (!problem.scenario.shifts[assign[nurse][weekday - 1].shift].legalNextShifts[assign[nurse][weekday].shift]);
-            }
+            objValue += DefaultPenalty::Succession_Repair *
+                (!problem.scenario.shifts[assign[nurse][weekday - 1].shift].legalNextShifts[assign[nurse][weekday].shift]);
         }
     }
 
     // check H4: Missing required skill
     for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
         for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
-            if (assign.isWorking( nurse, weekday )) {
-                if (!problem.scenario.nurses[nurse].skills[assign[nurse][weekday].skill]) {
-                    return DefaultPenalty::FORBIDDEN_MOVE;
-                }
+            if (!problem.scenario.nurses[nurse].skills[assign[nurse][weekday].skill]) {
+                return DefaultPenalty::FORBIDDEN_MOVE;
             }
         }
     }
@@ -94,8 +90,8 @@ NurseRostering::ObjValue NurseRostering::Solver::checkObjValue( const AssignTabl
 
     // check S1: Insufficient staffing for optimal coverage (30)
     for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
-        for (ShiftID shift = 0; shift < problem.scenario.shiftTypeNum; ++shift) {
-            for (SkillID skill = 0; skill < problem.scenario.skillTypeNum; ++skill) {
+        for (ShiftID shift = NurseRostering::Scenario::Shift::ID_BEGIN; shift < problem.scenario.shiftSize; ++shift) {
+            for (SkillID skill = NurseRostering::Scenario::Skill::ID_BEGIN; skill < problem.scenario.skillSize; ++skill) {
                 int missingNurse = (problem.weekData.optNurseNums[weekday][shift][skill]
                     - nurseNums[weekday][shift][skill]);
                 if (missingNurse > 0) {
@@ -153,10 +149,8 @@ NurseRostering::ObjValue NurseRostering::Solver::checkObjValue( const AssignTabl
     for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
         for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
             const ShiftID &shift = assign[nurse][weekday].shift;
-            if (Assign::isWorking( shift )) {
-                objValue += DefaultPenalty::Preference *
-                    problem.weekData.shiftOffs[weekday][shift][nurse];
-            }
+            objValue += DefaultPenalty::Preference *
+                problem.weekData.shiftOffs[weekday][shift][nurse];
         }
     }
 
@@ -272,12 +266,10 @@ void NurseRostering::Solver::errorLog( const std::string &msg ) const
 NurseRostering::NurseNumsOnSingleAssign NurseRostering::Solver::countNurseNums( const AssignTable &assign ) const
 {
     NurseNumsOnSingleAssign nurseNums( Weekday::SIZE,
-        vector< vector<int> >( problem.scenario.shiftTypeNum, vector<int>( problem.scenario.skillTypeNum, 0 ) ) );
+        vector< vector<int> >( problem.scenario.shiftSize, vector<int>( problem.scenario.skillSize, 0 ) ) );
     for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
         for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
-            if (assign.isWorking( nurse, weekday )) {
-                ++nurseNums[weekday][assign[nurse][weekday].shift][assign[nurse][weekday].skill];
-            }
+            ++nurseNums[weekday][assign[nurse][weekday].shift][assign[nurse][weekday].skill];
         }
     }
 
@@ -365,19 +357,19 @@ void NurseRostering::Solver::checkConsecutiveViolation( int &objValue,
 
 void NurseRostering::Solver::discoverNurseSkillRelation()
 {
-    nurseNumOfSkill = vector<SkillID>( problem.scenario.skillTypeNum, 0 );
-    nurseWithSkill = vector< vector< vector<NurseID> > >( problem.scenario.skillTypeNum );
+    nurseNumOfSkill = vector<SkillID>( problem.scenario.skillSize, 0 );
+    nurseWithSkill = vector< vector< vector<NurseID> > >( problem.scenario.skillSize );
 
-    for (NurseID n = 0; n < problem.scenario.nurseNum; ++n) {
-        const vector<bool> &skills = problem.scenario.nurses[n].skills;
-        unsigned skillNum = problem.scenario.nurses[n].skillNum;
-        for (int skill = 0; skill < problem.scenario.skillTypeNum; ++skill) {
+    for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
+        const vector<bool> &skills = problem.scenario.nurses[nurse].skills;
+        unsigned skillNum = problem.scenario.nurses[nurse].skillNum;
+        for (int skill = NurseRostering::Scenario::Skill::ID_BEGIN; skill < problem.scenario.skillSize; ++skill) {
             if (skills[skill]) {
                 ++nurseNumOfSkill[skill];
                 if (skillNum > nurseWithSkill[skill].size()) {
                     nurseWithSkill[skill].resize( skillNum );
                 }
-                nurseWithSkill[skill][skillNum - 1].push_back( n );
+                nurseWithSkill[skill][skillNum - 1].push_back( nurse );
             }
         }
     }
