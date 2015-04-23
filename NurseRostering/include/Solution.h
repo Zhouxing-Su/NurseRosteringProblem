@@ -338,7 +338,7 @@ private:
     bool fillAssign( int weekday, ShiftID shift, SkillID skill, NurseID nurse, int nurseNum );
 
     // allocate space for data structure and set default value
-    // must be called before generating initial solution
+    // must be called before building up a solution
     void resetAssign();
     void resetAssistData();
 
@@ -377,6 +377,7 @@ private:
     ObjValue trySwapNurse( const Move &move ) const;
     // evaluate cost of swapping Assign of two nurses in consecutive days start from weekday
     // and record the selected end of the block into weekday2
+    // the recorded move will always be no tabu move or meet aspiration criteria
     ObjValue trySwapBlock( int weekday, int &weekday2, NurseID nurse, NurseID nurse2 ) const;
     ObjValue trySwapBlock( const Move &move ) const;
     // evaluate cost of exchanging Assign of a nurse on two days
@@ -424,27 +425,31 @@ private:
     {
         return (iterCount > dayTabu[move.nurse][move.weekday]);
     }
-    bool noSwapTabu( const Move &move ) const
+    bool noSwapTabu( int weekday, NurseID nurse, NurseID nurse2 ) const
     {
-        const Assign &a( assign[move.nurse][move.weekday] );
-        const Assign &a2( assign[move.nurse2][move.weekday] );
+        const Assign &a( assign[nurse][weekday] );
+        const Assign &a2( assign[nurse2][weekday] );
 
         if (a.isWorking()) {
             if (a2.isWorking()) {
-                return ((iterCount > shiftTabu[move.nurse][move.weekday][a2.shift][a2.skill])
-                    || (iterCount > shiftTabu[move.nurse2][move.weekday][a.shift][a.skill]));
+                return ((iterCount > shiftTabu[nurse][weekday][a2.shift][a2.skill])
+                    || (iterCount > shiftTabu[nurse2][weekday][a.shift][a.skill]));
             } else {
-                return ((iterCount > dayTabu[move.nurse][move.weekday])
-                    || (iterCount > shiftTabu[move.nurse2][move.weekday][a.shift][a.skill]));
+                return ((iterCount > dayTabu[nurse][weekday])
+                    || (iterCount > shiftTabu[nurse2][weekday][a.shift][a.skill]));
             }
         } else {
             if (a2.isWorking()) {
-                return ((iterCount > shiftTabu[move.nurse][move.weekday][a2.shift][a2.skill])
-                    || (iterCount > dayTabu[move.nurse2][move.weekday]));
+                return ((iterCount > shiftTabu[nurse][weekday][a2.shift][a2.skill])
+                    || (iterCount > dayTabu[nurse2][weekday]));
             } else {    // no change
                 return true;
             }
         }
+    }
+    bool noSwapTabu( const Move &move ) const
+    {
+        return noSwapTabu( move.weekday, move.nurse, move.nurse2 );
     }
     bool noExchangeTabu( const Move &move ) const
     {
@@ -470,6 +475,7 @@ private:
     }
     bool noBlockSwapTabu( const Move &move ) const
     {
+        // TODO : more effective strategy?
         int tabuCount = (move.weekday2 - move.weekday + 1) / 2;
         for (int w = move.weekday; w <= move.weekday2; ++w) {
             --tabuCount;
@@ -478,11 +484,11 @@ private:
         return (tabuCount > 0);
     }
 
-    bool aspirationCritiera( const Move &bestMove, const Move &bestMove_tabu ) const
+    bool aspirationCritiera( ObjValue bestMoveDelta, ObjValue bestMoveDelta_tabu ) const
     {
-        return ((bestMove.delta >= DefaultPenalty::MAX_OBJ_VALUE)
-            || ((objValue + bestMove_tabu.delta < optima.getObjValue())
-            && (bestMove_tabu.delta < bestMove.delta)));
+        return ((bestMoveDelta >= DefaultPenalty::MAX_OBJ_VALUE)
+            || ((objValue + bestMoveDelta_tabu < optima.getObjValue())
+            && (bestMoveDelta_tabu < bestMoveDelta)));
     }
 
     void updateDayTabu( NurseID nurse, int weekday );
@@ -562,8 +568,10 @@ private:
 
     // for switching between add and remove
     // 1 for no improvement which is opposite in localSearch
-    mutable bool findBestARLoopFlag;    // findBestARLoop() will modify it
-    mutable bool findBestARLoopOnBlockBorderFlag;   // findBestARLoopOnBlockBorder() will modify it
+    mutable bool findBestARLoop_flag;    // findBestARLoop() will modify it
+    mutable bool findBestARLoopOnBlockBorder_flag;   // findBestARLoopOnBlockBorder() will modify it
+    // for controlling start point of the search of best block swap
+    mutable NurseID findBestBlockSwap_startNurse;    // findBestBlockSwap() will modify it
 
     ShiftTabu shiftTabu;
     DayTabu dayTabu;

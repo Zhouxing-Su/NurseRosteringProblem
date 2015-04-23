@@ -276,6 +276,10 @@ void NurseRostering::Solution::resetAssistData()
         vector<IterCount>( solver.problem.scenario.skillSize, 0 ) ) ) );
     dayTabu = DayTabu( solver.problem.scenario.nurseNum,
         vector<IterCount>( Weekday::SIZE, 0 ) );
+    // flags
+    findBestARLoop_flag = true;
+    findBestARLoopOnBlockBorder_flag = true;
+    findBestBlockSwap_startNurse = 0;
 }
 
 void NurseRostering::Solution::evaluateObjValue()
@@ -559,7 +563,7 @@ bool NurseRostering::Solution::findBestAdd( Move &bestMove ) const
         }
     }
 
-    if (aspirationCritiera( bestMove, bestMove_tabu )) {
+    if (aspirationCritiera( bestMove.delta, bestMove_tabu.delta )) {
         bestMove = bestMove_tabu;
     }
 
@@ -597,7 +601,7 @@ bool NurseRostering::Solution::findBestChange( Move &bestMove ) const
         }
     }
 
-    if (aspirationCritiera( bestMove, bestMove_tabu )) {
+    if (aspirationCritiera( bestMove.delta, bestMove_tabu.delta )) {
         bestMove = bestMove_tabu;
     }
 
@@ -629,7 +633,7 @@ bool NurseRostering::Solution::findBestRemove( Move &bestMove ) const
         }
     }
 
-    if (aspirationCritiera( bestMove, bestMove_tabu )) {
+    if (aspirationCritiera( bestMove.delta, bestMove_tabu.delta )) {
         bestMove = bestMove_tabu;
     }
 
@@ -663,7 +667,7 @@ bool NurseRostering::Solution::findBestSwap( Move &bestMove ) const
         }
     }
 
-    if (aspirationCritiera( bestMove, bestMove_tabu )) {
+    if (aspirationCritiera( bestMove.delta, bestMove_tabu.delta )) {
         bestMove = bestMove_tabu;
     }
 
@@ -675,35 +679,36 @@ bool NurseRostering::Solution::findBestBlockSwap( Move &bestMove ) const
 {
     penalty.setBlockSwapMode();
 
+    NurseID maxNurseID = solver.problem.scenario.nurseNum - 1;
+
     RandSelect<ObjValue> rs;
-    Move bestMove_tabu;
-    RandSelect<ObjValue> rs_tabu;
 
     Move move;
     move.mode = Move::Mode::BlockSwap;
-    for (move.nurse = 0; move.nurse < solver.problem.scenario.nurseNum; ++move.nurse) {
-        for (move.nurse2 = move.nurse + 1; move.nurse2 < solver.problem.scenario.nurseNum; ++move.nurse2) {
+    move.nurse = findBestBlockSwap_startNurse;
+    for (NurseID count = solver.problem.scenario.nurseNum; count > 0; --count) {
+        (move.nurse != maxNurseID) ? (++move.nurse) : (move.nurse = 0);
+        move.nurse2 = move.nurse;
+        for (NurseID count2 = count - 1; count2 > 0; --count2) {
+            (move.nurse2 != maxNurseID) ? (++move.nurse2) : (move.nurse2 = 0);
             for (move.weekday = Weekday::Mon; move.weekday < Weekday::SIZE; ++move.weekday) {
+                // TODO : it can be more efficient to reuse the swapped row rather than recover it
                 move.delta = trySwapBlock( move.weekday, move.weekday2, move.nurse, move.nurse2 );
-                if (noBlockSwapTabu( move )) {
-                    if (rs.isMinimal( move.delta, bestMove.delta )) {
-                        bestMove = move;
-                    }
-                } else {    // tabu
-                    if (rs_tabu.isMinimal( move.delta, bestMove_tabu.delta )) {
-                        bestMove_tabu = move;
+                if (rs.isMinimal( move.delta, bestMove.delta )) {
+                    bestMove = move;
+                    if (bestMove.delta < 0) {
+                        findBestBlockSwap_startNurse = move.nurse;
+                        penalty.setDefaultMode();
+                        return true;
                     }
                 }
             }
         }
     }
 
-    if (aspirationCritiera( bestMove, bestMove_tabu )) {
-        bestMove = bestMove_tabu;
-    }
-
+    findBestBlockSwap_startNurse = move.nurse;
     penalty.setDefaultMode();
-    return (bestMove.delta < 0);
+    return false;
 }
 
 bool NurseRostering::Solution::findBestExchange( Move &bestMove ) const
@@ -733,7 +738,7 @@ bool NurseRostering::Solution::findBestExchange( Move &bestMove ) const
         }
     }
 
-    if (aspirationCritiera( bestMove, bestMove_tabu )) {
+    if (aspirationCritiera( bestMove.delta, bestMove_tabu.delta )) {
         bestMove = bestMove_tabu;
     }
 
@@ -744,13 +749,11 @@ bool NurseRostering::Solution::findBestExchange( Move &bestMove ) const
 bool NurseRostering::Solution::findBestARLoop( Move &bestMove ) const
 {
     bool isImproved;
-    isImproved = findBestARLoopFlag
+    isImproved = findBestARLoop_flag
         ? findBestAdd( bestMove ) : findBestRemove( bestMove );
 
     if (!isImproved) {
-        findBestARLoopFlag = !findBestARLoopFlag;
-        isImproved = findBestARLoopFlag
-            ? findBestAdd( bestMove ) : findBestRemove( bestMove );
+        findBestARLoop_flag = !findBestARLoop_flag;
     }
 
     return isImproved;
@@ -806,7 +809,7 @@ bool NurseRostering::Solution::findBestARBoth( Move &bestMove ) const
         }
     }
 
-    if (aspirationCritiera( bestMove, bestMove_tabu )) {
+    if (aspirationCritiera( bestMove.delta, bestMove_tabu.delta )) {
         bestMove = bestMove_tabu;
     }
 
@@ -848,7 +851,7 @@ bool NurseRostering::Solution::findBestAddOnBlockBorder( Move &bestMove ) const
         }
     }
 
-    if (aspirationCritiera( bestMove, bestMove_tabu )) {
+    if (aspirationCritiera( bestMove.delta, bestMove_tabu.delta )) {
         bestMove = bestMove_tabu;
     }
 
@@ -890,7 +893,7 @@ bool NurseRostering::Solution::findBestChangeOnBlockBorder( Move &bestMove ) con
         }
     }
 
-    if (aspirationCritiera( bestMove, bestMove_tabu )) {
+    if (aspirationCritiera( bestMove.delta, bestMove_tabu.delta )) {
         bestMove = bestMove_tabu;
     }
 
@@ -926,7 +929,7 @@ bool NurseRostering::Solution::findBestRemoveOnBlockBorder( Move &bestMove ) con
         }
     }
 
-    if (aspirationCritiera( bestMove, bestMove_tabu )) {
+    if (aspirationCritiera( bestMove.delta, bestMove_tabu.delta )) {
         bestMove = bestMove_tabu;
     }
 
@@ -962,7 +965,7 @@ bool NurseRostering::Solution::findBestSwapOnBlockBorder( Move &bestMove ) const
         }
     }
 
-    if (aspirationCritiera( bestMove, bestMove_tabu )) {
+    if (aspirationCritiera( bestMove.delta, bestMove_tabu.delta )) {
         bestMove = bestMove_tabu;
     }
 
@@ -999,7 +1002,7 @@ bool NurseRostering::Solution::findBestExchangeOnBlockBorder( Move &bestMove ) c
         }
     }
 
-    if (aspirationCritiera( bestMove, bestMove_tabu )) {
+    if (aspirationCritiera( bestMove.delta, bestMove_tabu.delta )) {
         bestMove = bestMove_tabu;
     }
 
@@ -1010,13 +1013,11 @@ bool NurseRostering::Solution::findBestExchangeOnBlockBorder( Move &bestMove ) c
 bool NurseRostering::Solution::findBestARLoopOnBlockBorder( Move &bestMove ) const
 {
     bool isImproved;
-    isImproved = findBestARLoopOnBlockBorderFlag
+    isImproved = findBestARLoopOnBlockBorder_flag
         ? findBestAddOnBlockBorder( bestMove ) : findBestRemove( bestMove );
 
     if (!isImproved) {
-        findBestARLoopOnBlockBorderFlag = !findBestARLoopOnBlockBorderFlag;
-        isImproved = findBestARLoopOnBlockBorderFlag
-            ? findBestAddOnBlockBorder( bestMove ) : findBestRemoveOnBlockBorder( bestMove );
+        findBestARLoopOnBlockBorder_flag = !findBestARLoopOnBlockBorder_flag;
     }
 
     return isImproved;
@@ -1074,7 +1075,7 @@ bool NurseRostering::Solution::findBestARBothOnBlockBorder( Move &bestMove ) con
         }
     }
 
-    if (aspirationCritiera( bestMove, bestMove_tabu )) {
+    if (aspirationCritiera( bestMove.delta, bestMove_tabu.delta )) {
         bestMove = bestMove_tabu;
     }
 
@@ -1724,18 +1725,63 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock( int weekday, in
         return DefaultPenalty::FORBIDDEN_MOVE;
     }
 
+    if (!(isValidSuccession( nurse2, assign[nurse2][weekday].shift, weekday )
+        && isValidSuccession( nurse2, assign[nurse][weekday].shift, weekday ))) {
+        return DefaultPenalty::FORBIDDEN_MOVE;
+    }
+
+    RandSelect<ObjValue> rs;
+    RandSelect<ObjValue> rs_tabu;
+
     ObjValue delta = 0;
     ObjValue minDelta = DefaultPenalty::FORBIDDEN_MOVE;
+    ObjValue minDelta_tabu = DefaultPenalty::FORBIDDEN_MOVE;
+    int weekday2_tabu = weekday;
 
-    if (isValidSuccession( nurse2, assign[nurse2][weekday].shift, weekday )
-        && isValidSuccession( nurse2, assign[nurse][weekday].shift, weekday )) {
-        for (int w = weekday; w < Weekday::SIZE; ++w) {
-            if (!(solver.problem.scenario.nurses[nurse].skills[assign[nurse2][w].skill]
-                && solver.problem.scenario.nurses[nurse2].skills[assign[nurse][w].skill])) {
-                break;  // longer blocks will also be missing skill
-            }
+    // backup original data
+    int startWeekday = weekday;
 
+    // try each block length
+    int count = 0;
+    int notabuCount = 0;
+    for (; weekday < Weekday::SIZE; ++weekday) {
+        if (!(solver.problem.scenario.nurses[nurse].skills[assign[nurse2][weekday].skill]
+            && solver.problem.scenario.nurses[nurse2].skills[assign[nurse][weekday].skill])) {
+            break;  // longer blocks will also miss this skill
         }
+
+        delta += trySwapNurse( weekday, nurse, nurse2 );
+        (const_cast<Solution*>(this))->swapNurse( weekday, nurse, nurse2 );
+
+        ++count;
+        notabuCount += noSwapTabu( weekday, nurse, nurse2 );
+
+        // only record best move when current block swap is valid
+        if (isValidPrior( nurse2, assign[nurse2][weekday].shift, weekday )
+            && isValidPrior( nurse2, assign[nurse][weekday].shift, weekday )) {
+            // TODO : tabu judgment?
+            if (2 * notabuCount > count) {  // over half of swaps are no tabu
+                if (rs.isMinimal( delta, minDelta )) {
+                    minDelta = delta;
+                    weekday2 = weekday;
+                }
+            } else {    // tabu
+                if (rs_tabu.isMinimal( delta, minDelta )) {
+                    minDelta_tabu = delta;
+                    weekday2_tabu = weekday;
+                }
+            }
+        }
+    }
+
+    if (aspirationCritiera( minDelta, minDelta_tabu )) {
+        minDelta = minDelta_tabu;
+        weekday2 = weekday2_tabu;
+    }
+
+    // recover original data
+    for (; startWeekday < weekday; ++startWeekday) {
+        (const_cast<Solution*>(this))->swapNurse( startWeekday, nurse, nurse2 );
     }
 
     return minDelta;
