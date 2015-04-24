@@ -11,12 +11,11 @@ void debugRun()
 {
     ostringstream id( "0" );
 
-    srand( static_cast<int>(time( NULL ) + clock()) );
     int instIndex = InstIndex::n005w4;
     char initHis = '0';
     char weekdata[WEEKDATA_SEQ_SIZE] = "5533";
     int randSeed = 8787;
-    double runningTime = instTimeout[getNurseNum( instIndex )];
+    double runningTime = 3600;
     test_customIO( id.str(), outputDirPrefix + id.str(), instIndex, initHis, weekdata, runningTime, randSeed );
 }
 
@@ -94,10 +93,10 @@ int main()
     loadInstSeq();
     FileLock::unlock( LOG_FILE_NAME );
 
-    //debugRun();
+    debugRun();
     //realRun();
     //benchmarkRun();
-    sprintRun();
+    //sprintRun();
 
     //system( "pause" );
     return 0;

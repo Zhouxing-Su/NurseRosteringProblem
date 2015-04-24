@@ -12,7 +12,7 @@ NurseRostering::Solution::tryMove = {
     &NurseRostering::Solution::tryChangeAssign,
     &NurseRostering::Solution::trySwapNurse,
     &NurseRostering::Solution::tryExchangeDay,
-    &NurseRostering::Solution::trySwapBlock     // TODO : use trySwapBlock_fast
+    &NurseRostering::Solution::trySwapBlock_fast     // TODO : use trySwapBlock_fast
 };
 const NurseRostering::Solution::FindBestMoveTable
 NurseRostering::Solution::findBestMove = {
@@ -21,7 +21,7 @@ NurseRostering::Solution::findBestMove = {
     &NurseRostering::Solution::findBestChange,
     &NurseRostering::Solution::findBestSwap,
     &NurseRostering::Solution::findBestExchange,
-    &NurseRostering::Solution::findBestBlockSwap,   // TODO : use findBestBlockSwap_fast
+    &NurseRostering::Solution::findBestBlockSwap_fast,   // TODO : use findBestBlockSwap_fast
     &NurseRostering::Solution::findBestARLoop,
     &NurseRostering::Solution::findBestARRand,
     &NurseRostering::Solution::findBestARBoth
@@ -33,7 +33,7 @@ NurseRostering::Solution::findBestMoveOnBlockBorder = {
     &NurseRostering::Solution::findBestChangeOnBlockBorder,
     &NurseRostering::Solution::findBestSwapOnBlockBorder,
     &NurseRostering::Solution::findBestExchangeOnBlockBorder,
-    &NurseRostering::Solution::findBestBlockSwap,   // TODO : keep/break consecutive block swap?
+    &NurseRostering::Solution::findBestBlockSwap_fast,   // TODO : keep/break consecutive block swap?
     &NurseRostering::Solution::findBestARLoopOnBlockBorder,
     &NurseRostering::Solution::findBestARRandOnBlockBorder,
     &NurseRostering::Solution::findBestARBothOnBlockBorder
@@ -135,15 +135,15 @@ bool NurseRostering::Solution::genInitAssign_Greedy()
         // decide assign sequence of skill
         // the greater requiredNurseNum/nurseNumOfSkill[skill] is, the smaller index in skillRank a skill will get
         vector<SkillID> skillRank( solver.problem.scenario.skillTypeNum );
-        vector<double> dailyRequire( solver.problem.scenario.skillTypeNum, 0 );
+        vector<double> dailyRequire( solver.problem.scenario.skillSize, 0 );
         for (int rank = 0; rank < solver.problem.scenario.skillTypeNum; ++rank) {
             SkillID skill = rank + NurseRostering::Scenario::Skill::ID_BEGIN;
             skillRank[rank] = skill;
             for (ShiftID shift = NurseRostering::Scenario::Shift::ID_BEGIN;
                 shift < solver.problem.scenario.shiftSize; ++shift) {
-                dailyRequire[rank] += solver.problem.weekData.minNurseNums[weekday][shift][skill];
+                dailyRequire[skill] += solver.problem.weekData.minNurseNums[weekday][shift][skill];
             }
-            dailyRequire[rank] /= nurseNumOfSkill[skill];
+            dailyRequire[skill] /= nurseNumOfSkill[skill];
         }
 
         class CmpDailyRequire
@@ -279,7 +279,7 @@ void NurseRostering::Solution::resetAssistData()
     // flags
     findBestARLoop_flag = true;
     findBestARLoopOnBlockBorder_flag = true;
-    findBestBlockSwap_startNurse = 0;
+    findBestBlockSwap_startNurse = solver.problem.scenario.nurseNum;
 }
 
 void NurseRostering::Solution::evaluateObjValue()
@@ -687,10 +687,10 @@ bool NurseRostering::Solution::findBestBlockSwap( Move &bestMove ) const
     move.mode = Move::Mode::BlockSwap;
     move.nurse = findBestBlockSwap_startNurse;
     for (NurseID count = solver.problem.scenario.nurseNum; count > 0; --count) {
-        (move.nurse != maxNurseID) ? (++move.nurse) : (move.nurse = 0);
+        (move.nurse < maxNurseID) ? (++move.nurse) : (move.nurse = 0);
         move.nurse2 = move.nurse;
         for (NurseID count2 = count - 1; count2 > 0; --count2) {
-            (move.nurse2 != maxNurseID) ? (++move.nurse2) : (move.nurse2 = 0);
+            (move.nurse2 < maxNurseID) ? (++move.nurse2) : (move.nurse2 = 0);
             for (move.weekday = Weekday::Mon; move.weekday < Weekday::SIZE; ++move.weekday) {
                 move.delta = trySwapBlock( move.weekday, move.weekday2, move.nurse, move.nurse2 );
                 if (rs.isMinimal( move.delta, bestMove.delta )) {
@@ -724,10 +724,10 @@ bool NurseRostering::Solution::findBestBlockSwap_fast( Move &bestMove ) const
     move.mode = Move::Mode::BlockSwap;
     move.nurse = findBestBlockSwap_startNurse;
     for (NurseID count = solver.problem.scenario.nurseNum; count > 0; --count) {
-        (move.nurse != maxNurseID) ? (++move.nurse) : (move.nurse = 0);
+        (move.nurse < maxNurseID) ? (++move.nurse) : (move.nurse = 0);
         move.nurse2 = move.nurse;
         for (NurseID count2 = count - 1; count2 > 0; --count2) {
-            (move.nurse2 != maxNurseID) ? (++move.nurse2) : (move.nurse2 = 0);
+            (move.nurse2 < maxNurseID) ? (++move.nurse2) : (move.nurse2 = 0);
             move.delta = trySwapBlock_fast( move.weekday, move.weekday2, move.nurse, move.nurse2 );
             if (noBlockSwapTabu( move )) {
                 if (rs.isMinimal( move.delta, bestMove.delta )) {
@@ -1815,7 +1815,9 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock( int weekday, in
 
         if (weekday >= Weekday::Sun) { break; }
 
-        (const_cast<Solution*>(this))->swapNurse( weekday, nurse, nurse2 );
+        (delta < DefaultPenalty::MAX_OBJ_VALUE)
+            ? (const_cast<Solution*>(this))->swapNurse( weekday, nurse, nurse2 )
+            : (delta -= DefaultPenalty::FORBIDDEN_MOVE);    // two day off
         ++weekday;
     }
 
@@ -1848,11 +1850,6 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock_fast( int &weekd
         return DefaultPenalty::FORBIDDEN_MOVE;
     }
 
-    if (!(isValidSuccession( nurse, assign[nurse2][weekday].shift, weekday )
-        && isValidSuccession( nurse2, assign[nurse][weekday].shift, weekday ))) {
-        return DefaultPenalty::FORBIDDEN_MOVE;
-    }
-
     RandSelect<ObjValue> rs;
 
     ObjValue delta = 0;
@@ -1869,11 +1866,18 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock_fast( int &weekd
     int w = Weekday::Mon;
     int w2;
     for (; w < Weekday::SIZE; ++w) {
+        if (!(isValidSuccession( nurse, assign[nurse2][w].shift, w )
+            && isValidSuccession( nurse2, assign[nurse][w].shift, w ))) {
+            continue;
+        }
+
         w2 = w;
         for (; (w2 < Weekday::SIZE) && hasSkill[w2]; ++w2) { // longer blocks will also miss this skill
             // only record best move when current block swap is valid
             delta += trySwapNurse( w2, nurse, nurse2 );
-            (const_cast<Solution*>(this))->swapNurse( w2, nurse, nurse2 );
+            (delta < DefaultPenalty::MAX_OBJ_VALUE)
+                ? (const_cast<Solution*>(this))->swapNurse( w2, nurse, nurse2 )
+                : (delta -= DefaultPenalty::FORBIDDEN_MOVE);    // two day off
             if (isValidPrior( nurse, assign[nurse2][w2].shift, w2 )
                 && isValidPrior( nurse2, assign[nurse][w2].shift, w2 )) {
                 if (rs.isMinimal( delta, minDelta )) {
@@ -1885,7 +1889,9 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock_fast( int &weekd
         }
 
         delta += trySwapNurse( w, nurse, nurse2 );
-        (const_cast<Solution*>(this))->swapNurse( w, nurse, nurse2 );
+        (delta < DefaultPenalty::MAX_OBJ_VALUE)
+            ? (const_cast<Solution*>(this))->swapNurse( w, nurse, nurse2 )
+            : (delta -= DefaultPenalty::FORBIDDEN_MOVE);    // two day off
         ++w;
 
         while ((w2--) > w) {
@@ -1899,7 +1905,9 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock_fast( int &weekd
             }
             // only record best move when current block swap is valid
             delta += trySwapNurse( w2, nurse, nurse2 );
-            (const_cast<Solution*>(this))->swapNurse( w2, nurse, nurse2 );
+            (delta < DefaultPenalty::MAX_OBJ_VALUE)
+                ? (const_cast<Solution*>(this))->swapNurse( w2, nurse, nurse2 )
+                : (delta -= DefaultPenalty::FORBIDDEN_MOVE);    // two day off
         }
     }
 
