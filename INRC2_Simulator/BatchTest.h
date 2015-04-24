@@ -118,6 +118,9 @@ void prepareArgv_FirstWeek( const std::string &id, const std::string &outputDir,
 void prepareArgv( const std::string &id, const std::string &outputDir, char *argv[], char argvBuf[][MAX_ARGV_LEN], int instIndex, const char *weeks, char week,
     const std::string &timeoutInSec, const std::string &randSeed = "", const std::string &cusIn = "", const std::string &cusOut = "" );
 
+#ifdef INRC2_CHECK_INSTANCE_FEASIBILITY_ONLINE
 void httpget( std::ostream &os, const char *host, const char *file );
+#endif
+
 
 #endif

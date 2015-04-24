@@ -2,15 +2,16 @@
 #define _WIN32_WINNT 0x601  // Win7
 #endif
 
-#include <boost/asio.hpp>
-
 #include "BatchTest.h"
+
+#ifdef INRC2_CHECK_INSTANCE_FEASIBILITY_ONLINE
+#include <boost/asio.hpp>
+using boost::asio::ip::tcp;
+#endif
 
 
 using namespace std;
 using namespace INRC2;
-
-using boost::asio::ip::tcp;
 
 
 char *fullArgv[ArgcVal::full] = {
@@ -182,11 +183,12 @@ void genWeekdataSequence( int instIndex, char weekdata[WEEKDATA_SEQ_SIZE] )
 
 void genInstanceSequence( int instIndex, char &initHis, char weekdata[WEEKDATA_SEQ_SIZE] )
 {
-    bool feasible = false;
+    bool feasible = true;
     do {
         initHis = genInitHisIndex();
         genWeekdataSequence( instIndex, weekdata );
 
+#ifdef INRC2_CHECK_INSTANCE_FEASIBILITY_ONLINE
         string file = "/" + instance[instIndex] + "/H0-" + instance[instIndex] + "-" + initHis;
         for (int weekNum = getWeekNum( instIndex ); weekNum >= 0; --weekNum) {
             file += ("/WD-" + instance[instIndex] + "-" + weekdata[weekNum]);
@@ -202,8 +204,10 @@ void genInstanceSequence( int instIndex, char &initHis, char weekdata[WEEKDATA_S
         } else if (strstr( buf, "Infeasible" )) {
             feasible = false;
         } else {
+            feasible = false;
             cerr << getTime() << " : error in response from feasible checker." << endl;
         }
+#endif
     } while (!feasible);
 }
 
@@ -401,6 +405,7 @@ void prepareArgv( const std::string &id, const std::string &outputDir, char *arg
     }
 }
 
+#ifdef INRC2_CHECK_INSTANCE_FEASIBILITY_ONLINE
 void httpget( ostream &os, const char *host, const char *file )
 {
     try {
@@ -482,3 +487,4 @@ void httpget( ostream &os, const char *host, const char *file )
         std::cerr << "Exception: " << e.what() << "\n";
     }
 }
+#endif
