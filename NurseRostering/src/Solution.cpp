@@ -1733,18 +1733,18 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapNurse( int weekday, Nu
     if (assign.isWorking( nurse, weekday )) {
         if (assign.isWorking( nurse2, weekday )) {
             delta += tryChangeAssign( weekday, nurse, assign[nurse2][weekday] );
-            delta += ((delta >= DefaultPenalty::MAX_OBJ_VALUE)
-                ? 0 : tryChangeAssign( weekday, nurse2, assign[nurse][weekday] ));
+            delta += ((delta < DefaultPenalty::MAX_OBJ_VALUE)
+                ? tryChangeAssign( weekday, nurse2, assign[nurse][weekday] ) : 0);
         } else {
             delta += tryRemoveAssign( weekday, nurse );
-            delta += ((delta >= DefaultPenalty::MAX_OBJ_VALUE)
-                ? 0 : tryAddAssign( weekday, nurse2, assign[nurse][weekday] ));
+            delta += ((delta < DefaultPenalty::MAX_OBJ_VALUE)
+                ? tryAddAssign( weekday, nurse2, assign[nurse][weekday] ) : 0);
         }
     } else {
         if (assign.isWorking( nurse2, weekday )) {
             delta += tryAddAssign( weekday, nurse, assign[nurse2][weekday] );
-            delta += ((delta >= DefaultPenalty::MAX_OBJ_VALUE)
-                ? 0 : tryRemoveAssign( weekday, nurse2 ));
+            delta += ((delta < DefaultPenalty::MAX_OBJ_VALUE)
+                ? tryRemoveAssign( weekday, nurse2 ) : 0);
         } else {    // no change
             delta = DefaultPenalty::FORBIDDEN_MOVE;
         }
@@ -1769,7 +1769,7 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock( int weekday, in
         return DefaultPenalty::FORBIDDEN_MOVE;
     }
 
-    if (!(isValidSuccession( nurse2, assign[nurse2][weekday].shift, weekday )
+    if (!(isValidSuccession( nurse, assign[nurse2][weekday].shift, weekday )
         && isValidSuccession( nurse2, assign[nurse][weekday].shift, weekday ))) {
         return DefaultPenalty::FORBIDDEN_MOVE;
     }
@@ -1848,7 +1848,7 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock_fast( int &weekd
         return DefaultPenalty::FORBIDDEN_MOVE;
     }
 
-    if (!(isValidSuccession( nurse2, assign[nurse2][weekday].shift, weekday )
+    if (!(isValidSuccession( nurse, assign[nurse2][weekday].shift, weekday )
         && isValidSuccession( nurse2, assign[nurse][weekday].shift, weekday ))) {
         return DefaultPenalty::FORBIDDEN_MOVE;
     }
@@ -1922,29 +1922,31 @@ NurseRostering::ObjValue NurseRostering::Solution::tryExchangeDay( int weekday, 
         return DefaultPenalty::FORBIDDEN_MOVE;
     }
 
-    // make sure they won't be two free days
+    // both are day off will change nothing
     if (!assign.isWorking( nurse, weekday ) && !assign.isWorking( nurse, weekday2 )) {
         return DefaultPenalty::FORBIDDEN_MOVE;
     }
 
     // check succession 
+    ShiftID shift = assign[nurse][weekday].shift;
+    ShiftID shift2 = assign[nurse][weekday2].shift;
     if (weekday == weekday2 + 1) {
-        if (!(isValidSuccession( nurse, assign[nurse][weekday].shift, weekday2 ) &&
-            solver.problem.scenario.shifts[assign[nurse][weekday].shift].legalNextShifts[assign[nurse][weekday2].shift] &&
-            isValidPrior( nurse, assign[nurse][weekday2].shift, weekday ))) {
+        if (!(isValidSuccession( nurse, shift, weekday2 )
+            && solver.problem.scenario.shifts[shift].legalNextShifts[shift2]
+            && isValidPrior( nurse, shift2, weekday ))) {
             return DefaultPenalty::FORBIDDEN_MOVE;
         }
     } else if (weekday == weekday2 - 1) {
-        if (!(isValidSuccession( nurse, assign[nurse][weekday2].shift, weekday ) &&
-            solver.problem.scenario.shifts[assign[nurse][weekday2].shift].legalNextShifts[assign[nurse][weekday].shift] &&
-            isValidPrior( nurse, assign[nurse][weekday].shift, weekday2 ))) {
+        if (!(isValidSuccession( nurse, shift2, weekday )
+            && solver.problem.scenario.shifts[shift2].legalNextShifts[shift]
+            && isValidPrior( nurse, shift, weekday2 ))) {
             return DefaultPenalty::FORBIDDEN_MOVE;
         }
     } else {
-        if (!(isValidSuccession( nurse, assign[nurse][weekday].shift, weekday2 ) &&
-            isValidPrior( nurse, assign[nurse][weekday].shift, weekday2 ) &&
-            isValidSuccession( nurse, assign[nurse][weekday2].shift, weekday ) &&
-            isValidPrior( nurse, assign[nurse][weekday2].shift, weekday ))) {
+        if (!(isValidSuccession( nurse, shift, weekday2 )
+            && isValidPrior( nurse, shift, weekday2 )
+            && isValidSuccession( nurse, shift2, weekday )
+            && isValidPrior( nurse, shift2, weekday ))) {
             return DefaultPenalty::FORBIDDEN_MOVE;
         }
     }
