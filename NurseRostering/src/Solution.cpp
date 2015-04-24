@@ -1922,9 +1922,65 @@ NurseRostering::ObjValue NurseRostering::Solution::tryExchangeDay( int weekday, 
         return DefaultPenalty::FORBIDDEN_MOVE;
     }
 
+	// make sure they won't be two free days
+	if (!assign.isWorking( nurse, weekday ) && !assign.isWorking( nurse, weekday2 )){
+		return DefaultPenalty::FORBIDDEN_MOVE;
+	}
+
+	// check succuession 
+	if (weekday == weekday2 + 1){
+		if (!(isValidSuccession( nurse, assign[nurse][weekday].shift, weekday2 ) &&
+			solver.problem.scenario.shifts[assign[nurse][weekday].shift].legalNextShifts[assign[nurse][weekday2].shift] &&
+			isValidPrior( nurse, assign[nurse][weekday2].shift, weekday ))){
+			return DefaultPenalty::FORBIDDEN_MOVE;
+		}
+	}
+	else if (weekday == weekday2 - 1){
+		if (!(isValidSuccession( nurse, assign[nurse][weekday2].shift, weekday ) &&
+			solver.problem.scenario.shifts[assign[nurse][weekday2].shift].legalNextShifts[assign[nurse][weekday].shift] &&
+			isValidPrior( nurse, assign[nurse][weekday].shift, weekday2 ))){
+			return DefaultPenalty::FORBIDDEN_MOVE;
+		}
+	}
+	else{
+		if (!(isValidSuccession( nurse, assign[nurse][weekday].shift, weekday2 ) &&
+			isValidPrior( nurse, assign[nurse][weekday].shift, weekday2 ) &&
+			isValidSuccession( nurse, assign[nurse][weekday2].shift, weekday ) &&
+			isValidPrior( nurse, assign[nurse][weekday2].shift, weekday ))){
+			return DefaultPenalty::FORBIDDEN_MOVE;
+		}
+	}
+
     ObjValue delta = 0;
 
-
+	if (assign.isWorking( nurse, weekday )){
+		if (assign.isWorking( nurse, weekday2 )){
+			delta += tryChangeAssign( weekday, nurse, assign[nurse][weekday2] );
+			if (delta < DefaultPenalty::MAX_OBJ_VALUE){
+				Assign a(assign[nurse][weekday]);
+				(const_cast<Solution*>(this))->changeAssign( weekday, nurse, assign[nurse][weekday2] );
+				delta += tryChangeAssign( weekday2, nurse, a );
+				(const_cast<Solution*>(this))->changeAssign( weekday, nurse, a );
+			}		
+		}
+		else{
+			delta += tryRemoveAssign( weekday, nurse );
+			if (delta < DefaultPenalty::MAX_OBJ_VALUE){
+				Assign a(assign[nurse][weekday]);
+				(const_cast<Solution*>(this))->removeAssign( weekday, nurse );
+				delta += tryAddAssign( weekday2, nurse, a );
+				(const_cast<Solution*>(this))->addAssign( weekday, nurse, a );
+			}
+		}
+	}
+	else{
+		delta += tryAddAssign( weekday, nurse, assign[nurse][weekday2] );
+		if (delta < DefaultPenalty::MAX_OBJ_VALUE){
+			(const_cast<Solution*>(this))->addAssign( weekday, nurse, assign[nurse][weekday2] );
+			delta += tryRemoveAssign( weekday2, nurse );
+			(const_cast<Solution*>(this))->removeAssign( weekday, nurse );
+		}
+	}
     // TODO :
 
     // HOWTO : modify data members in const function
@@ -1932,7 +1988,7 @@ NurseRostering::ObjValue NurseRostering::Solution::tryExchangeDay( int weekday, 
 
     // return DefaultPenalty::FORBIDDEN_MOVE before finishing
     // in case the call in randomWalk()
-    delta = DefaultPenalty::FORBIDDEN_MOVE;
+    // delta = DefaultPenalty::FORBIDDEN_MOVE;
 
     return delta;
 }
