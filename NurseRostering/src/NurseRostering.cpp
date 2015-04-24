@@ -82,7 +82,7 @@ void NurseRostering::Penalty::setExchangeMode()
 {
     singleAssign = 0;   // due to no extra assignments
     underStaff = DefaultPenalty::FORBIDDEN_MOVE;
-    succession = DefaultPenalty::FORBIDDEN_MOVE;
+    succession = 0;     // due to it is calculated outside the try
     missSkill = 0;      // due to it is the same nurse
 
     insufficientStaff = DefaultPenalty::InsufficientStaff;
