@@ -80,7 +80,7 @@ public:
 
         ObjValue delta;
         Mode mode;
-        int weekday;
+        mutable int weekday;    // tryBlockSwap() will modify it
         // weekday2 should always be greater than weekday in block swap
         mutable int weekday2;   // tryBlockSwap() will modify it
         NurseID nurse;
@@ -350,6 +350,7 @@ private:
     bool findBestRemove( Move &bestMove ) const;
     bool findBestSwap( Move &bestMove ) const;
     bool findBestBlockSwap( Move &bestMove ) const;
+    bool findBestBlockSwap_fast( Move &bestMove ) const;
     bool findBestExchange( Move &bestMove ) const;
     bool findBestARLoop( Move &bestMove ) const;
     bool findBestARRand( Move &bestMove ) const;
@@ -380,6 +381,10 @@ private:
     // the recorded move will always be no tabu move or meet aspiration criteria
     ObjValue trySwapBlock( int weekday, int &weekday2, NurseID nurse, NurseID nurse2 ) const;
     ObjValue trySwapBlock( const Move &move ) const;
+    // evaluate cost of swapping Assign of two nurses in consecutive days in a week
+    // and record the block information into weekday and weekday2
+    ObjValue trySwapBlock_fast( int &weekday, int &weekday2, NurseID nurse, NurseID nurse2 ) const;
+    ObjValue trySwapBlock_fast( const Move &move ) const;
     // evaluate cost of exchanging Assign of a nurse on two days
     ObjValue tryExchangeDay( int weekday, NurseID nurse, int weekday2 ) const;
     ObjValue tryExchangeDay( const Move &move ) const;
