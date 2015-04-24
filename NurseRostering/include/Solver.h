@@ -177,6 +177,8 @@ private:    // forbidden operators
 class NurseRostering::TabuSolver : public NurseRostering::Solver
 {
 public:
+    // minimal tabu tenure base
+    static const int MIN_TABU_BASE = 6;
     // ratio of tabuTenureBase to tabuTenureAmp
     static const int TABU_BASE_TO_AMP = 4;
 

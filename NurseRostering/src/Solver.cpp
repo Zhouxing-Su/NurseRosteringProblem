@@ -549,6 +549,11 @@ void NurseRostering::TabuSolver::setTabuTenure()
     setShiftTabuTenure_NurseNum( config.shiftTabuCoefficient[TabuTenureCoefficientIndex::NurseNum] );
     setShiftTabuTenure_DayNum( config.shiftTabuCoefficient[TabuTenureCoefficientIndex::DayNum] );
     setShiftTabuTenure_ShiftNum( config.shiftTabuCoefficient[TabuTenureCoefficientIndex::ShiftNum] );
+
+    if (dayTabuTenureBase > MIN_TABU_BASE) { dayTabuTenureBase = MIN_TABU_BASE; }
+    if (shiftTabuTenureBase > MIN_TABU_BASE) { shiftTabuTenureBase = MIN_TABU_BASE; }
+    dayTabuTenureAmp = 1 + dayTabuTenureBase / TABU_BASE_TO_AMP;
+    shiftTabuTenureAmp = 1 + shiftTabuTenureBase / TABU_BASE_TO_AMP;
 }
 
 void NurseRostering::TabuSolver::setDayTabuTenure_TableSize( double coefficient )
@@ -562,7 +567,6 @@ void NurseRostering::TabuSolver::setDayTabuTenure_TableSize( double coefficient 
         // plus 1 to make sure it will not be 0
         dayTabuTenureBase *= static_cast<IterCount>(1 + coefficient *
             problem.scenario.nurseNum * Weekday::NUM);
-        dayTabuTenureAmp = 1 + dayTabuTenureBase / TABU_BASE_TO_AMP;
     }
 }
 
@@ -577,7 +581,6 @@ void NurseRostering::TabuSolver::setShiftTabuTenure_TableSize( double coefficien
         // plus 1 to make sure it will not be 0
         shiftTabuTenureBase *= static_cast<IterCount>(1 + coefficient *
             problem.scenario.nurseNum * Weekday::NUM * problem.scenario.shiftTypeNum * problem.scenario.skillTypeNum);
-        shiftTabuTenureAmp = 1 + shiftTabuTenureBase / TABU_BASE_TO_AMP;
     }
 }
 
@@ -591,7 +594,6 @@ void NurseRostering::TabuSolver::setDayTabuTenure_NurseNum( double coefficient )
 
         // plus 1 to make sure it will not be 0
         dayTabuTenureBase *= static_cast<IterCount>(1 + coefficient * problem.scenario.nurseNum);
-        dayTabuTenureAmp = 1 + dayTabuTenureBase / TABU_BASE_TO_AMP;
     }
 }
 
@@ -605,7 +607,6 @@ void NurseRostering::TabuSolver::setShiftTabuTenure_NurseNum( double coefficient
 
         // plus 1 to make sure it will not be 0
         shiftTabuTenureBase *= static_cast<IterCount>(1 + coefficient * problem.scenario.nurseNum);
-        shiftTabuTenureAmp = 1 + shiftTabuTenureBase / TABU_BASE_TO_AMP;
     }
 }
 
@@ -619,7 +620,6 @@ void NurseRostering::TabuSolver::setDayTabuTenure_DayNum( double coefficient )
 
         // plus 1 to make sure it will not be 0
         dayTabuTenureBase *= static_cast<IterCount>(1 + coefficient * Weekday::NUM);
-        dayTabuTenureAmp = 1 + dayTabuTenureBase / TABU_BASE_TO_AMP;
     }
 }
 
@@ -633,7 +633,6 @@ void NurseRostering::TabuSolver::setShiftTabuTenure_DayNum( double coefficient )
 
         // plus 1 to make sure it will not be 0
         shiftTabuTenureBase *= static_cast<IterCount>(1 + coefficient * Weekday::NUM);
-        shiftTabuTenureAmp = 1 + shiftTabuTenureBase / TABU_BASE_TO_AMP;
     }
 }
 
@@ -648,7 +647,6 @@ void NurseRostering::TabuSolver::setDayTabuTenure_ShiftNum( double coefficient )
         // plus 1 to make sure it will not be 0
         dayTabuTenureBase *= static_cast<IterCount>(1 + coefficient *
             problem.scenario.shiftTypeNum * problem.scenario.skillTypeNum);
-        dayTabuTenureAmp = 1 + dayTabuTenureBase / TABU_BASE_TO_AMP;
     }
 }
 
@@ -663,6 +661,5 @@ void NurseRostering::TabuSolver::setShiftTabuTenure_ShiftNum( double coefficient
         // plus 1 to make sure it will not be 0
         shiftTabuTenureBase *= static_cast<IterCount>(1 + coefficient *
             problem.scenario.shiftTypeNum * problem.scenario.skillTypeNum);
-        shiftTabuTenureAmp = 1 + shiftTabuTenureBase / TABU_BASE_TO_AMP;
     }
 }
