@@ -93,10 +93,10 @@ int main()
     loadInstSeq();
     FileLock::unlock( LOG_FILE_NAME );
 
-    debugRun();
+    //debugRun();
     //realRun();
     //benchmarkRun();
-    //sprintRun();
+    sprintRun();
 
     //system( "pause" );
     return 0;

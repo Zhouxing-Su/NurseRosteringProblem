@@ -59,6 +59,8 @@ NurseRostering::Solution::updateTabuTable = {
 
 const vector<string> NurseRostering::Solution::modeSeqNames = {
     "[ARlCS]", "[ARrCS]", "[ARbCS]", "[ACSR]",
+    "[ARlSCB]", "[ARrSCB]", "[ARbSCB]", "[ASCBR]",
+    "[ARlCSE]", "[ARrCSE]", "[ARbCSE]", "[ACSER]",
     "[ARlCSEB]", "[ARrCSEB]", "[ARbCSEB]", "[ACSEBR]"
 };
 const vector<vector<int> > NurseRostering::Solution::modeSeqPatterns = {
@@ -66,6 +68,16 @@ const vector<vector<int> > NurseRostering::Solution::modeSeqPatterns = {
     { Solution::Move::Mode::ARRand, Solution::Move::Mode::Change, Solution::Move::Mode::Swap },
     { Solution::Move::Mode::ARBoth, Solution::Move::Mode::Change, Solution::Move::Mode::Swap },
     { Solution::Move::Mode::Add, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::Remove },
+
+    { Solution::Move::Mode::ARLoop, Solution::Move::Mode::Swap, Solution::Move::Mode::Change, Solution::Move::Mode::BlockSwap },
+    { Solution::Move::Mode::ARRand, Solution::Move::Mode::Swap, Solution::Move::Mode::Change, Solution::Move::Mode::BlockSwap },
+    { Solution::Move::Mode::ARBoth, Solution::Move::Mode::Swap, Solution::Move::Mode::Change, Solution::Move::Mode::BlockSwap },
+    { Solution::Move::Mode::Add, Solution::Move::Mode::Swap, Solution::Move::Mode::Change, Solution::Move::Mode::BlockSwap, Solution::Move::Mode::Remove },
+
+    { Solution::Move::Mode::ARLoop, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::Exchange },
+    { Solution::Move::Mode::ARRand, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::Exchange },
+    { Solution::Move::Mode::ARBoth, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::Exchange },
+    { Solution::Move::Mode::Add, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::Exchange, Solution::Move::Mode::Remove },
 
     { Solution::Move::Mode::ARLoop, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap },
     { Solution::Move::Mode::ARRand, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap },
@@ -280,6 +292,8 @@ void NurseRostering::Solution::resetAssistData()
     findBestARLoop_flag = true;
     findBestARLoopOnBlockBorder_flag = true;
     findBestBlockSwap_startNurse = solver.problem.scenario.nurseNum;
+    isPossibilitySelect = false;
+    isBlockSwapSelected = false;
 }
 
 void NurseRostering::Solution::evaluateObjValue()
@@ -327,6 +341,7 @@ bool NurseRostering::Solution::repair( const Timer &timer )
 
     return feasible;
 }
+
 
 void NurseRostering::Solution::tabuSearch_Loop( const Timer &timer, const FindBestMoveTable &findBestMoveTable )
 {
@@ -389,6 +404,8 @@ void NurseRostering::Solution::tabuSearch_Possibility( const Timer &timer, const
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t startTime = clock();
 #endif
+    isPossibilitySelect = true;
+
     optima = *this;
 
     int modeNum = findBestMoveTable.size();
@@ -408,8 +425,10 @@ void NurseRostering::Solution::tabuSearch_Possibility( const Timer &timer, const
         int modeSelect = startMode;
         Move::Mode moveMode = Move::Mode::SIZE;
         Move bestMove;
+        isBlockSwapSelected = false;
         // judge every neighborhood whether to select and search when selected
-        for (int i = 0; i < modeNum; ++i) {
+        // start from big end to make sure block swap will be tested before swap
+        for (int i = modeNum - 1; i >= 0; --i) {
             if (rand() < (P_global + P_local[i])) { // selected
                 (this->*findBestMoveTable[i])(bestMove);
                 if (moveMode != bestMove.mode) {
@@ -443,6 +462,8 @@ void NurseRostering::Solution::tabuSearch_Possibility( const Timer &timer, const
             P_local[modeSelect] = static_cast<int>(P_local[modeSelect] * dec_local);
         }
     }
+
+    isPossibilitySelect = false;
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t duration = clock() - startTime;
     cout << "[TS] iter: " << iterCount << ' '
@@ -494,7 +515,6 @@ void NurseRostering::Solution::perturb( double strength )
     updateOptima();
 }
 
-
 void NurseRostering::Solution::randomWalk( const Timer &timer, IterCount stepNum )
 {
 #ifdef INRC2_PERFORMANCE_TEST
@@ -531,6 +551,7 @@ void NurseRostering::Solution::randomWalk( const Timer &timer, IterCount stepNum
         << "speed: " << iterCount * static_cast<double>(CLOCKS_PER_SEC) / (duration + 1) << endl;
 #endif
 }
+
 
 bool NurseRostering::Solution::findBestAdd( Move &bestMove ) const
 {
@@ -642,6 +663,10 @@ bool NurseRostering::Solution::findBestRemove( Move &bestMove ) const
 
 bool NurseRostering::Solution::findBestSwap( Move &bestMove ) const
 {
+    if (isPossibilitySelect && isBlockSwapSelected) {
+        return false;
+    }
+
     penalty.setSwapMode();
 
     RandSelect<ObjValue> rs;
@@ -677,6 +702,7 @@ bool NurseRostering::Solution::findBestSwap( Move &bestMove ) const
 
 bool NurseRostering::Solution::findBestBlockSwap( Move &bestMove ) const
 {
+    isBlockSwapSelected = true;
     penalty.setBlockSwapMode();
 
     NurseID maxNurseID = solver.problem.scenario.nurseNum - 1;
@@ -712,6 +738,7 @@ bool NurseRostering::Solution::findBestBlockSwap( Move &bestMove ) const
 
 bool NurseRostering::Solution::findBestBlockSwap_fast( Move &bestMove ) const
 {
+    isBlockSwapSelected = true;
     penalty.setBlockSwapMode();
 
     NurseID maxNurseID = solver.problem.scenario.nurseNum - 1;
@@ -982,6 +1009,10 @@ bool NurseRostering::Solution::findBestRemoveOnBlockBorder( Move &bestMove ) con
 
 bool NurseRostering::Solution::findBestSwapOnBlockBorder( Move &bestMove ) const
 {
+    if (isPossibilitySelect && isBlockSwapSelected) {
+        return false;
+    }
+
     penalty.setSwapMode();
 
     RandSelect<ObjValue> rs;
@@ -1126,6 +1157,7 @@ bool NurseRostering::Solution::findBestARBothOnBlockBorder( Move &bestMove ) con
     return (bestMove.delta < 0);
 }
 
+
 bool NurseRostering::Solution::isValidSuccession( NurseID nurse, ShiftID shift, int weekday ) const
 {
     return solver.problem.scenario.shifts[assign[nurse][weekday - 1].shift].legalNextShifts[shift];
@@ -1136,6 +1168,7 @@ bool NurseRostering::Solution::isValidPrior( NurseID nurse, ShiftID shift, int w
     return ((weekday >= Weekday::Sun)
         || solver.problem.scenario.shifts[shift].legalNextShifts[assign[nurse][weekday + 1].shift]);
 }
+
 
 NurseRostering::ObjValue NurseRostering::Solution::tryAddAssign( int weekday, NurseID nurse, const Assign &a ) const
 {
@@ -1796,19 +1829,18 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock( int weekday, in
         ++count;
         notabuCount += noSwapTabu( weekday, nurse, nurse2 );
 
-        if (delta < DefaultPenalty::MAX_OBJ_VALUE){
+        if (delta < DefaultPenalty::MAX_OBJ_VALUE) {
             // only record best move when current block swap is valid
-            if (isValidPrior(nurse, assign[nurse2][weekday].shift, weekday)
-                && isValidPrior(nurse2, assign[nurse][weekday].shift, weekday)) {
+            if (isValidPrior( nurse, assign[nurse2][weekday].shift, weekday )
+                && isValidPrior( nurse2, assign[nurse][weekday].shift, weekday )) {
                 // TODO : tabu judgment?
                 if (2 * notabuCount > count) {  // over half of swaps are no tabu
-                    if (rs.isMinimal(delta, minDelta)) {
+                    if (rs.isMinimal( delta, minDelta )) {
                         minDelta = delta;
                         weekday2 = weekday;
                     }
-                }
-                else {    // tabu
-                    if (rs_tabu.isMinimal(delta, minDelta_tabu)) {
+                } else {    // tabu
+                    if (rs_tabu.isMinimal( delta, minDelta_tabu )) {
                         minDelta_tabu = delta;
                         weekday2_tabu = weekday;
                     }
@@ -1820,7 +1852,7 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock( int weekday, in
 
         if (weekday >= Weekday::Sun) { break; }
 
-        (const_cast<Solution*>(this))->swapNurse(weekday, nurse, nurse2);
+        (const_cast<Solution*>(this))->swapNurse( weekday, nurse, nurse2 );
         ++weekday;
     }
 
@@ -1894,14 +1926,14 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock_fast( int &weekd
         if (w == w2) { continue; }  // the first day is not swapped
 
         do {
-            delta += trySwapNurse(w, nurse, nurse2);
+            delta += trySwapNurse( w, nurse, nurse2 );
             (delta < DefaultPenalty::MAX_OBJ_VALUE)
-                ? (const_cast<Solution*>(this))->swapNurse(w, nurse, nurse2)
+                ? (const_cast<Solution*>(this))->swapNurse( w, nurse, nurse2 )
                 : (delta -= DefaultPenalty::FORBIDDEN_MOVE);    // two day off
             ++w;
         } while ((w < w2)
-            && !(isValidSuccession(nurse, assign[nurse][w].shift, w)
-            && isValidSuccession(nurse2, assign[nurse2][w].shift, w)));
+            && !(isValidSuccession( nurse, assign[nurse][w].shift, w )
+            && isValidSuccession( nurse2, assign[nurse2][w].shift, w )));
 
         while (w < (w2--)) {
             if (isValidPrior( nurse, assign[nurse][w2].shift, w2 )
@@ -2008,6 +2040,7 @@ NurseRostering::ObjValue NurseRostering::Solution::tryExchangeDay( const Move &m
 
     return delta;
 }
+
 
 void NurseRostering::Solution::addAssign( int weekday, NurseID nurse, const Assign &a )
 {
@@ -2227,6 +2260,7 @@ void NurseRostering::Solution::assignSingle( int weekday, int high[Weekday::SIZE
     }
 }
 
+
 void NurseRostering::Solution::updateDayTabu( NurseID nurse, int weekday )
 {
     dayTabu[nurse][weekday] = iterCount +
@@ -2238,6 +2272,7 @@ void NurseRostering::Solution::updateShiftTabu( NurseID nurse, int weekday, cons
     shiftTabu[nurse][weekday][a.shift][a.skill] = iterCount +
         solver.ShiftTabuTenureBase() + (rand() % solver.ShiftTabuTenureAmp());
 }
+
 
 bool NurseRostering::Solution::checkIncrementalUpdate()
 {
