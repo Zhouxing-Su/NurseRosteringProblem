@@ -1796,28 +1796,31 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock( int weekday, in
         ++count;
         notabuCount += noSwapTabu( weekday, nurse, nurse2 );
 
-        // only record best move when current block swap is valid
-        if (isValidPrior( nurse, assign[nurse2][weekday].shift, weekday )
-            && isValidPrior( nurse2, assign[nurse][weekday].shift, weekday )) {
-            // TODO : tabu judgment?
-            if (2 * notabuCount > count) {  // over half of swaps are no tabu
-                if (rs.isMinimal( delta, minDelta )) {
-                    minDelta = delta;
-                    weekday2 = weekday;
+        if (delta < DefaultPenalty::MAX_OBJ_VALUE){
+            // only record best move when current block swap is valid
+            if (isValidPrior(nurse, assign[nurse2][weekday].shift, weekday)
+                && isValidPrior(nurse2, assign[nurse][weekday].shift, weekday)) {
+                // TODO : tabu judgment?
+                if (2 * notabuCount > count) {  // over half of swaps are no tabu
+                    if (rs.isMinimal(delta, minDelta)) {
+                        minDelta = delta;
+                        weekday2 = weekday;
+                    }
                 }
-            } else {    // tabu
-                if (rs_tabu.isMinimal( delta, minDelta )) {
-                    minDelta_tabu = delta;
-                    weekday2_tabu = weekday;
+                else {    // tabu
+                    if (rs_tabu.isMinimal(delta, minDelta_tabu)) {
+                        minDelta_tabu = delta;
+                        weekday2_tabu = weekday;
+                    }
                 }
             }
+        } else {    // two day off
+            delta -= DefaultPenalty::FORBIDDEN_MOVE;
         }
 
         if (weekday >= Weekday::Sun) { break; }
 
-        (delta < DefaultPenalty::MAX_OBJ_VALUE)
-            ? (const_cast<Solution*>(this))->swapNurse( weekday, nurse, nurse2 )
-            : (delta -= DefaultPenalty::FORBIDDEN_MOVE);    // two day off
+        (const_cast<Solution*>(this))->swapNurse(weekday, nurse, nurse2);
         ++weekday;
     }
 
@@ -1878,8 +1881,8 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock_fast( int &weekd
             (delta < DefaultPenalty::MAX_OBJ_VALUE)
                 ? (const_cast<Solution*>(this))->swapNurse( w2, nurse, nurse2 )
                 : (delta -= DefaultPenalty::FORBIDDEN_MOVE);    // two day off
-            if (isValidPrior( nurse, assign[nurse2][w2].shift, w2 )
-                && isValidPrior( nurse2, assign[nurse][w2].shift, w2 )) {
+            if (isValidPrior( nurse, assign[nurse][w2].shift, w2 )
+                && isValidPrior( nurse2, assign[nurse2][w2].shift, w2 )) {
                 if (rs.isMinimal( delta, minDelta )) {
                     minDelta = delta;
                     weekday = w;
@@ -1888,15 +1891,21 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock_fast( int &weekd
             }
         }
 
-        delta += trySwapNurse( w, nurse, nurse2 );
-        (delta < DefaultPenalty::MAX_OBJ_VALUE)
-            ? (const_cast<Solution*>(this))->swapNurse( w, nurse, nurse2 )
-            : (delta -= DefaultPenalty::FORBIDDEN_MOVE);    // two day off
-        ++w;
+        if (w == w2) { continue; }  // the first day is not swapped
 
-        while ((w2--) > w) {
-            if (isValidPrior( nurse, assign[nurse2][w2].shift, w2 )
-                && isValidPrior( nurse2, assign[nurse][w2].shift, w2 )) {
+        do {
+            delta += trySwapNurse(w, nurse, nurse2);
+            (delta < DefaultPenalty::MAX_OBJ_VALUE)
+                ? (const_cast<Solution*>(this))->swapNurse(w, nurse, nurse2)
+                : (delta -= DefaultPenalty::FORBIDDEN_MOVE);    // two day off
+            ++w;
+        } while ((w < w2)
+            && !(isValidSuccession(nurse, assign[nurse][w].shift, w)
+            && isValidSuccession(nurse2, assign[nurse2][w].shift, w)));
+
+        while (w < (w2--)) {
+            if (isValidPrior( nurse, assign[nurse][w2].shift, w2 )
+                && isValidPrior( nurse2, assign[nurse2][w2].shift, w2 )) {
                 if (rs.isMinimal( delta, minDelta )) {
                     minDelta = delta;
                     weekday = w;

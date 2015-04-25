@@ -87,7 +87,7 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <PostBuildEvent>
-      <Command>cp $(TargetPath) $(SolutionDir)\BatchRun</Command>
+      <Command>copy $(TargetPath) $(SolutionDir)\BatchRun</Command>
       <Message>release simulator.</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
