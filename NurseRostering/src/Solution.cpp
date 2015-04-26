@@ -353,6 +353,7 @@ void NurseRostering::Solution::tabuSearch_Loop( const Timer &timer, const FindBe
 {
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t startTime = clock();
+    long long startIterCount = iterCount;
 #endif
     optima = *this;
 
@@ -399,9 +400,9 @@ void NurseRostering::Solution::tabuSearch_Loop( const Timer &timer, const FindBe
     }
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t duration = clock() - startTime;
-    cout << "[TS] iter: " << iterCount << ' '
+    cout << "[TS] iter: " << (iterCount - startIterCount) << ' '
         << "time: " << duration << ' '
-        << "speed: " << iterCount * static_cast<double>(CLOCKS_PER_SEC) / (duration + 1) << endl;
+        << "speed: " << (iterCount - startIterCount) * static_cast<double>(CLOCKS_PER_SEC) / (duration + 1) << endl;
 #endif
 }
 
@@ -409,6 +410,7 @@ void NurseRostering::Solution::tabuSearch_Possibility( const Timer &timer, const
 {
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t startTime = clock();
+    long long startIterCount = iterCount;
 #endif
     isPossibilitySelect = true;
 
@@ -472,9 +474,9 @@ void NurseRostering::Solution::tabuSearch_Possibility( const Timer &timer, const
     isPossibilitySelect = false;
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t duration = clock() - startTime;
-    cout << "[TS] iter: " << iterCount << ' '
+    cout << "[TS] iter: " << (iterCount - startIterCount) << ' '
         << "time: " << duration << ' '
-        << "speed: " << iterCount * static_cast<double>(CLOCKS_PER_SEC) / (duration + 1) << endl;
+        << "speed: " << (iterCount - startIterCount) * static_cast<double>(CLOCKS_PER_SEC) / (duration + 1) << endl;
 #endif
 }
 
@@ -482,6 +484,7 @@ void NurseRostering::Solution::localSearch( const Timer &timer, const FindBestMo
 {
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t startTime = clock();
+    long long startIterCount = iterCount;
 #endif
     optima = *this;
 
@@ -504,9 +507,9 @@ void NurseRostering::Solution::localSearch( const Timer &timer, const FindBestMo
     }
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t duration = clock() - startTime;
-    cout << "[LS] iter: " << iterCount << ' '
+    cout << "[LS] iter: " << (iterCount - startIterCount) << ' '
         << "time: " << duration << ' '
-        << "speed: " << iterCount * static_cast<double>(CLOCKS_PER_SEC) / (duration + 1) << endl;
+        << "speed: " << (iterCount - startIterCount) * static_cast<double>(CLOCKS_PER_SEC) / (duration + 1) << endl;
 #endif
 }
 
@@ -525,6 +528,7 @@ void NurseRostering::Solution::randomWalk( const Timer &timer, IterCount stepNum
 {
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t startTime = clock();
+    long long startIterCount = stepNum;
 #endif
     optima = *this;
 
@@ -552,9 +556,9 @@ void NurseRostering::Solution::randomWalk( const Timer &timer, IterCount stepNum
     }
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t duration = clock() - startTime;
-    cout << "[RW] iter: " << iterCount << ' '
+    cout << "[RW] iter: " << startIterCount << ' '
         << "time: " << duration << ' '
-        << "speed: " << iterCount * static_cast<double>(CLOCKS_PER_SEC) / (duration + 1) << endl;
+        << "speed: " << startIterCount * static_cast<double>(CLOCKS_PER_SEC) / (duration + 1) << endl;
 #endif
 }
 
