@@ -106,7 +106,8 @@ public:
         ARlCS, ARrCS, ARbCS, ACSR,
         ARlSCB, ARrSCB, ARbSCB, ASCBR,
         ARlCSE, ARrCSE, ARbCSE, ACSER,
-        ARlCSEB, ARrCSEB, ARbCSEB, ACSEBR, SIZE
+        ARlCSEB, ARrCSEB, ARbCSEB, ACSEBR,
+        ARrCB, ARbCB, ARrCEB, ARbCEB, SIZE
     };
 
     static const std::vector<std::string> modeSeqNames;

@@ -82,16 +82,16 @@ public:
     public:
         Config() : initAlgorithm( InitAlgorithm::Greedy ),
             solveAlgorithm( SolveAlgorithm::TabuSearch_Possibility ),
-            modeSeq( Solution::ModeSeq::ARbCS ),
+            modeSeq( Solution::ModeSeq::ARrCS ),
             maxNoImproveCoefficient( 1 )
         {
             dayTabuCoefficient[TabuTenureCoefficientIndex::TableSize] = 0;
-            dayTabuCoefficient[TabuTenureCoefficientIndex::NurseNum] = 0.5;
+            dayTabuCoefficient[TabuTenureCoefficientIndex::NurseNum] = 1.2;
             dayTabuCoefficient[TabuTenureCoefficientIndex::DayNum] = 0;
             dayTabuCoefficient[TabuTenureCoefficientIndex::ShiftNum] = 0;
 
             shiftTabuCoefficient[TabuTenureCoefficientIndex::TableSize] = 0;
-            shiftTabuCoefficient[TabuTenureCoefficientIndex::NurseNum] = 0.8;
+            shiftTabuCoefficient[TabuTenureCoefficientIndex::NurseNum] = 1.2;
             shiftTabuCoefficient[TabuTenureCoefficientIndex::DayNum] = 0;
             shiftTabuCoefficient[TabuTenureCoefficientIndex::ShiftNum] = 0;
         }

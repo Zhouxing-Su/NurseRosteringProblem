@@ -189,14 +189,9 @@ _Pvt_Extensions/
 ModelManifest.xml
 
 # Custom file
-/NurseRostering/instance/output*
-/INRC2_Simulator/output*
-/INRC2_Simulator/err.csv
-/INRC2_Simulator/log.csv
-/Analysis/output*
-/Analysis/log.csv
-/Analysis/checkResult.csv
-/Analysis/Validator-results.txt
-/BatchRun/checkResult.csv
-/BatchRun/log.csv
-/BatchRun/output
+output*
+log.csv
+err.csv
+checkResult.csv
+analysisResult.csv
+Validator-results.txt

@@ -61,7 +61,8 @@ const vector<string> NurseRostering::Solution::modeSeqNames = {
     "[ARlCS]", "[ARrCS]", "[ARbCS]", "[ACSR]",
     "[ARlSCB]", "[ARrSCB]", "[ARbSCB]", "[ASCBR]",
     "[ARlCSE]", "[ARrCSE]", "[ARbCSE]", "[ACSER]",
-    "[ARlCSEB]", "[ARrCSEB]", "[ARbCSEB]", "[ACSEBR]"
+    "[ARlCSEB]", "[ARrCSEB]", "[ARbCSEB]", "[ACSEBR]",
+    "[ARrCB]", "[ARbCB]", "[ARrCEB]", "[ARbCEB]"
 };
 const vector<vector<int> > NurseRostering::Solution::modeSeqPatterns = {
     { Solution::Move::Mode::ARLoop, Solution::Move::Mode::Change, Solution::Move::Mode::Swap },
@@ -82,7 +83,12 @@ const vector<vector<int> > NurseRostering::Solution::modeSeqPatterns = {
     { Solution::Move::Mode::ARLoop, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap },
     { Solution::Move::Mode::ARRand, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap },
     { Solution::Move::Mode::ARBoth, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap },
-    { Solution::Move::Mode::Add, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap, Solution::Move::Mode::Remove }
+    { Solution::Move::Mode::Add, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap, Solution::Move::Mode::Remove },
+    
+    { Solution::Move::Mode::ARRand, Solution::Move::Mode::Change, Solution::Move::Mode::BlockSwap },
+    { Solution::Move::Mode::ARBoth, Solution::Move::Mode::Change, Solution::Move::Mode::BlockSwap },
+    { Solution::Move::Mode::ARRand, Solution::Move::Mode::Change, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap },
+    { Solution::Move::Mode::ARBoth, Solution::Move::Mode::Change, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap }
 };
 
 
