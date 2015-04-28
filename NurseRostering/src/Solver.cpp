@@ -9,7 +9,7 @@ const double NurseRostering::Solver::INIT_PERTURB_STRENGTH = 0.6;
 const double NurseRostering::Solver::PERTURB_STRENGTH_DELTA = 0.01;
 
 const vector<string> NurseRostering::Solver::solveAlgorithmName = {
-    "[RW]", "[ILS]", "[TSP]", "[TSL]"
+    "[RW]", "[ILS]", "[TSP]", "[TSL]", "[TSR]"
 };
 
 
@@ -421,6 +421,9 @@ void NurseRostering::TabuSolver::solve()
             break;
         case SolveAlgorithm::TabuSearch_Loop:
             tabuSearch( config.modeSeq, &Solution::tabuSearch_Loop );
+            break;
+        case SolveAlgorithm::TabuSearch_Rand:
+            tabuSearch( config.modeSeq, &Solution::tabuSearch_Rand );
             break;
         case SolveAlgorithm::TabuSearch_Possibility:
         default:

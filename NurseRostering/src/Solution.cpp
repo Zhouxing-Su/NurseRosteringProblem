@@ -62,7 +62,8 @@ const vector<string> NurseRostering::Solution::modeSeqNames = {
     "[ARlSCB]", "[ARrSCB]", "[ARbSCB]", "[ASCBR]",
     "[ARlCSE]", "[ARrCSE]", "[ARbCSE]", "[ACSER]",
     "[ARlCSEB]", "[ARrCSEB]", "[ARbCSEB]", "[ACSEBR]",
-    "[ARrCB]", "[ARbCB]", "[ARrCEB]", "[ARbCEB]"
+    "[ARlCB]", "[ARrCB]", "[ARbCB]", "[ACBR]",
+    "[ARlCEB]", "[ARrCEB]", "[ARbCEB]", "[ACEBR]"
 };
 const vector<vector<int> > NurseRostering::Solution::modeSeqPatterns = {
     { Solution::Move::Mode::ARLoop, Solution::Move::Mode::Change, Solution::Move::Mode::Swap },
@@ -84,11 +85,16 @@ const vector<vector<int> > NurseRostering::Solution::modeSeqPatterns = {
     { Solution::Move::Mode::ARRand, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap },
     { Solution::Move::Mode::ARBoth, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap },
     { Solution::Move::Mode::Add, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap, Solution::Move::Mode::Remove },
-
+    
+    { Solution::Move::Mode::ARLoop, Solution::Move::Mode::Change, Solution::Move::Mode::BlockSwap },
     { Solution::Move::Mode::ARRand, Solution::Move::Mode::Change, Solution::Move::Mode::BlockSwap },
     { Solution::Move::Mode::ARBoth, Solution::Move::Mode::Change, Solution::Move::Mode::BlockSwap },
+    { Solution::Move::Mode::Add, Solution::Move::Mode::Change, Solution::Move::Mode::BlockSwap, Solution::Move::Mode::Remove },
+    
+    { Solution::Move::Mode::ARLoop, Solution::Move::Mode::Change, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap },
     { Solution::Move::Mode::ARRand, Solution::Move::Mode::Change, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap },
-    { Solution::Move::Mode::ARBoth, Solution::Move::Mode::Change, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap }
+    { Solution::Move::Mode::ARBoth, Solution::Move::Mode::Change, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap },
+    { Solution::Move::Mode::Add, Solution::Move::Mode::Change, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap, Solution::Move::Mode::Remove }
 };
 
 
@@ -359,9 +365,10 @@ void NurseRostering::Solution::tabuSearch_Rand( const Timer &timer, const FindBe
 
     int modeNum = findBestMoveTable.size();
 
-    const int weight_Invalid = 32;
-    const int weight_NoImprove = 128;
-    const int weight_Improve = 512;
+    const int weight_Invalid = 128;     // min weight
+    const int weight_NoImprove = 512;
+    const int weight_Valid = 1024;
+    const int weight_Improve = 4096;    // max weight (less than (RAND_MAX / modeNum))
     const int initWeight = (weight_NoImprove + weight_Improve) / 2;
     const int deltaIncRatio = 16;   // = weights[mode] / weightDelta
     const int incError = deltaIncRatio - 1;
@@ -385,15 +392,23 @@ void NurseRostering::Solution::tabuSearch_Rand( const Timer &timer, const FindBe
             (this->*applyMove[bestMove.mode])(bestMove);
             objValue += bestMove.delta;
 
-            if (objValue < optima.getObjValue()) {   // improved
+            if (objValue < optima.getObjValue()) {   // improve (improve optima)
                 noImprove = solver.MaxNoImproveForAllNeighborhood();
                 updateOptima();
                 weightDelta = (incError + weight_Improve - weights[modeSelect]) / deltaIncRatio;
-            } else {    // not improved
+            } else {
                 --noImprove;
-                weightDelta = (decError + weight_NoImprove - weights[modeSelect]) / deltaDecRatio;
+                if (bestMove.delta < 0) {    // no improve (improve current solution)
+                    weightDelta = (weights[modeSelect] < weight_NoImprove)
+                        ? (incError + weight_NoImprove - weights[modeSelect]) / deltaIncRatio
+                        : (decError + weight_NoImprove - weights[modeSelect]) / deltaDecRatio;
+                } else {    // valid ()
+                    weightDelta = (weights[modeSelect] < weight_Valid)
+                        ? (incError + weight_Valid - weights[modeSelect]) / deltaIncRatio
+                        : (decError + weight_Valid - weights[modeSelect]) / deltaDecRatio;
+                }
             }
-        } else {
+        } else {    // invalid
             weightDelta = (decError + weight_Invalid - weights[modeSelect]) / deltaDecRatio;
         }
 
