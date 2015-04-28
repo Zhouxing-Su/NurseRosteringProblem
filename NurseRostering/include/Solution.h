@@ -107,7 +107,8 @@ public:
         ARlSCB, ARrSCB, ARbSCB, ASCBR,
         ARlCSE, ARrCSE, ARbCSE, ACSER,
         ARlCSEB, ARrCSEB, ARbCSEB, ACSEBR,
-        ARrCB, ARbCB, ARrCEB, ARbCEB, SIZE
+        ARlCB, ARrCB, ARbCB, ACBR,
+        ARlCEB, ARrCEB, ARbCEB, ACEBR, SIZE
     };
 
     static const std::vector<std::string> modeSeqNames;
@@ -153,6 +154,11 @@ public:
     bool repair( const Timer &timer );  // make infeasible solution feasible
 
 
+    // select single neighborhood to search in each iteration randomly
+    // the random select process is a discrete distribution
+    // the possibility to be selected will increase if the neighborhood
+    // improve the solution, else decrease it. the sum of possibilities is 1.0
+    void tabuSearch_Rand( const Timer &timer, const FindBestMoveTable &findBestMoveTable );
     // loop to select neighborhood to search until timeout or there is no
     // improvement on (NeighborhoodNum + 2) neighborhood consecutively.
     // switch neighborhood when maxNoImproveForSingleNeighborhood has

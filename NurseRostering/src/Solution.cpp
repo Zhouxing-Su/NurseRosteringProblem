@@ -84,7 +84,7 @@ const vector<vector<int> > NurseRostering::Solution::modeSeqPatterns = {
     { Solution::Move::Mode::ARRand, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap },
     { Solution::Move::Mode::ARBoth, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap },
     { Solution::Move::Mode::Add, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap, Solution::Move::Mode::Remove },
-    
+
     { Solution::Move::Mode::ARRand, Solution::Move::Mode::Change, Solution::Move::Mode::BlockSwap },
     { Solution::Move::Mode::ARBoth, Solution::Move::Mode::Change, Solution::Move::Mode::BlockSwap },
     { Solution::Move::Mode::ARRand, Solution::Move::Mode::Change, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap },
@@ -348,6 +348,65 @@ bool NurseRostering::Solution::repair( const Timer &timer )
     return feasible;
 }
 
+
+void NurseRostering::Solution::tabuSearch_Rand( const Timer &timer, const FindBestMoveTable &findBestMoveTable )
+{
+#ifdef INRC2_PERFORMANCE_TEST
+    clock_t startTime = clock();
+    long long startIterCount = iterCount;
+#endif
+    optima = *this;
+
+    int modeNum = findBestMoveTable.size();
+
+    const int weight_Invalid = 32;
+    const int weight_NoImprove = 128;
+    const int weight_Improve = 512;
+    const int initWeight = (weight_NoImprove + weight_Improve) / 2;
+    const int deltaIncRatio = 16;   // = weights[mode] / weightDelta
+    const int incError = deltaIncRatio - 1;
+    const int deltaDecRatio = 8;    // = weights[mode] / weightDelta
+    const int decError = -(deltaDecRatio - 1);
+    vector<int> weights( modeNum, initWeight );
+    int totalWeight = initWeight * modeNum;
+
+    IterCount noImprove = solver.MaxNoImproveForAllNeighborhood();
+    for (; !timer.isTimeOut() && (noImprove > 0); ++iterCount) {
+        int modeSelect = 0;
+        for (int w = rand() % totalWeight; (w -= weights[modeSelect]) >= 0; ++modeSelect) {}
+
+        Move bestMove;
+        (this->*findBestMoveTable[modeSelect])(bestMove);
+
+        int weightDelta;
+        if (bestMove.delta < DefaultPenalty::MAX_OBJ_VALUE) {
+            // update tabu list first because it requires original assignment
+            (this->*updateTabuTable[bestMove.mode])(bestMove);
+            (this->*applyMove[bestMove.mode])(bestMove);
+            objValue += bestMove.delta;
+
+            if (objValue < optima.getObjValue()) {   // improved
+                noImprove = solver.MaxNoImproveForAllNeighborhood();
+                updateOptima();
+                weightDelta = (incError + weight_Improve - weights[modeSelect]) / deltaIncRatio;
+            } else {    // not improved
+                --noImprove;
+                weightDelta = (decError + weight_NoImprove - weights[modeSelect]) / deltaDecRatio;
+            }
+        } else {
+            weightDelta = (decError + weight_Invalid - weights[modeSelect]) / deltaDecRatio;
+        }
+
+        weights[modeSelect] += weightDelta;
+        totalWeight += weightDelta;
+    }
+#ifdef INRC2_PERFORMANCE_TEST
+    clock_t duration = clock() - startTime;
+    cout << "[TS] iter: " << (iterCount - startIterCount) << ' '
+        << "time: " << duration << ' '
+        << "speed: " << (iterCount - startIterCount) * static_cast<double>(CLOCKS_PER_SEC) / (duration + 1) << endl;
+#endif
+}
 
 void NurseRostering::Solution::tabuSearch_Loop( const Timer &timer, const FindBestMoveTable &findBestMoveTable )
 {
