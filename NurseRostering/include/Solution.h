@@ -587,8 +587,6 @@ private:
     // for controlling start point of the search of best block swap
     mutable NurseID findBestBlockSwap_startNurse;    // findBestBlockSwap() will modify it
     // for controlling swap and block swap will not be selected both in possibility select
-    bool isPossibilitySelect;
-    mutable bool isBlockSwapSelected;    // tabuSearch_Possibility() and findBestBlockSwap() wil modify it
 
     ShiftTabu shiftTabu;
     DayTabu dayTabu;

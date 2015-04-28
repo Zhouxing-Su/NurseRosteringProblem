@@ -298,8 +298,6 @@ void NurseRostering::Solution::resetAssistData()
     findBestARLoop_flag = true;
     findBestARLoopOnBlockBorder_flag = true;
     findBestBlockSwap_startNurse = solver.problem.scenario.nurseNum;
-    isPossibilitySelect = false;
-    isBlockSwapSelected = false;
 }
 
 void NurseRostering::Solution::evaluateObjValue()
@@ -471,8 +469,6 @@ void NurseRostering::Solution::tabuSearch_Possibility( const Timer &timer, const
     clock_t startTime = clock();
     long long startIterCount = iterCount;
 #endif
-    isPossibilitySelect = true;
-
     optima = *this;
 
     int modeNum = findBestMoveTable.size();
@@ -492,7 +488,6 @@ void NurseRostering::Solution::tabuSearch_Possibility( const Timer &timer, const
         int modeSelect = startMode;
         Move::Mode moveMode = Move::Mode::SIZE;
         Move bestMove;
-        isBlockSwapSelected = false;
         // judge every neighborhood whether to select and search when selected
         // start from big end to make sure block swap will be tested before swap
         for (int i = modeNum - 1; i >= 0; --i) {
@@ -529,8 +524,6 @@ void NurseRostering::Solution::tabuSearch_Possibility( const Timer &timer, const
             P_local[modeSelect] = static_cast<int>(P_local[modeSelect] * dec_local);
         }
     }
-
-    isPossibilitySelect = false;
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t duration = clock() - startTime;
     cout << "[TS] iter: " << (iterCount - startIterCount) << ' '
@@ -732,10 +725,6 @@ bool NurseRostering::Solution::findBestRemove( Move &bestMove ) const
 
 bool NurseRostering::Solution::findBestSwap( Move &bestMove ) const
 {
-    if (isPossibilitySelect && isBlockSwapSelected) {
-        return false;
-    }
-
     penalty.setSwapMode();
 
     RandSelect<ObjValue> rs;
@@ -771,7 +760,6 @@ bool NurseRostering::Solution::findBestSwap( Move &bestMove ) const
 
 bool NurseRostering::Solution::findBestBlockSwap( Move &bestMove ) const
 {
-    isBlockSwapSelected = true;
     penalty.setBlockSwapMode();
 
     NurseID maxNurseID = solver.problem.scenario.nurseNum - 1;
@@ -807,7 +795,6 @@ bool NurseRostering::Solution::findBestBlockSwap( Move &bestMove ) const
 
 bool NurseRostering::Solution::findBestBlockSwap_fast( Move &bestMove ) const
 {
-    isBlockSwapSelected = true;
     penalty.setBlockSwapMode();
 
     NurseID maxNurseID = solver.problem.scenario.nurseNum - 1;
@@ -1078,10 +1065,6 @@ bool NurseRostering::Solution::findBestRemoveOnBlockBorder( Move &bestMove ) con
 
 bool NurseRostering::Solution::findBestSwapOnBlockBorder( Move &bestMove ) const
 {
-    if (isPossibilitySelect && isBlockSwapSelected) {
-        return false;
-    }
-
     penalty.setSwapMode();
 
     RandSelect<ObjValue> rs;
