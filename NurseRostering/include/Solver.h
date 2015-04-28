@@ -62,7 +62,7 @@ public:
     enum SolveAlgorithm
     {
         RandomWalk, IterativeLocalSearch,
-        TabuSearch_Possibility, TabuSearch_Loop
+        TabuSearch_Possibility, TabuSearch_Loop, TabuSearch_Rand
     };
 
     enum TabuTenureCoefficientIndex

@@ -44,14 +44,15 @@ namespace INRC2
             " week      - weekdata file path.\n"
             " sol       - solution file path.\n"
             " [cusIn]   - custom input file path.\n"
-            " cusOut]   - custom output file path.\n"
+            " [cusOut]   - custom output file path.\n"
             " [rand]    - rand seed for the solver.\n"
             " [timeout] - max running time of the solver.\n"
             " [config]  - specifies algorithm select and argument settings.\n"
             "             format: cci;d;d,d,d,d;d,d,d,d\n"
             "               c for char, d for real number, comma is used to separate numbers.\n"
             "               the first char can be 'g'(for greedy init) or 'e'(for exact init).\n"
-            "               the second char can be 'r'(RW), 'i'(ILS), 'p'(TSP) or 'l'(TSL).\n"
+            "               the second char can be 'w'(Random Walk), 'i'(Iterative Local Search),\n"
+            "               'p'(Tabu Search Possibility), 'l'(TS Loop), 'r'(TS Rand).\n"
             "               i for a non-negative integer corresponding to Solution::ModeSeq.\n"
             "               first real number for coefficient of max no improve count.\n"
             "               following 4 real numbers are coefficients for TableSize, NurseNum,\n"
@@ -496,7 +497,7 @@ namespace INRC2
         }
 
         iss >> c;
-        if (c == 'r') {
+        if (c == 'w') {
             config.solveAlgorithm = NurseRostering::Solver::SolveAlgorithm::RandomWalk;
         } else if (c == 'i') {
             config.solveAlgorithm = NurseRostering::Solver::SolveAlgorithm::IterativeLocalSearch;
@@ -504,6 +505,8 @@ namespace INRC2
             config.solveAlgorithm = NurseRostering::Solver::SolveAlgorithm::TabuSearch_Possibility;
         } else if (c == 'l') {
             config.solveAlgorithm = NurseRostering::Solver::SolveAlgorithm::TabuSearch_Loop;
+        } else if (c == 'r') {
+            config.solveAlgorithm = NurseRostering::Solver::SolveAlgorithm::TabuSearch_Rand;
         } else {
             return config;
         }
