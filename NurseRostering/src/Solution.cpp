@@ -367,12 +367,12 @@ void NurseRostering::Solution::tabuSearch_Rand( const Timer &timer, const FindBe
 
     const int weight_Invalid = 128;     // min weight
     const int weight_NoImprove = 512;
-    const int weight_Valid = 1024;
-    const int weight_Improve = 4096;    // max weight (less than (RAND_MAX / modeNum))
-    const int initWeight = (weight_NoImprove + weight_Improve) / 2;
-    const int deltaIncRatio = 16;   // = weights[mode] / weightDelta
+    const int weight_ImproveCur = 1024;
+    const int weight_ImproveOpt = 4096; // max weight (less than (RAND_MAX / modeNum))
+    const int initWeight = (weight_ImproveCur + weight_NoImprove) / 2;
+    const int deltaIncRatio = 8;    // = weights[mode] / weightDelta
     const int incError = deltaIncRatio - 1;
-    const int deltaDecRatio = 8;    // = weights[mode] / weightDelta
+    const int deltaDecRatio = 16;   // = weights[mode] / weightDelta
     const int decError = -(deltaDecRatio - 1);
     vector<int> weights( modeNum, initWeight );
     int totalWeight = initWeight * modeNum;
@@ -392,20 +392,20 @@ void NurseRostering::Solution::tabuSearch_Rand( const Timer &timer, const FindBe
             (this->*applyMove[bestMove.mode])(bestMove);
             objValue += bestMove.delta;
 
-            if (objValue < optima.getObjValue()) {   // improve (improve optima)
+            if (objValue < optima.getObjValue()) {   // improve optima
                 noImprove = solver.MaxNoImproveForAllNeighborhood();
                 updateOptima();
-                weightDelta = (incError + weight_Improve - weights[modeSelect]) / deltaIncRatio;
+                weightDelta = (incError + weight_ImproveOpt - weights[modeSelect]) / deltaIncRatio;
             } else {
                 --noImprove;
-                if (bestMove.delta < 0) {    // no improve (improve current solution)
+                if (bestMove.delta < 0) {    // improve current solution
+                    weightDelta = (weights[modeSelect] < weight_ImproveCur)
+                        ? (incError + weight_ImproveCur - weights[modeSelect]) / deltaIncRatio
+                        : (decError + weight_ImproveCur - weights[modeSelect]) / deltaDecRatio;
+                } else {    // no improve but valid
                     weightDelta = (weights[modeSelect] < weight_NoImprove)
                         ? (incError + weight_NoImprove - weights[modeSelect]) / deltaIncRatio
                         : (decError + weight_NoImprove - weights[modeSelect]) / deltaDecRatio;
-                } else {    // valid ()
-                    weightDelta = (weights[modeSelect] < weight_Valid)
-                        ? (incError + weight_Valid - weights[modeSelect]) / deltaIncRatio
-                        : (decError + weight_Valid - weights[modeSelect]) / deltaDecRatio;
                 }
             }
         } else {    // invalid
