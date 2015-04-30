@@ -50,6 +50,8 @@ void solutionAnalysis( const std::string &logFileName, const std::string &output
         csvFile.getline( buf, MaxLen::LINE, ',' );  // algorithm
         algorithm = buf;
         csvFile.getline( buf, MaxLen::LINE, ',' );  // rand seed
+        csvFile.getline( buf, MaxLen::LINE, ',' );  // generation count
+        csvFile.getline( buf, MaxLen::LINE, ',' );  // iteration count
         csvFile >> duration;
         csvFile.getline( buf, MaxLen::LINE, ',' );  // clear
         csvFile >> feasible;

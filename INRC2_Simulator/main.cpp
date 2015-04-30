@@ -72,7 +72,7 @@ void sprintRun()
 
     int runCount = 3;
     int threadBeginInterval = 3;
-    int threadNum = thread::hardware_concurrency() / 2;
+    int threadNum = 2;
     threadNum += (threadNum == 0);
     vector<thread> vt;
     for (int i = 0; i < threadNum; ++i) {

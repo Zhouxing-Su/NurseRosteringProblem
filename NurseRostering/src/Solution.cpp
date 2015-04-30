@@ -85,12 +85,12 @@ const vector<vector<int> > NurseRostering::Solution::modeSeqPatterns = {
     { Solution::Move::Mode::ARRand, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap },
     { Solution::Move::Mode::ARBoth, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap },
     { Solution::Move::Mode::Add, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap, Solution::Move::Mode::Remove },
-    
+
     { Solution::Move::Mode::ARLoop, Solution::Move::Mode::Change, Solution::Move::Mode::BlockSwap },
     { Solution::Move::Mode::ARRand, Solution::Move::Mode::Change, Solution::Move::Mode::BlockSwap },
     { Solution::Move::Mode::ARBoth, Solution::Move::Mode::Change, Solution::Move::Mode::BlockSwap },
     { Solution::Move::Mode::Add, Solution::Move::Mode::Change, Solution::Move::Mode::BlockSwap, Solution::Move::Mode::Remove },
-    
+
     { Solution::Move::Mode::ARLoop, Solution::Move::Mode::Change, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap },
     { Solution::Move::Mode::ARRand, Solution::Move::Mode::Change, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap },
     { Solution::Move::Mode::ARBoth, Solution::Move::Mode::Change, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap },
@@ -359,7 +359,7 @@ void NurseRostering::Solution::tabuSearch_Rand( const Timer &timer, const FindBe
 {
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t startTime = clock();
-    long long startIterCount = iterCount;
+    IterCount startIterCount = iterCount;
 #endif
     optima = *this;
 
@@ -427,7 +427,7 @@ void NurseRostering::Solution::tabuSearch_Loop( const Timer &timer, const FindBe
 {
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t startTime = clock();
-    long long startIterCount = iterCount;
+    IterCount startIterCount = iterCount;
 #endif
     optima = *this;
 
@@ -484,7 +484,7 @@ void NurseRostering::Solution::tabuSearch_Possibility( const Timer &timer, const
 {
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t startTime = clock();
-    long long startIterCount = iterCount;
+    IterCount startIterCount = iterCount;
 #endif
     isPossibilitySelect = true;
 
@@ -558,7 +558,7 @@ void NurseRostering::Solution::localSearch( const Timer &timer, const FindBestMo
 {
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t startTime = clock();
-    long long startIterCount = iterCount;
+    IterCount startIterCount = iterCount;
 #endif
     optima = *this;
 
@@ -587,22 +587,11 @@ void NurseRostering::Solution::localSearch( const Timer &timer, const FindBestMo
 #endif
 }
 
-void NurseRostering::Solution::perturb( double strength )
-{
-    // TODO : make this change solution structure in certain complexity
-    int randomWalkStepCount = static_cast<int>(strength *
-        solver.problem.scenario.nurseNum * Weekday::NUM);
-
-    randomWalk( solver.timer, randomWalkStepCount );
-
-    updateOptima();
-}
-
 void NurseRostering::Solution::randomWalk( const Timer &timer, IterCount stepNum )
 {
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t startTime = clock();
-    long long startIterCount = stepNum;
+    IterCount startIterCount = stepNum;
 #endif
     optima = *this;
 
@@ -634,6 +623,17 @@ void NurseRostering::Solution::randomWalk( const Timer &timer, IterCount stepNum
         << "time: " << duration << ' '
         << "speed: " << startIterCount * static_cast<double>(CLOCKS_PER_SEC) / (duration + 1) << endl;
 #endif
+}
+
+void NurseRostering::Solution::perturb( double strength )
+{
+    // TODO : make this change solution structure in certain complexity
+    int randomWalkStepCount = static_cast<int>(strength *
+        solver.problem.scenario.nurseNum * Weekday::NUM);
+
+    randomWalk( solver.timer, randomWalkStepCount );
+
+    updateOptima();
 }
 
 

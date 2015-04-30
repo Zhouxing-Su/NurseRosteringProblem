@@ -10,6 +10,7 @@
 *               to improve efficiency since repair process is more similar to generating initial assignment?
 *           5.  perturb() should start from optima?
 *           6.  move mode setting to findBest rather than try.
+*           7.  just add max tabu tenure to iterCount rather than reset tabu table when rebuild (except the first time)
 *
 */
 
@@ -147,6 +148,8 @@ public:
     void evaluateObjValue();
     // get history for next week, only used for custom file
     History genHistory() const;
+    // get current iteration count (may not be the actual iter count)
+    IterCount getIterCount() const { return iterCount; }
 
     bool genInitAssign( int greedyRetryCount );
     bool genInitAssign_Greedy();

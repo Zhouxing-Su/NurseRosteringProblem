@@ -35,6 +35,7 @@
 #include <chrono>
 #include <ctime>
 #include <cstdio>
+#include <cmath>
 
 #include "DebugFlag.h"
 #include "NurseRostering.h"
@@ -163,11 +164,16 @@ protected:
     NurseNumOfSkill nurseNumOfSkill;
     NurseWithSkill nurseWithSkill;
 
+
     Output optima;
 
     Config config;
+
+    // information for log record
     std::string runID;
     std::string algorithmName;
+    IterCount iterationCount;
+    IterCount generationCount;
 
 private:    // forbidden operators
     Solver& operator=(const Solver &) { return *this; }
@@ -235,8 +241,9 @@ private:
 
         maxNoImproveForSingleNeighborhood = static_cast<IterCount>(
             coefficient * problem.scenario.nurseNum * Weekday::NUM);
-        maxNoImproveForAllNeighborhood = maxNoImproveForSingleNeighborhood *
-            problem.scenario.shiftTypeNum * problem.scenario.skillTypeNum;
+        maxNoImproveForAllNeighborhood = static_cast<IterCount>(
+            coefficient * problem.scenario.nurseNum * Weekday::NUM *
+            sqrt( problem.scenario.shiftTypeNum * problem.scenario.skillTypeNum ));
     }
 
     IterCount dayTabuTenureBase;

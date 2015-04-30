@@ -54,6 +54,8 @@ NurseRostering::ObjValue rebuildSolution( const string &logFileName, const strin
 
     csvFile.getline( buf, MaxLen::ALGORITHM_NAME, ',' );    // algorithmName
     csvFile.getline( buf, MaxLen::ALGORITHM_NAME, ',' );    // randSeed
+    csvFile.getline( buf, MaxLen::ALGORITHM_NAME, ',' );    // generation count
+    csvFile.getline( buf, MaxLen::ALGORITHM_NAME, ',' );    // iteration count
     csvFile.getline( buf, MaxLen::ALGORITHM_NAME, ',' );    // timeCost
     csvFile >> feasible >> c >> checkObj >> c
         >> obj >> c >> accObj >> c;
@@ -114,6 +116,8 @@ NurseRostering::ObjValue rebuildSolution( const string &logFileName, const strin
 
         csvFile.getline( buf, MaxLen::ALGORITHM_NAME, ',' );    // algorithmName
         csvFile.getline( buf, MaxLen::ALGORITHM_NAME, ',' );    // randSeed
+        csvFile.getline( buf, MaxLen::ALGORITHM_NAME, ',' );    // generation count
+        csvFile.getline( buf, MaxLen::ALGORITHM_NAME, ',' );    // iteration count
         csvFile.getline( buf, MaxLen::ALGORITHM_NAME, ',' );    // timeCost
         csvFile >> feasible >> c >> checkObj >> c
             >> obj >> c >> accObj >> c;
@@ -160,15 +164,17 @@ void validatorCheck( const std::string &logFileName, const std::string &outputFi
 
     char timeBuf[MaxLen::LINE];
     char idBuf[MaxLen::LINE];
+    char instNameBuf[MaxLen::INST_NAME];
 
     // clear first line of header
     csvFile.getline( timeBuf, MaxLen::LINE );
     // create header
-    output << "Time,ID,Feasible,Validator-Obj" << endl;
+    output << "Time,ID,Instance,Obj,Feasible,Validator-Obj" << endl;
 
     while (true) {
         csvFile.getline( timeBuf, MaxLen::LINE, ',' );
         csvFile.getline( idBuf, MaxLen::LINE, ',' );
+        csvFile.getline( instNameBuf, MaxLen::INST_NAME, '[' );
         if (csvFile.eof()) { break; }
 
         ValidatorArgvPack vap;
@@ -177,7 +183,9 @@ void validatorCheck( const std::string &logFileName, const std::string &outputFi
             callValidator( vap );
 
             NurseRostering::ObjValue checkResult = getObjValueInValidatorResult();
-            output << timeBuf << "," << idBuf << "," << (checkResult >= 0) << "," << (checkResult - totalObj) << endl;
+            output << timeBuf << "," << idBuf << ","
+                << instNameBuf << "," << totalObj << ","
+                << (checkResult >= 0) << "," << (checkResult - totalObj) << endl;
         }
 
         csvFile.getline( idBuf, MaxLen::LINE );    // clear line

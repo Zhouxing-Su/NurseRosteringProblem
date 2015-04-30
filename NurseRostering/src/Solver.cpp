@@ -211,7 +211,7 @@ void NurseRostering::Solver::print() const
 
 void NurseRostering::Solver::initResultSheet( std::ofstream &csvFile )
 {
-    csvFile << "Time,ID,Instance,Algorithm,RandSeed,Duration,Feasible,Check-Obj,ObjValue,AccObjValue,Solution" << std::endl;
+    csvFile << "Time,ID,Instance,Algorithm,RandSeed,GenCount,IterCount,Duration,Feasible,Check-Obj,ObjValue,AccObjValue,Solution" << std::endl;
 }
 
 void NurseRostering::Solver::record( const std::string logFileName, const std::string &instanceName ) const
@@ -237,6 +237,8 @@ void NurseRostering::Solver::record( const std::string logFileName, const std::s
         << instanceName << ","
         << algorithmName << ","
         << problem.randSeed << ","
+        << generationCount << ","
+        << iterationCount << ","
         << (optima.getFindTime() - startTime) / static_cast<double>(CLOCKS_PER_SEC) << "s,"
         << checkFeasibility() << ","
         << (checkObjValue() - optima.getObjValue()) / static_cast<double>(DefaultPenalty::AMP) << ","
@@ -392,6 +394,7 @@ void NurseRostering::TabuSolver::init( const Config &cfg, const std::string &id 
     config = cfg;
     runID = id;
     algorithmName = "Tabu";
+    generationCount = 0;
     srand( problem.randSeed );
 
     setTabuTenure();
@@ -499,11 +502,13 @@ void NurseRostering::TabuSolver::iterativeLocalSearch( Solution::ModeSeq modeSeq
     double perturbStrength = INIT_PERTURB_STRENGTH;
     while (!timer.isTimeOut()) {
         ObjValue lastObj = optima.getObjValue();
-        if (rand() % 2) {
-            sln.localSearch( timer, fbmt );
-        } else {
-            sln.localSearch( timer, fbmtobb );
-        }
+        iterationCount -= sln.getIterCount();
+
+        sln.localSearch( timer, ((rand() % 2) ? fbmt : fbmtobb) );
+
+        iterationCount += sln.getIterCount();
+        ++generationCount;
+
         updateOptima( sln.getOptima() );
         (optima.getObjValue() == lastObj)
             ? (perturbStrength += PERTURB_STRENGTH_DELTA)
@@ -529,7 +534,13 @@ void NurseRostering::TabuSolver::tabuSearch( Solution::ModeSeq modeSeq, Solution
     double perturbStrength = INIT_PERTURB_STRENGTH;
     while (!timer.isTimeOut()) {
         ObjValue lastObj = optima.getObjValue();
+        iterationCount -= sln.getIterCount();
+
         (sln.*search)(timer, fbmt);
+
+        iterationCount += sln.getIterCount();
+        ++generationCount;
+
         updateOptima( sln.getOptima() );
         sln.rebuild( (rand() % PERTURB_ORIGIN_SELECT)
             ? optima.getAssignTable()
