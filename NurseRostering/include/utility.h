@@ -144,7 +144,7 @@ std::string getTime();
 class FileLock
 {
 public:
-    static const int TRY_LOCK_INTERVAL = 50;   // in milliseconds
+    static const int TRY_LOCK_INTERVAL = 500;   // in milliseconds
     static const int BIT_NUM_OF_INT = 32;
 
     static const std::string LockName;
@@ -179,6 +179,9 @@ private:    // forbidden operators
     FileLock( const FileLock & ) : lockFileName(), signature(), retryInterval() {}
     FileLock& operator=(const FileLock &) { return *this; }
 };
+
+// 
+void errorLog( const std::string &msg );
 
 
 #endif

@@ -167,6 +167,7 @@ NurseRostering::ObjValue NurseRostering::Solver::checkObjValue( const AssignTabl
     int totalWeekNum = problem.scenario.totalWeekNum;
     for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
         int min = problem.scenario.contracts[problem.scenario.nurses[nurse].contract].minShiftNum;
+        int lastWeekMin = problem.scenario.contracts[problem.scenario.nurses[nurse].contract].minShiftNum_lastWeek;
         int max = problem.scenario.contracts[problem.scenario.nurses[nurse].contract].maxShiftNum;
         int assignNum = problem.history.totalAssignNums[nurse];
         for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
@@ -187,7 +188,7 @@ NurseRostering::ObjValue NurseRostering::Solver::checkObjValue( const AssignTabl
         if (problem.history.pastWeekCount > 0) {
             objValue -= DefaultPenalty::TotalAssign * distanceToRange(
                 problem.history.totalAssignNums[nurse] * totalWeekNum,
-                min * problem.history.pastWeekCount, max * problem.history.pastWeekCount ) / totalWeekNum;
+                lastWeekMin * problem.history.pastWeekCount, max * problem.history.pastWeekCount ) / totalWeekNum;
 
             historyWeekend -= maxWeekend * problem.history.pastWeekCount;
             if (historyWeekend > 0) {
@@ -259,7 +260,7 @@ void NurseRostering::Solver::record( const std::string logFileName, const std::s
 
 void NurseRostering::Solver::errorLog( const std::string &msg ) const
 {
-#ifdef INRC2_DEBUG
+#ifdef INRC2_LOG
     cerr << getTime() << "," << runID << "," << msg << endl;
 #endif
 }
@@ -394,6 +395,7 @@ void NurseRostering::TabuSolver::init( const Config &cfg, const std::string &id 
     config = cfg;
     runID = id;
     algorithmName = "Tabu";
+    iterationCount = 0;
     generationCount = 0;
     srand( problem.randSeed );
 
@@ -433,11 +435,6 @@ void NurseRostering::TabuSolver::solve()
             tabuSearch( config.modeSeq, &Solution::tabuSearch_Possibility );
             break;
     }
-
-    /// rebuild previous solution
-    //cout << optima.getObjValue() / DefaultPenalty::AMP << endl;
-    //AssignTable at( problem.scenario.nurseNum, Weekday::SIZE, "-1 0 -1 0 1 1 1 1 1 1 2 1 2 0 0 1 0 0 -1 0 0 1 0 0 1 1 1 0 1 0 1 1 2 0 2 1 2 1 2 0 2 1 1 1 -1 0 -1 0 -1 0 0 1 0 1 0 1 2 1 2 1 2 1 -1 0 -1 0 1 1 1 1" );
-    //optima = Output( 445 * DefaultPenalty::AMP, at );
 }
 
 bool NurseRostering::TabuSolver::updateOptima( const Output &localOptima )

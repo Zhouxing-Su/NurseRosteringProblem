@@ -50,19 +50,27 @@ std::string getTime()
 }
 
 //
+void errorLog( const std::string &msg )
+{
+#ifdef INRC2_LOG
+    cerr << getTime() << "," << msg << endl;
+#endif
+}
+
+//
 const std::string FileLock::LockName( ".lock" );
 const std::ios_base::openmode FileLock::ReadMode( ios::in | ios::binary );
 const std::ios_base::openmode FileLock::WriteMode( ios::out | ios::binary );
 
 void FileLock::unlock( const std::string &filename )
 {
-    remove( (LockName + filename).c_str() );
+    remove( (filename + LockName).c_str() );
 }
 
 FileLock::FileLock( const string &filename, unsigned id )
     : lockFileName( filename + LockName ),
     signature( (static_cast<long long>(rand() + time( NULL ) + clock()) << BIT_NUM_OF_INT) | id ),
-    retryInterval( TRY_LOCK_INTERVAL + (id % TRY_LOCK_INTERVAL) )
+    retryInterval( TRY_LOCK_INTERVAL + (signature % TRY_LOCK_INTERVAL) )
 {
 }
 
@@ -96,7 +104,7 @@ void FileLock::lock()
     do {
         tryLock();  // result can be 1.success; 2.fail; 3.share lock
         // wait in case others write signature right after checkLock
-        this_thread::sleep_for( chrono::milliseconds( retryInterval ) );
+        this_thread::sleep_for( chrono::milliseconds( retryInterval + (rand() % TRY_LOCK_INTERVAL) ) );
     } while (!checkLock());
 }
 

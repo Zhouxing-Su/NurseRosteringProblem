@@ -101,6 +101,7 @@ public:
         {
         public:
             int minShiftNum;    // total assignments in the planning horizon
+            int minShiftNum_lastWeek;   // load from custom file. if there isn't, it is the same as minShiftNum
             int maxShiftNum;    // total assignments in the planning horizon
             int minConsecutiveDayNum;
             int maxConsecutiveDayNum;
@@ -140,8 +141,8 @@ public:
     {
     public:
         ObjValue accObjValue;   // accumulated objective value
-        int pastWeekCount;  // count from 0 (the number in history file)
-        int currentWeek;    // count from 1
+        int pastWeekCount;      // count from 0 (the number in history file)
+        int currentWeek;        // count from 1
 
         std::vector<int> totalAssignNums;
         std::vector<int> totalWorkingWeekendNums;
@@ -149,6 +150,8 @@ public:
         std::vector<int> consecutiveShiftNums;
         std::vector<int> consecutiveDayNums;
         std::vector<int> consecutiveDayoffNums;
+
+        bool ignoreMinShiftConstraint;  // generated after reading history for initializing minShiftNum_lastWeek next week
     };
 
     class Names

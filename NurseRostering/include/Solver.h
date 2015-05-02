@@ -19,6 +19,7 @@
 *               makes clock_t can only count to about 4000 seconds.
 *           v10. record() uses c style function to check file open state, change it to c++ style.
 *           11. reset solution to global optima or last local optima after each tabuSearch?
+*           12. use constructor with assign string of AssignTable to rebuild solution.
 *
 */
 
@@ -82,8 +83,8 @@ public:
     {
     public:
         Config() : initAlgorithm( InitAlgorithm::Greedy ),
-            solveAlgorithm( SolveAlgorithm::TabuSearch_Possibility ),
-            modeSeq( Solution::ModeSeq::ARrCS ),
+            solveAlgorithm( SolveAlgorithm::TabuSearch_Rand ),
+            modeSeq( Solution::ModeSeq::ACBR ),
             maxNoImproveCoefficient( 1 )
         {
             dayTabuCoefficient[TabuTenureCoefficientIndex::TableSize] = 0;

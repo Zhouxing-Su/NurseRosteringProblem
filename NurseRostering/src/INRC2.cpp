@@ -86,28 +86,24 @@ namespace INRC2
             return -1;
         }
 
-        // load history
-        if (argvMap.find( ARGV_CUSTOM_INPUT ) != argvMap.end()) {
-            readCustomInput( argvMap[ARGV_CUSTOM_INPUT], input );
-        } else if (argvMap.find( ARGV_HISTORY ) != argvMap.end()) {
-            readHistory( argvMap[ARGV_HISTORY], input );
-        } else {
-#ifdef INRC2_DEBUG
-            cerr << getTime() << " : missing obligate argument(history)" << endl;
-#endif
-            return -1;
-        }
-
         // load weekdata
         if (!readWeekData( argvMap[ARGV_WEEKDATA], input )) {
             return -1;
         }
 
+        // load history last for it will initialize some assist data depending on scenario and weekdata
+        if (argvMap.find( ARGV_CUSTOM_INPUT ) != argvMap.end()) {
+            readCustomInput( argvMap[ARGV_CUSTOM_INPUT], input );
+        } else if (argvMap.find( ARGV_HISTORY ) != argvMap.end()) {
+            readHistory( argvMap[ARGV_HISTORY], input );
+        } else {
+            errorLog( "missing obligate argument(history)" );
+            return -1;
+        }
+
         // check solution file name
         if (argvMap.find( ARGV_SOLUTION ) == argvMap.end()) {
-#ifdef INRC2_DEBUG
-            cerr << getTime() << " : missing obligate argument(solution file name)" << endl;
-#endif
+            errorLog( "missing obligate argument(solution file name)" );
             return -1;
         }
 
@@ -144,6 +140,9 @@ namespace INRC2
 #ifdef INRC2_DEBUG
         solver.check();
         solver.print();
+#endif
+
+#ifdef INRC2_LOG
         ostringstream oss;
         int historyFileNameIndex = argvMap[ARGV_HISTORY].find_last_of( "/\\" ) + 1;
         int weekdataFileNameIndex = argvMap[ARGV_WEEKDATA].find_last_of( "/\\" ) + 1;
@@ -164,9 +163,7 @@ namespace INRC2
         ifstream ifs( scenarioFileName );
 
         if (!ifs.is_open()) {
-#ifdef INRC2_DEBUG
-            cerr << getTime() << " : fail to open scenario file." << endl;
-#endif
+            errorLog( "fail to open scenario file." );
             return false;
         }
 
@@ -239,6 +236,7 @@ namespace INRC2
                 >> contract.maxConsecutiveDayoffNum >> c     // )
                 >> contract.maxWorkingWeekendNum
                 >> contract.completeWeekend;
+            contract.minShiftNum_lastWeek = contract.minShiftNum;
             input.names.contractMap[input.names.contractNames[i]] = i;
         }
         ifs.getline( buf, MAX_BUF_LEN );        // clear line
@@ -273,9 +271,7 @@ namespace INRC2
         ifstream ifs( historyFileName );
 
         if (!ifs.is_open()) {
-#ifdef INRC2_DEBUG
-            cerr << getTime() << " : fail to open history file." << endl;
-#endif
+            errorLog( "fail to open history file." );
             return false;
         }
 
@@ -304,6 +300,21 @@ namespace INRC2
         }
 
         ifs.close();
+
+        // do not count min shift number in early weeks
+        history.ignoreMinShiftConstraint = (history.currentWeek * 2 <= input.scenario.totalWeekNum);
+        if (input.scenario.totalWeekNum > 1) {  // it must be count if there is only one week
+            bool ignoreMinShiftConstraint = (history.pastWeekCount * 2 <= input.scenario.totalWeekNum);
+            for (auto iter = input.scenario.contracts.begin(); iter != input.scenario.contracts.end(); ++iter) {
+                if (ignoreMinShiftConstraint) {
+                    iter->minShiftNum_lastWeek = 0;
+                    if (history.ignoreMinShiftConstraint) {
+                        iter->minShiftNum = 0;
+                    }
+                }
+            }
+        }
+
         return true;
     }
 
@@ -321,9 +332,7 @@ namespace INRC2
         ifstream ifs( weekDataFileName );
 
         if (!ifs.is_open()) {
-#ifdef INRC2_DEBUG
-            cerr << getTime() << " : fail to open weekdata file." << endl;
-#endif
+            errorLog( "fail to open weekdata file." );
             return false;
         }
 
@@ -374,9 +383,7 @@ namespace INRC2
         ifstream ifs( customInputFileName, ios::binary );
 
         if (!ifs.is_open()) {
-#ifdef INRC2_DEBUG
-            cerr << getTime() << " : fail to open custom input file." << endl;
-#endif
+            errorLog( "fail to open custom input file." );
             return false;
         }
 
@@ -387,6 +394,7 @@ namespace INRC2
         int *consecutiveShiftNums = new int[nurseNum];
         int *consecutiveDayNums = new int[nurseNum];
         int *consecutiveDayoffNums = new int[nurseNum];
+        bool ignoreMinShiftConstraint;
 
         ifs.read( reinterpret_cast<char *>(&input.history.accObjValue), sizeof( input.history.accObjValue ) );
         ifs.read( reinterpret_cast<char *>(&input.history.pastWeekCount), sizeof( input.history.pastWeekCount ) );
@@ -397,6 +405,7 @@ namespace INRC2
         ifs.read( reinterpret_cast<char *>(consecutiveShiftNums), nurseNum * sizeof( int ) );
         ifs.read( reinterpret_cast<char *>(consecutiveDayNums), nurseNum * sizeof( int ) );
         ifs.read( reinterpret_cast<char *>(consecutiveDayoffNums), nurseNum * sizeof( int ) );
+        ifs.read( reinterpret_cast<char *>(&ignoreMinShiftConstraint), nurseNum * sizeof( ignoreMinShiftConstraint ) );
 
         input.history.totalAssignNums = vector<int>( totalAssignNums, totalAssignNums + nurseNum );
         input.history.totalWorkingWeekendNums = vector<int>( totalWorkingWeekendNums, totalWorkingWeekendNums + nurseNum );
@@ -412,6 +421,37 @@ namespace INRC2
         delete[] consecutiveDayNums;
         delete[] consecutiveDayoffNums;
 
+        if (input.scenario.totalWeekNum <= 1) { // it must be count if there is only one week
+            input.history.ignoreMinShiftConstraint = false;
+        } else {    // do not count min shift number in early weeks
+            int workload = 0;
+            int minNurseNum = 0;
+            for (NurseRostering::NurseID nurse = 0; nurse < input.scenario.nurseNum; ++nurse) {
+                workload += totalAssignNums[nurse]; // workload in previous weeks
+                minNurseNum += input.scenario.contracts[input.scenario.nurses[nurse].contract].minShiftNum;
+            }
+            // potentials workload in this week
+            for (int weekday = NurseRostering::Weekday::Mon; weekday < NurseRostering::Weekday::SIZE; ++weekday) {
+                for (NurseRostering::ShiftID shift = NurseRostering::Scenario::Shift::ID_BEGIN; shift < input.scenario.shiftSize; shift++) {
+                    for (NurseRostering::SkillID skill = NurseRostering::Scenario::Skill::ID_BEGIN; skill < input.scenario.skillSize; skill++) {
+                        workload += input.weekData.optNurseNums[weekday][shift][skill];
+                    }
+                }
+            }
+
+            input.history.ignoreMinShiftConstraint = (input.history.currentWeek >= input.scenario.totalWeekNum)
+                ? false : (workload > minNurseNum);
+
+            for (auto iter = input.scenario.contracts.begin(); iter != input.scenario.contracts.end(); ++iter) {
+                if (ignoreMinShiftConstraint) {
+                    iter->minShiftNum_lastWeek = 0;
+                    if (input.history.ignoreMinShiftConstraint) {
+                        iter->minShiftNum = 0;
+                    }
+                }
+            }
+        }
+
         ifs.close();
         return true;
     }
@@ -423,9 +463,7 @@ namespace INRC2
         ofstream ofs( solutionFileName );
 
         if (!ofs.is_open()) {
-#ifdef INRC2_DEBUG
-            cerr << getTime() << " : fail to open solution file." << endl;
-#endif
+            errorLog( "fail to open solution file." );
             return false;
         }
 
@@ -460,9 +498,7 @@ namespace INRC2
         ofstream ofs( customOutputFileName, ios::binary );
 
         if (!ofs.is_open()) {
-#ifdef INRC2_DEBUG
-            cerr << getTime() << " : fail to open custom output file." << endl;
-#endif
+            errorLog( "fail to open custom output file." );
             return false;
         }
 
@@ -475,6 +511,7 @@ namespace INRC2
         ofs.write( reinterpret_cast<const char *>(history.consecutiveShiftNums.data()), history.consecutiveShiftNums.size() * sizeof( int ) );
         ofs.write( reinterpret_cast<const char *>(history.consecutiveDayNums.data()), history.consecutiveDayNums.size() * sizeof( int ) );
         ofs.write( reinterpret_cast<const char *>(history.consecutiveDayoffNums.data()), history.consecutiveDayoffNums.size() * sizeof( int ) );
+        ofs.write( reinterpret_cast<const char *>(&history.ignoreMinShiftConstraint), sizeof( history.ignoreMinShiftConstraint ) );
 
         ofs.close();
         return true;

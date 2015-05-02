@@ -11,11 +11,11 @@ void debugRun()
 {
     ostringstream id( "0" );
 
-    int instIndex = InstIndex::n005w4;
-    char initHis = '0';
-    char weekdata[WEEKDATA_SEQ_SIZE] = "5533";
+    int instIndex = InstIndex::n120w4;
+    char initHis = '2';
+    char weekdata[WEEKDATA_SEQ_SIZE] = "3327";
     int randSeed = 8787;
-    double runningTime = 3600;
+    double runningTime = instTimeout[getNurseNum( instIndex )];
     test_customIO( id.str(), outputDirPrefix + id.str(), instIndex, initHis, weekdata, runningTime, randSeed );
 }
 
