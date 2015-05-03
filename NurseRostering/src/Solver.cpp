@@ -47,7 +47,7 @@ NurseRostering::ObjValue NurseRostering::Solver::checkFeasibility( const AssignT
     // always true
 
     // check H2: Under-staffing
-    for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
+    for (int weekday = Weekday::Mon; weekday <= Weekday::Sun; ++weekday) {
         for (ShiftID shift = NurseRostering::Scenario::Shift::ID_BEGIN; shift < problem.scenario.shiftSize; ++shift) {
             for (SkillID skill = NurseRostering::Scenario::Skill::ID_BEGIN; skill < problem.scenario.skillSize; ++skill) {
                 if (nurseNum[weekday][shift][skill] < problem.weekData.minNurseNums[weekday][shift][skill]) {
@@ -59,7 +59,7 @@ NurseRostering::ObjValue NurseRostering::Solver::checkFeasibility( const AssignT
     }
 
     // check H3: Shift type successions
-    for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
+    for (int weekday = Weekday::Mon; weekday <= Weekday::Sun; ++weekday) {
         for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
             objValue += DefaultPenalty::Succession_Repair *
                 (!problem.scenario.shifts[assign[nurse][weekday - 1].shift].legalNextShifts[assign[nurse][weekday].shift]);
@@ -68,7 +68,7 @@ NurseRostering::ObjValue NurseRostering::Solver::checkFeasibility( const AssignT
 
     // check H4: Missing required skill
     for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
-        for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
+        for (int weekday = Weekday::Mon; weekday <= Weekday::Sun; ++weekday) {
             if (!problem.scenario.nurses[nurse].skills[assign[nurse][weekday].skill]) {
                 return DefaultPenalty::FORBIDDEN_MOVE;
             }
@@ -89,7 +89,7 @@ NurseRostering::ObjValue NurseRostering::Solver::checkObjValue( const AssignTabl
     NurseNumsOnSingleAssign nurseNums( countNurseNums( assign ) );
 
     // check S1: Insufficient staffing for optimal coverage (30)
-    for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
+    for (int weekday = Weekday::Mon; weekday <= Weekday::Sun; ++weekday) {
         for (ShiftID shift = NurseRostering::Scenario::Shift::ID_BEGIN; shift < problem.scenario.shiftSize; ++shift) {
             for (SkillID skill = NurseRostering::Scenario::Skill::ID_BEGIN; skill < problem.scenario.skillSize; ++skill) {
                 int missingNurse = (problem.weekData.optNurseNums[weekday][shift][skill]
@@ -115,7 +115,7 @@ NurseRostering::ObjValue NurseRostering::Solver::checkObjValue( const AssignTabl
             consecutiveShift, consecutiveDay, consecutiveDayOff,
             shiftBegin, dayBegin, dayoffBegin );
 
-        for (int weekday = Weekday::Tue; weekday < Weekday::SIZE; ++weekday) {
+        for (int weekday = Weekday::Tue; weekday <= Weekday::Sun; ++weekday) {
             checkConsecutiveViolation( objValue, assign, nurse, weekday, assign[nurse][weekday - 1].shift,
                 consecutiveShift, consecutiveDay, consecutiveDayOff,
                 shiftBegin, dayBegin, dayoffBegin );
@@ -147,7 +147,7 @@ NurseRostering::ObjValue NurseRostering::Solver::checkObjValue( const AssignTabl
 
     // check S4: Preferences (10)
     for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
-        for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
+        for (int weekday = Weekday::Mon; weekday <= Weekday::Sun; ++weekday) {
             const ShiftID &shift = assign[nurse][weekday].shift;
             objValue += DefaultPenalty::Preference *
                 problem.weekData.shiftOffs[weekday][shift][nurse];
@@ -170,7 +170,7 @@ NurseRostering::ObjValue NurseRostering::Solver::checkObjValue( const AssignTabl
         int lastWeekMin = problem.scenario.contracts[problem.scenario.nurses[nurse].contract].minShiftNum_lastWeek;
         int max = problem.scenario.contracts[problem.scenario.nurses[nurse].contract].maxShiftNum;
         int assignNum = problem.history.totalAssignNums[nurse];
-        for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
+        for (int weekday = Weekday::Mon; weekday <= Weekday::Sun; ++weekday) {
             assignNum += assign.isWorking( nurse, weekday );
         }
         objValue += DefaultPenalty::TotalAssign * distanceToRange( assignNum * totalWeekNum,
@@ -247,7 +247,7 @@ void NurseRostering::Solver::record( const std::string logFileName, const std::s
         << (optima.getObjValue() + problem.history.accObjValue) / static_cast<double>(DefaultPenalty::AMP) << ",";
 
     for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
-        for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
+        for (int weekday = Weekday::Mon; weekday <= Weekday::Sun; ++weekday) {
             csvFile << optima.getAssign( nurse, weekday ).shift << ' '
                 << optima.getAssign( nurse, weekday ).skill << ' ';
         }
@@ -271,7 +271,7 @@ NurseRostering::NurseNumsOnSingleAssign NurseRostering::Solver::countNurseNums( 
     NurseNumsOnSingleAssign nurseNums( Weekday::SIZE,
         vector< vector<int> >( problem.scenario.shiftSize, vector<int>( problem.scenario.skillSize, 0 ) ) );
     for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
-        for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
+        for (int weekday = Weekday::Mon; weekday <= Weekday::Sun; ++weekday) {
             ++nurseNums[weekday][assign[nurse][weekday].shift][assign[nurse][weekday].skill];
         }
     }

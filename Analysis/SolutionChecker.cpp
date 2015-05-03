@@ -74,7 +74,7 @@ NurseRostering::ObjValue rebuildSolution( const string &logFileName, const strin
     double totalObj = obj;
 
     for (NurseRostering::NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
-        for (int weekday = NurseRostering::Weekday::Mon; weekday < NurseRostering::Weekday::SIZE; ++weekday) {
+        for (int weekday = NurseRostering::Weekday::Mon; weekday <= NurseRostering::Weekday::Sun; ++weekday) {
             csvFile >> assign[nurse][weekday].shift >> assign[nurse][weekday].skill;
         }
     }
@@ -124,7 +124,7 @@ NurseRostering::ObjValue rebuildSolution( const string &logFileName, const strin
         totalObj += obj;
 
         for (NurseRostering::NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
-            for (int weekday = NurseRostering::Weekday::Mon; weekday < NurseRostering::Weekday::SIZE; ++weekday) {
+            for (int weekday = NurseRostering::Weekday::Mon; weekday <= NurseRostering::Weekday::Sun; ++weekday) {
                 csvFile >> assign[nurse][weekday].shift >> assign[nurse][weekday].skill;
             }
         }

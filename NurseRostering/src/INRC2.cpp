@@ -21,7 +21,7 @@ namespace INRC2
     const std::string ARGV_HELP( "help" );
 
     const std::string weekdayNames[NurseRostering::Weekday::SIZE] = {
-        "HIS", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"
+        "HIS", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun", "NEXT_WEEK"
     };
     const std::map<std::string, int> weekdayMap = {
         { weekdayNames[NurseRostering::Weekday::Mon], NurseRostering::Weekday::Mon },
@@ -163,7 +163,7 @@ namespace INRC2
         ifstream ifs( scenarioFileName );
 
         if (!ifs.is_open()) {
-            errorLog( "fail to open scenario file." );
+            errorLog( "fail to open scenario file : " + scenarioFileName );
             return false;
         }
 
@@ -271,7 +271,7 @@ namespace INRC2
         ifstream ifs( historyFileName );
 
         if (!ifs.is_open()) {
-            errorLog( "fail to open history file." );
+            errorLog( "fail to open history file : " + historyFileName );
             return false;
         }
 
@@ -332,7 +332,7 @@ namespace INRC2
         ifstream ifs( weekDataFileName );
 
         if (!ifs.is_open()) {
-            errorLog( "fail to open weekdata file." );
+            errorLog( "fail to open weekdata file : " + weekDataFileName );
             return false;
         }
 
@@ -350,7 +350,7 @@ namespace INRC2
             NurseRostering::ShiftID shift = input.names.shiftMap[shiftName];
             NurseRostering::SkillID skill = input.names.skillMap[skillName];
             for (int weekday = NurseRostering::Weekday::Mon;
-                weekday < NurseRostering::Weekday::SIZE; ++weekday) {
+                weekday <= NurseRostering::Weekday::Sun; ++weekday) {
                 ifs >> c >> weekdata.minNurseNums[weekday][shift][skill]
                     >> c >> weekdata.optNurseNums[weekday][shift][skill] >> c;
             }
@@ -431,7 +431,7 @@ namespace INRC2
                 minNurseNum += input.scenario.contracts[input.scenario.nurses[nurse].contract].minShiftNum;
             }
             // potentials workload in this week
-            for (int weekday = NurseRostering::Weekday::Mon; weekday < NurseRostering::Weekday::SIZE; ++weekday) {
+            for (int weekday = NurseRostering::Weekday::Mon; weekday <= NurseRostering::Weekday::Sun; ++weekday) {
                 for (NurseRostering::ShiftID shift = NurseRostering::Scenario::Shift::ID_BEGIN; shift < input.scenario.shiftSize; shift++) {
                     for (NurseRostering::SkillID skill = NurseRostering::Scenario::Skill::ID_BEGIN; skill < input.scenario.skillSize; skill++) {
                         workload += input.weekData.optNurseNums[weekday][shift][skill];
@@ -463,7 +463,7 @@ namespace INRC2
         ofstream ofs( solutionFileName );
 
         if (!ofs.is_open()) {
-            errorLog( "fail to open solution file." );
+            errorLog( "fail to open solution file : " + solutionFileName );
             return false;
         }
 
@@ -473,7 +473,7 @@ namespace INRC2
         int totalAssign = 0;
         ostringstream oss;
         for (NurseRostering::NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
-            for (int weekday = NurseRostering::Weekday::Mon; weekday < NurseRostering::Weekday::SIZE; ++weekday) {
+            for (int weekday = NurseRostering::Weekday::Mon; weekday <= NurseRostering::Weekday::Sun; ++weekday) {
                 if (assign.isWorking( nurse, weekday )) {
                     ++totalAssign;
                     oss << names.nurseNames[nurse] << ' '
@@ -498,7 +498,7 @@ namespace INRC2
         ofstream ofs( customOutputFileName, ios::binary );
 
         if (!ofs.is_open()) {
-            errorLog( "fail to open custom output file." );
+            errorLog( "fail to open custom output file : " + customOutputFileName );
             return false;
         }
 

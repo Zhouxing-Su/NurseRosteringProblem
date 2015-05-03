@@ -21,7 +21,7 @@
 class NurseRostering
 {
 public:
-    enum Weekday { HIS = 0, Mon, Tue, Wed, Thu, Fri, Sat, Sun, NUM = Sun, SIZE };
+    enum Weekday { HIS = 0, Mon, Tue, Wed, Thu, Fri, Sat, Sun, NUM = Sun, NEXT_WEEK, SIZE };
     enum DefaultPenalty
     {
         // (delta >= MAX_OBJ_MAX) stands for forbidden move

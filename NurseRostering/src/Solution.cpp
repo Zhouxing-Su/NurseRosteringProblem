@@ -99,12 +99,12 @@ const vector<vector<int> > NurseRostering::Solution::modeSeqPatterns = {
 
 
 NurseRostering::Solution::Solution( const TabuSolver &s )
-    : solver( s ), iterCount( 1 )
+    : solver( s ), problem( s.problem ), iterCount( 1 )
 {
 }
 
 NurseRostering::Solution::Solution( const TabuSolver &s, const AssignTable &at )
-    : solver( s ), iterCount( 1 )
+    : solver( s ), problem( s.problem ), iterCount( 1 )
 {
     rebuild( at );
 }
@@ -116,8 +116,8 @@ void NurseRostering::Solution::rebuild( const AssignTable &at )
     resetAssign();
     resetAssistData();
 
-    for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
-        for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
+    for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
+        for (int weekday = Weekday::Mon; weekday <= Weekday::Sun; ++weekday) {
             if (assignTable[nurse][weekday].isWorking()) {
                 addAssign( weekday, nurse, assignTable[nurse][weekday] );
             }
@@ -155,17 +155,17 @@ bool NurseRostering::Solution::genInitAssign_Greedy()
     AvailableNurses availableNurse( *this );
     const NurseNumOfSkill &nurseNumOfSkill( solver.getNurseNumOfSkill() );
 
-    for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
+    for (int weekday = Weekday::Mon; weekday <= Weekday::Sun; ++weekday) {
         // decide assign sequence of skill
         // the greater requiredNurseNum/nurseNumOfSkill[skill] is, the smaller index in skillRank a skill will get
-        vector<SkillID> skillRank( solver.problem.scenario.skillTypeNum );
-        vector<double> dailyRequire( solver.problem.scenario.skillSize, 0 );
-        for (int rank = 0; rank < solver.problem.scenario.skillTypeNum; ++rank) {
+        vector<SkillID> skillRank( problem.scenario.skillTypeNum );
+        vector<double> dailyRequire( problem.scenario.skillSize, 0 );
+        for (int rank = 0; rank < problem.scenario.skillTypeNum; ++rank) {
             SkillID skill = rank + NurseRostering::Scenario::Skill::ID_BEGIN;
             skillRank[rank] = skill;
             for (ShiftID shift = NurseRostering::Scenario::Shift::ID_BEGIN;
-                shift < solver.problem.scenario.shiftSize; ++shift) {
-                dailyRequire[skill] += solver.problem.weekData.minNurseNums[weekday][shift][skill];
+                shift < problem.scenario.shiftSize; ++shift) {
+                dailyRequire[skill] += problem.weekData.minNurseNums[weekday][shift][skill];
             }
             dailyRequire[skill] /= nurseNumOfSkill[skill];
         }
@@ -188,13 +188,13 @@ bool NurseRostering::Solution::genInitAssign_Greedy()
         sort( skillRank.begin(), skillRank.end(), cmpDailyRequire );
 
         // start assigning nurses
-        for (int rank = 0; rank < solver.problem.scenario.skillTypeNum; ++rank) {
+        for (int rank = 0; rank < problem.scenario.skillTypeNum; ++rank) {
             SkillID skill = skillRank[rank];
             availableNurse.setEnvironment( weekday, skill );
             for (ShiftID shift = NurseRostering::Scenario::Shift::ID_BEGIN;
-                shift < solver.problem.scenario.shiftSize; ++shift) {
+                shift < problem.scenario.shiftSize; ++shift) {
                 availableNurse.setShift( shift );
-                for (int i = 0; i < solver.problem.weekData.minNurseNums[weekday][shift][skill]; ++i) {
+                for (int i = 0; i < problem.weekData.minNurseNums[weekday][shift][skill]; ++i) {
                     int nurse = availableNurse.getNurse();
                     if (nurse != NurseRostering::Scenario::Nurse::ID_NONE) {
                         addAssign( weekday, nurse, Assign( shift, skill ) );
@@ -224,15 +224,15 @@ bool NurseRostering::Solution::genInitAssign_BranchAndCut()
 
 bool NurseRostering::Solution::fillAssign( int weekday, ShiftID shift, SkillID skill, NurseID nurse, int nurseNum )
 {
-    if (nurse >= solver.problem.scenario.nurseNum) {
-        if (nurseNum < solver.problem.weekData.minNurseNums[weekday][shift][skill]) {
+    if (nurse >= problem.scenario.nurseNum) {
+        if (nurseNum < problem.weekData.minNurseNums[weekday][shift][skill]) {
             return false;
         } else {
             return fillAssign( weekday, shift, skill + 1, 0, 0 );
         }
-    } else if (skill >= solver.problem.scenario.skillSize) {
+    } else if (skill >= problem.scenario.skillSize) {
         return fillAssign( weekday, shift + 1, NurseRostering::Scenario::Skill::ID_BEGIN, 0, 0 );
-    } else if (shift >= solver.problem.scenario.shiftSize) {
+    } else if (shift >= problem.scenario.shiftSize) {
         return fillAssign( weekday + 1, NurseRostering::Scenario::Shift::ID_BEGIN,
             NurseRostering::Scenario::Skill::ID_BEGIN, 0, 0 );
     } else if (weekday > Weekday::Sun) {
@@ -250,7 +250,7 @@ bool NurseRostering::Solution::fillAssign( int weekday, ShiftID shift, SkillID s
     bool isNotAssignedBefore = !assign.isWorking( nurse, weekday );
 
     if (isNotAssignedBefore) {
-        if (solver.problem.scenario.nurses[nurse].skills[skill]
+        if (problem.scenario.nurses[nurse].skills[skill]
             && isValidSuccession( nurse, shift, weekday )) {
             if (rand() % 2) {
                 swap( firstAssign, secondAssign );
@@ -278,32 +278,33 @@ bool NurseRostering::Solution::fillAssign( int weekday, ShiftID shift, SkillID s
 
 void NurseRostering::Solution::resetAssign()
 {
-    assign = AssignTable( solver.problem.scenario.nurseNum, Weekday::SIZE );
-    for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
-        assign[nurse][Weekday::HIS] = Assign( solver.problem.history.lastShifts[nurse] );
+    assign = AssignTable( problem.scenario.nurseNum, Weekday::SIZE );
+    for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
+        assign[nurse][Weekday::HIS] = Assign( problem.history.lastShifts[nurse] );
+        assign[nurse][Weekday::NEXT_WEEK] = Assign();
     }
 }
 
 void NurseRostering::Solution::resetAssistData()
 {
     // assist data structure
-    missingNurseNums = solver.problem.weekData.optNurseNums;
-    totalAssignNums = solver.problem.history.totalAssignNums;
-    consecutives = vector<Consecutive>( solver.problem.scenario.nurseNum );
-    for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
-        consecutives[nurse] = Consecutive( solver.problem.history, nurse );
+    missingNurseNums = problem.weekData.optNurseNums;
+    totalAssignNums = problem.history.totalAssignNums;
+    consecutives = vector<Consecutive>( problem.scenario.nurseNum );
+    for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
+        consecutives[nurse] = Consecutive( problem.history, nurse );
     }
     // tabu table
-    shiftTabu = ShiftTabu( solver.problem.scenario.nurseNum,
+    shiftTabu = ShiftTabu( problem.scenario.nurseNum,
         vector< vector< vector<IterCount> > >( Weekday::SIZE,
-        vector< vector<IterCount> >( solver.problem.scenario.shiftSize,
-        vector<IterCount>( solver.problem.scenario.skillSize, 0 ) ) ) );
-    dayTabu = DayTabu( solver.problem.scenario.nurseNum,
+        vector< vector<IterCount> >( problem.scenario.shiftSize,
+        vector<IterCount>( problem.scenario.skillSize, 0 ) ) ) );
+    dayTabu = DayTabu( problem.scenario.nurseNum,
         vector<IterCount>( Weekday::SIZE, 0 ) );
     // flags
     findBestARLoop_flag = true;
     findBestARLoopOnBlockBorder_flag = true;
-    findBestBlockSwap_startNurse = solver.problem.scenario.nurseNum;
+    findBestBlockSwap_startNurse = problem.scenario.nurseNum;
     isPossibilitySelect = false;
     isBlockSwapSelected = false;
 }
@@ -336,12 +337,12 @@ void NurseRostering::Solution::evaluateObjValue()
 
 NurseRostering::History NurseRostering::Solution::genHistory() const
 {
-    const History &history( solver.problem.history );
+    const History &history( problem.history );
     History newHistory;
-    newHistory.lastShifts.resize( solver.problem.scenario.nurseNum );
-    newHistory.consecutiveShiftNums.resize( solver.problem.scenario.nurseNum, 0 );
-    newHistory.consecutiveDayNums.resize( solver.problem.scenario.nurseNum, 0 );
-    newHistory.consecutiveDayoffNums.resize( solver.problem.scenario.nurseNum, 0 );
+    newHistory.lastShifts.resize( problem.scenario.nurseNum );
+    newHistory.consecutiveShiftNums.resize( problem.scenario.nurseNum, 0 );
+    newHistory.consecutiveDayNums.resize( problem.scenario.nurseNum, 0 );
+    newHistory.consecutiveDayoffNums.resize( problem.scenario.nurseNum, 0 );
 
     newHistory.accObjValue = history.accObjValue + objValue;
     newHistory.pastWeekCount = history.currentWeek;
@@ -350,7 +351,7 @@ NurseRostering::History NurseRostering::Solution::genHistory() const
     newHistory.totalWorkingWeekendNums = history.totalWorkingWeekendNums;
     newHistory.ignoreMinShiftConstraint = history.ignoreMinShiftConstraint;
 
-    for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
+    for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
         newHistory.totalWorkingWeekendNums[nurse] +=
             (assign.isWorking( nurse, Weekday::Sat ) || assign.isWorking( nurse, Weekday::Sun ));
         newHistory.lastShifts[nurse] = assign[nurse][Weekday::Sun].shift;
@@ -358,21 +359,11 @@ NurseRostering::History NurseRostering::Solution::genHistory() const
         if (assign.isWorking( nurse, Weekday::Sun )) {
             newHistory.consecutiveShiftNums[nurse] =
                 c.shiftHigh[Weekday::Sun] - c.shiftLow[Weekday::Sun] + 1;
-            if (c.isSingleConsecutiveShift()
-                && (history.lastShifts[nurse] == assign[nurse][Weekday::Sun].shift)) {
-                newHistory.consecutiveShiftNums[nurse] += history.consecutiveShiftNums[nurse];
-            }
             newHistory.consecutiveDayNums[nurse] =
                 c.dayHigh[Weekday::Sun] - c.dayLow[Weekday::Sun] + 1;
-            if (c.isSingleConsecutiveDay()) {
-                newHistory.consecutiveDayNums[nurse] += history.consecutiveDayNums[nurse];
-            }
         } else {
             newHistory.consecutiveDayoffNums[nurse] =
                 c.dayHigh[Weekday::Sun] - c.dayLow[Weekday::Sun] + 1;
-            if (c.isSingleConsecutiveDay()) {
-                newHistory.consecutiveDayoffNums[nurse] += history.consecutiveDayoffNums[nurse];
-            }
         }
     }
 
@@ -648,12 +639,12 @@ void NurseRostering::Solution::randomWalk( const Timer &timer, IterCount stepNum
         Move move;
         move.weekday = (rand() % Weekday::NUM) + Weekday::Mon;
         move.weekday2 = (rand() % Weekday::NUM) + Weekday::Mon;
-        move.nurse = rand() % solver.problem.scenario.nurseNum;
-        move.nurse2 = rand() % solver.problem.scenario.nurseNum;
+        move.nurse = rand() % problem.scenario.nurseNum;
+        move.nurse2 = rand() % problem.scenario.nurseNum;
         move.assign.shift = NurseRostering::Scenario::Shift::ID_BEGIN +
-            (rand() % solver.problem.scenario.shiftTypeNum);
+            (rand() % problem.scenario.shiftTypeNum);
         move.assign.skill = NurseRostering::Scenario::Skill::ID_BEGIN +
-            (rand() % solver.problem.scenario.skillTypeNum);
+            (rand() % problem.scenario.skillTypeNum);
 
         delta = (this->*tryMove[moveMode])(move);
         if (delta < DefaultPenalty::MAX_OBJ_VALUE) {
@@ -676,7 +667,7 @@ void NurseRostering::Solution::perturb( double strength )
 {
     // TODO : make this change solution structure in certain complexity
     int randomWalkStepCount = static_cast<int>(strength *
-        solver.problem.scenario.nurseNum * Weekday::NUM);
+        problem.scenario.nurseNum * Weekday::NUM);
 
     randomWalk( solver.timer, randomWalkStepCount );
 
@@ -692,13 +683,13 @@ bool NurseRostering::Solution::findBestAdd( Move &bestMove ) const
 
     Move move;
     move.mode = Move::Mode::Add;
-    for (move.nurse = 0; move.nurse < solver.problem.scenario.nurseNum; ++move.nurse) {
-        for (move.weekday = Weekday::Mon; move.weekday < Weekday::SIZE; ++move.weekday) {
+    for (move.nurse = 0; move.nurse < problem.scenario.nurseNum; ++move.nurse) {
+        for (move.weekday = Weekday::Mon; move.weekday <= Weekday::Sun; ++move.weekday) {
             if (!assign.isWorking( move.nurse, move.weekday )) {
                 for (move.assign.shift = NurseRostering::Scenario::Shift::ID_BEGIN;
-                    move.assign.shift < solver.problem.scenario.shiftSize; ++move.assign.shift) {
+                    move.assign.shift < problem.scenario.shiftSize; ++move.assign.shift) {
                     for (move.assign.skill = NurseRostering::Scenario::Skill::ID_BEGIN;
-                        move.assign.skill < solver.problem.scenario.skillSize; ++move.assign.skill) {
+                        move.assign.skill < problem.scenario.skillSize; ++move.assign.skill) {
                         move.delta = tryAddAssign( move );
                         if (noAddTabu( move )) {
                             if (rs.isMinimal( move.delta, bestMove.delta )) {
@@ -730,13 +721,13 @@ bool NurseRostering::Solution::findBestChange( Move &bestMove ) const
 
     Move move;
     move.mode = Move::Mode::Change;
-    for (move.nurse = 0; move.nurse < solver.problem.scenario.nurseNum; ++move.nurse) {
-        for (move.weekday = Weekday::Mon; move.weekday < Weekday::SIZE; ++move.weekday) {
+    for (move.nurse = 0; move.nurse < problem.scenario.nurseNum; ++move.nurse) {
+        for (move.weekday = Weekday::Mon; move.weekday <= Weekday::Sun; ++move.weekday) {
             if (assign.isWorking( move.nurse, move.weekday )) {
                 for (move.assign.shift = NurseRostering::Scenario::Shift::ID_BEGIN;
-                    move.assign.shift < solver.problem.scenario.shiftSize; ++move.assign.shift) {
+                    move.assign.shift < problem.scenario.shiftSize; ++move.assign.shift) {
                     for (move.assign.skill = NurseRostering::Scenario::Skill::ID_BEGIN;
-                        move.assign.skill < solver.problem.scenario.skillSize; ++move.assign.skill) {
+                        move.assign.skill < problem.scenario.skillSize; ++move.assign.skill) {
                         move.delta = tryChangeAssign( move );
                         if (noChangeTabu( move )) {
                             if (rs.isMinimal( move.delta, bestMove.delta )) {
@@ -768,8 +759,8 @@ bool NurseRostering::Solution::findBestRemove( Move &bestMove ) const
 
     Move move;
     move.mode = Move::Mode::Remove;
-    for (move.nurse = 0; move.nurse < solver.problem.scenario.nurseNum; ++move.nurse) {
-        for (move.weekday = Weekday::Mon; move.weekday < Weekday::SIZE; ++move.weekday) {
+    for (move.nurse = 0; move.nurse < problem.scenario.nurseNum; ++move.nurse) {
+        for (move.weekday = Weekday::Mon; move.weekday <= Weekday::Sun; ++move.weekday) {
             if (assign.isWorking( move.nurse, move.weekday )) {
                 move.delta = tryRemoveAssign( move );
                 if (noRemoveTabu( move )) {
@@ -806,9 +797,9 @@ bool NurseRostering::Solution::findBestSwap( Move &bestMove ) const
 
     Move move;
     move.mode = Move::Mode::Swap;
-    for (move.nurse = 0; move.nurse < solver.problem.scenario.nurseNum; ++move.nurse) {
-        for (move.nurse2 = move.nurse + 1; move.nurse2 < solver.problem.scenario.nurseNum; ++move.nurse2) {
-            for (move.weekday = Weekday::Mon; move.weekday < Weekday::SIZE; ++move.weekday) {
+    for (move.nurse = 0; move.nurse < problem.scenario.nurseNum; ++move.nurse) {
+        for (move.nurse2 = move.nurse + 1; move.nurse2 < problem.scenario.nurseNum; ++move.nurse2) {
+            for (move.weekday = Weekday::Mon; move.weekday <= Weekday::Sun; ++move.weekday) {
                 move.delta = trySwapNurse( move.weekday, move.nurse, move.nurse2 );
                 if (noSwapTabu( move )) {
                     if (rs.isMinimal( move.delta, bestMove.delta )) {
@@ -836,19 +827,19 @@ bool NurseRostering::Solution::findBestBlockSwap( Move &bestMove ) const
     isBlockSwapSelected = true;
     penalty.setBlockSwapMode();
 
-    NurseID maxNurseID = solver.problem.scenario.nurseNum - 1;
+    NurseID maxNurseID = problem.scenario.nurseNum - 1;
 
     RandSelect<ObjValue> rs;
 
     Move move;
     move.mode = Move::Mode::BlockSwap;
     move.nurse = findBestBlockSwap_startNurse;
-    for (NurseID count = solver.problem.scenario.nurseNum; count > 0; --count) {
+    for (NurseID count = problem.scenario.nurseNum; count > 0; --count) {
         (move.nurse < maxNurseID) ? (++move.nurse) : (move.nurse = 0);
         move.nurse2 = move.nurse;
         for (NurseID count2 = count - 1; count2 > 0; --count2) {
             (move.nurse2 < maxNurseID) ? (++move.nurse2) : (move.nurse2 = 0);
-            for (move.weekday = Weekday::Mon; move.weekday < Weekday::SIZE; ++move.weekday) {
+            for (move.weekday = Weekday::Mon; move.weekday <= Weekday::Sun; ++move.weekday) {
                 move.delta = trySwapBlock( move.weekday, move.weekday2, move.nurse, move.nurse2 );
                 if (rs.isMinimal( move.delta, bestMove.delta )) {
                     bestMove = move;
@@ -872,7 +863,7 @@ bool NurseRostering::Solution::findBestBlockSwap_fast( Move &bestMove ) const
     isBlockSwapSelected = true;
     penalty.setBlockSwapMode();
 
-    NurseID maxNurseID = solver.problem.scenario.nurseNum - 1;
+    NurseID maxNurseID = problem.scenario.nurseNum - 1;
 
     RandSelect<ObjValue> rs;
     Move bestMove_tabu;
@@ -881,7 +872,7 @@ bool NurseRostering::Solution::findBestBlockSwap_fast( Move &bestMove ) const
     Move move;
     move.mode = Move::Mode::BlockSwap;
     move.nurse = findBestBlockSwap_startNurse;
-    for (NurseID count = solver.problem.scenario.nurseNum; count > 0; --count) {
+    for (NurseID count = problem.scenario.nurseNum; count > 0; --count) {
         (move.nurse < maxNurseID) ? (++move.nurse) : (move.nurse = 0);
         move.nurse2 = move.nurse;
         for (NurseID count2 = count - 1; count2 > 0; --count2) {
@@ -923,9 +914,9 @@ bool NurseRostering::Solution::findBestExchange( Move &bestMove ) const
 
     Move move;
     move.mode = Move::Mode::Exchange;
-    for (move.nurse = 0; move.nurse < solver.problem.scenario.nurseNum; ++move.nurse) {
-        for (move.weekday = Weekday::Mon; move.weekday < Weekday::SIZE; ++move.weekday) {
-            for (move.weekday2 = move.weekday + 1; move.weekday2 < Weekday::SIZE; ++move.weekday2) {
+    for (move.nurse = 0; move.nurse < problem.scenario.nurseNum; ++move.nurse) {
+        for (move.weekday = Weekday::Mon; move.weekday <= Weekday::Sun; ++move.weekday) {
+            for (move.weekday2 = move.weekday + 1; move.weekday2 <= Weekday::Sun; ++move.weekday2) {
                 move.delta = tryExchangeDay( move.weekday, move.nurse, move.weekday2 );
                 if (noExchangeTabu( move )) {
                     if (rs.isMinimal( move.delta, bestMove.delta )) {
@@ -973,8 +964,8 @@ bool NurseRostering::Solution::findBestARBoth( Move &bestMove ) const
     RandSelect<ObjValue> rs_tabu;
 
     Move move;
-    for (move.nurse = 0; move.nurse < solver.problem.scenario.nurseNum; ++move.nurse) {
-        for (move.weekday = Weekday::Mon; move.weekday < Weekday::SIZE; ++move.weekday) {
+    for (move.nurse = 0; move.nurse < problem.scenario.nurseNum; ++move.nurse) {
+        for (move.weekday = Weekday::Mon; move.weekday <= Weekday::Sun; ++move.weekday) {
             if (assign.isWorking( move.nurse, move.weekday )) {
                 move.delta = tryRemoveAssign( move );
                 if (noRemoveTabu( move )) {
@@ -990,9 +981,9 @@ bool NurseRostering::Solution::findBestARBoth( Move &bestMove ) const
                 }
             } else {
                 for (move.assign.shift = NurseRostering::Scenario::Shift::ID_BEGIN;
-                    move.assign.shift < solver.problem.scenario.shiftSize; ++move.assign.shift) {
+                    move.assign.shift < problem.scenario.shiftSize; ++move.assign.shift) {
                     for (move.assign.skill = NurseRostering::Scenario::Skill::ID_BEGIN;
-                        move.assign.skill < solver.problem.scenario.skillSize; ++move.assign.skill) {
+                        move.assign.skill < problem.scenario.skillSize; ++move.assign.skill) {
                         move.delta = tryAddAssign( move );
                         if (noAddTabu( move )) {
                             if (rs.isMinimal( move.delta, bestMove.delta )) {
@@ -1026,14 +1017,14 @@ bool NurseRostering::Solution::findBestAddOnBlockBorder( Move &bestMove ) const
 
     Move move;
     move.mode = Move::Mode::Add;
-    for (move.nurse = 0; move.nurse < solver.problem.scenario.nurseNum; ++move.nurse) {
+    for (move.nurse = 0; move.nurse < problem.scenario.nurseNum; ++move.nurse) {
         const Consecutive &c( consecutives[move.nurse] );
-        for (move.weekday = Weekday::Mon; move.weekday < Weekday::SIZE;) {
+        for (move.weekday = Weekday::Mon; move.weekday <= Weekday::Sun;) {
             if (!assign.isWorking( move.nurse, move.weekday )) {
                 for (move.assign.shift = NurseRostering::Scenario::Shift::ID_BEGIN;
-                    move.assign.shift < solver.problem.scenario.shiftSize; ++move.assign.shift) {
+                    move.assign.shift < problem.scenario.shiftSize; ++move.assign.shift) {
                     for (move.assign.skill = NurseRostering::Scenario::Skill::ID_BEGIN;
-                        move.assign.skill < solver.problem.scenario.skillSize; ++move.assign.skill) {
+                        move.assign.skill < problem.scenario.skillSize; ++move.assign.skill) {
                         move.delta = tryAddAssign( move );
                         if (noAddTabu( move )) {
                             if (rs.isMinimal( move.delta, bestMove.delta )) {
@@ -1068,14 +1059,14 @@ bool NurseRostering::Solution::findBestChangeOnBlockBorder( Move &bestMove ) con
 
     Move move;
     move.mode = Move::Mode::Change;
-    for (move.nurse = 0; move.nurse < solver.problem.scenario.nurseNum; ++move.nurse) {
+    for (move.nurse = 0; move.nurse < problem.scenario.nurseNum; ++move.nurse) {
         const Consecutive &c( consecutives[move.nurse] );
-        for (move.weekday = Weekday::Mon; move.weekday < Weekday::SIZE;) {
+        for (move.weekday = Weekday::Mon; move.weekday <= Weekday::Sun;) {
             if (assign.isWorking( move.nurse, move.weekday )) {
                 for (move.assign.shift = NurseRostering::Scenario::Shift::ID_BEGIN;
-                    move.assign.shift < solver.problem.scenario.shiftSize; ++move.assign.shift) {
+                    move.assign.shift < problem.scenario.shiftSize; ++move.assign.shift) {
                     for (move.assign.skill = NurseRostering::Scenario::Skill::ID_BEGIN;
-                        move.assign.skill < solver.problem.scenario.skillSize; ++move.assign.skill) {
+                        move.assign.skill < problem.scenario.skillSize; ++move.assign.skill) {
                         move.delta = tryChangeAssign( move );
                         if (noChangeTabu( move )) {
                             if (rs.isMinimal( move.delta, bestMove.delta )) {
@@ -1110,9 +1101,9 @@ bool NurseRostering::Solution::findBestRemoveOnBlockBorder( Move &bestMove ) con
 
     Move move;
     move.mode = Move::Mode::Remove;
-    for (move.nurse = 0; move.nurse < solver.problem.scenario.nurseNum; ++move.nurse) {
+    for (move.nurse = 0; move.nurse < problem.scenario.nurseNum; ++move.nurse) {
         const Consecutive &c( consecutives[move.nurse] );
-        for (move.weekday = Weekday::Mon; move.weekday < Weekday::SIZE;) {
+        for (move.weekday = Weekday::Mon; move.weekday <= Weekday::Sun;) {
             if (assign.isWorking( move.nurse, move.weekday )) {
                 move.delta = tryRemoveAssign( move );
                 if (noRemoveTabu( move )) {
@@ -1152,10 +1143,10 @@ bool NurseRostering::Solution::findBestSwapOnBlockBorder( Move &bestMove ) const
 
     Move move;
     move.mode = Move::Mode::Swap;
-    for (move.nurse = 0; move.nurse < solver.problem.scenario.nurseNum; ++move.nurse) {
+    for (move.nurse = 0; move.nurse < problem.scenario.nurseNum; ++move.nurse) {
         const Consecutive &c( consecutives[move.nurse] );
-        for (move.weekday = Weekday::Mon; move.weekday < Weekday::SIZE;) {
-            for (move.nurse2 = 0; move.nurse2 < solver.problem.scenario.nurseNum; ++move.nurse2) {
+        for (move.weekday = Weekday::Mon; move.weekday <= Weekday::Sun;) {
+            for (move.nurse2 = 0; move.nurse2 < problem.scenario.nurseNum; ++move.nurse2) {
                 move.delta = trySwapNurse( move.weekday, move.nurse, move.nurse2 );
                 if (noSwapTabu( move )) {
                     if (rs.isMinimal( move.delta, bestMove.delta )) {
@@ -1189,10 +1180,10 @@ bool NurseRostering::Solution::findBestExchangeOnBlockBorder( Move &bestMove ) c
 
     Move move;
     move.mode = Move::Mode::Exchange;
-    for (move.nurse = 0; move.nurse < solver.problem.scenario.nurseNum; ++move.nurse) {
+    for (move.nurse = 0; move.nurse < problem.scenario.nurseNum; ++move.nurse) {
         const Consecutive &c( consecutives[move.nurse] );
-        for (move.weekday = Weekday::Mon; move.weekday < Weekday::SIZE;) {
-            for (move.weekday2 = Weekday::Mon; move.weekday2 < Weekday::SIZE; ++move.weekday2) {
+        for (move.weekday = Weekday::Mon; move.weekday <= Weekday::Sun;) {
+            for (move.weekday2 = Weekday::Mon; move.weekday2 <= Weekday::Sun; ++move.weekday2) {
                 move.delta = tryExchangeDay( move.weekday, move.nurse, move.weekday2 );
                 if (noExchangeTabu( move )) {
                     if (rs.isMinimal( move.delta, bestMove.delta )) {
@@ -1241,9 +1232,9 @@ bool NurseRostering::Solution::findBestARBothOnBlockBorder( Move &bestMove ) con
     RandSelect<ObjValue> rs_tabu;
 
     Move move;
-    for (move.nurse = 0; move.nurse < solver.problem.scenario.nurseNum; ++move.nurse) {
+    for (move.nurse = 0; move.nurse < problem.scenario.nurseNum; ++move.nurse) {
         const Consecutive &c( consecutives[move.nurse] );
-        for (move.weekday = Weekday::Mon; move.weekday < Weekday::SIZE;) {
+        for (move.weekday = Weekday::Mon; move.weekday <= Weekday::Sun;) {
             if (assign.isWorking( move.nurse, move.weekday )) {
                 move.delta = tryRemoveAssign( move );
                 if (noRemoveTabu( move )) {
@@ -1259,9 +1250,9 @@ bool NurseRostering::Solution::findBestARBothOnBlockBorder( Move &bestMove ) con
                 }
             } else {
                 for (move.assign.shift = NurseRostering::Scenario::Shift::ID_BEGIN;
-                    move.assign.shift < solver.problem.scenario.shiftSize; ++move.assign.shift) {
+                    move.assign.shift < problem.scenario.shiftSize; ++move.assign.shift) {
                     for (move.assign.skill = NurseRostering::Scenario::Skill::ID_BEGIN;
-                        move.assign.skill < solver.problem.scenario.skillSize; ++move.assign.skill) {
+                        move.assign.skill < problem.scenario.skillSize; ++move.assign.skill) {
                         move.delta = tryAddAssign( move );
                         if (noAddTabu( move )) {
                             if (rs.isMinimal( move.delta, bestMove.delta )) {
@@ -1289,18 +1280,6 @@ bool NurseRostering::Solution::findBestARBothOnBlockBorder( Move &bestMove ) con
 }
 
 
-bool NurseRostering::Solution::isValidSuccession( NurseID nurse, ShiftID shift, int weekday ) const
-{
-    return solver.problem.scenario.shifts[assign[nurse][weekday - 1].shift].legalNextShifts[shift];
-}
-
-bool NurseRostering::Solution::isValidPrior( NurseID nurse, ShiftID shift, int weekday ) const
-{
-    return ((weekday >= Weekday::Sun)
-        || solver.problem.scenario.shifts[shift].legalNextShifts[assign[nurse][weekday + 1].shift]);
-}
-
-
 NurseRostering::ObjValue NurseRostering::Solution::tryAddAssign( int weekday, NurseID nurse, const Assign &a ) const
 {
     ObjValue delta = 0;
@@ -1311,7 +1290,7 @@ NurseRostering::ObjValue NurseRostering::Solution::tryAddAssign( int weekday, Nu
     }
 
     // hard constraint check
-    delta += penalty.MissSkill() * (!solver.problem.scenario.nurses[nurse].skills[a.skill]);
+    delta += penalty.MissSkill() * (!problem.scenario.nurses[nurse].skills[a.skill]);
 
     delta += penalty.Succession() * (!isValidSuccession( nurse, a.shift, weekday ));
     delta += penalty.Succession() * (!isValidPrior( nurse, a.shift, weekday ));
@@ -1320,16 +1299,16 @@ NurseRostering::ObjValue NurseRostering::Solution::tryAddAssign( int weekday, Nu
         return delta;
     }
 
-    const WeekData &weekData( solver.problem.weekData );
+    const WeekData &weekData( problem.weekData );
     delta -= penalty.UnderStaff() * (weekData.minNurseNums[weekday][a.shift][a.skill] >
         (weekData.optNurseNums[weekday][a.shift][a.skill] - missingNurseNums[weekday][a.shift][a.skill]));
 
     int prevDay = weekday - 1;
     int nextDay = weekday + 1;
-    ContractID contractID = solver.problem.scenario.nurses[nurse].contract;
-    const Scenario::Contract &contract( solver.problem.scenario.contracts[contractID] );
-    int totalWeekNum = solver.problem.scenario.totalWeekNum;
-    int currentWeek = solver.problem.history.currentWeek;
+    ContractID contractID = problem.scenario.nurses[nurse].contract;
+    const Scenario::Contract &contract( problem.scenario.contracts[contractID] );
+    int totalWeekNum = problem.scenario.totalWeekNum;
+    int currentWeek = problem.history.currentWeek;
     const Consecutive &c( consecutives[nurse] );
 
     // insufficient staff
@@ -1337,7 +1316,7 @@ NurseRostering::ObjValue NurseRostering::Solution::tryAddAssign( int weekday, Nu
         (missingNurseNums[weekday][a.shift][a.skill] > 0);
 
     // consecutive shift
-    const vector<Scenario::Shift> &shifts( solver.problem.scenario.shifts );
+    const vector<Scenario::Shift> &shifts( problem.scenario.shifts );
     const Scenario::Shift &shift( shifts[a.shift] );
     ShiftID prevShiftID = assign[nurse][prevDay].shift;
     if (weekday == Weekday::Sun) {  // there is no blocks on the right
@@ -1498,7 +1477,7 @@ NurseRostering::ObjValue NurseRostering::Solution::tryAddAssign( int weekday, Nu
 
         // total working weekend
         if (!assign.isWorking( nurse, theOtherDay )) {
-            const History &history( solver.problem.history );
+            const History &history( problem.history );
             delta -= penalty.TotalWorkingWeekend() * exceedCount(
                 history.totalWorkingWeekendNums[nurse] * totalWeekNum,
                 contract.maxWorkingWeekendNum * currentWeek ) / totalWeekNum;
@@ -1536,12 +1515,12 @@ NurseRostering::ObjValue NurseRostering::Solution::tryChangeAssign( int weekday,
         return DefaultPenalty::FORBIDDEN_MOVE;
     }
 
-    delta += penalty.MissSkill() * (!solver.problem.scenario.nurses[nurse].skills[a.skill]);
+    delta += penalty.MissSkill() * (!problem.scenario.nurses[nurse].skills[a.skill]);
 
     delta += penalty.Succession() * (!isValidSuccession( nurse, a.shift, weekday ));
     delta += penalty.Succession() * (!isValidPrior( nurse, a.shift, weekday ));
 
-    const WeekData &weekData( solver.problem.weekData );
+    const WeekData &weekData( problem.weekData );
     delta += penalty.UnderStaff() * (weekData.minNurseNums[weekday][oldShiftID][oldSkillID] >=
         (weekData.optNurseNums[weekday][oldShiftID][oldSkillID] - missingNurseNums[weekday][oldShiftID][oldSkillID]));
 
@@ -1567,9 +1546,9 @@ NurseRostering::ObjValue NurseRostering::Solution::tryChangeAssign( int weekday,
 
     if (a.shift != oldShiftID) {
         // consecutive shift
-        const vector<Scenario::Shift> &shifts( solver.problem.scenario.shifts );
+        const vector<Scenario::Shift> &shifts( problem.scenario.shifts );
         const Scenario::Shift &shift( shifts[a.shift] );
-        const Scenario::Shift &oldShift( solver.problem.scenario.shifts[oldShiftID] );
+        const Scenario::Shift &oldShift( problem.scenario.shifts[oldShiftID] );
         ShiftID prevShiftID = assign[nurse][prevDay].shift;
         if (weekday == Weekday::Sun) {  // there is no blocks on the right
             // shiftHigh[weekday] will always equal to Weekday::Sun
@@ -1701,7 +1680,7 @@ NurseRostering::ObjValue NurseRostering::Solution::tryRemoveAssign( int weekday,
         return DefaultPenalty::FORBIDDEN_MOVE;
     }
 
-    const WeekData &weekData( solver.problem.weekData );
+    const WeekData &weekData( problem.weekData );
     delta += penalty.UnderStaff() * (weekData.minNurseNums[weekday][oldShiftID][oldSkillID] >=
         (weekData.optNurseNums[weekday][oldShiftID][oldSkillID] - missingNurseNums[weekday][oldShiftID][oldSkillID]));
 
@@ -1714,10 +1693,10 @@ NurseRostering::ObjValue NurseRostering::Solution::tryRemoveAssign( int weekday,
 
     int prevDay = weekday - 1;
     int nextDay = weekday + 1;
-    ContractID contractID = solver.problem.scenario.nurses[nurse].contract;
-    const Scenario::Contract &contract( solver.problem.scenario.contracts[contractID] );
-    int totalWeekNum = solver.problem.scenario.totalWeekNum;
-    int currentWeek = solver.problem.history.currentWeek;
+    ContractID contractID = problem.scenario.nurses[nurse].contract;
+    const Scenario::Contract &contract( problem.scenario.contracts[contractID] );
+    int totalWeekNum = problem.scenario.totalWeekNum;
+    int currentWeek = problem.history.currentWeek;
     const Consecutive &c( consecutives[nurse] );
 
     // insufficient staff
@@ -1725,7 +1704,7 @@ NurseRostering::ObjValue NurseRostering::Solution::tryRemoveAssign( int weekday,
         (missingNurseNums[weekday][oldShiftID][oldSkillID] >= 0);
 
     // consecutive shift
-    const vector<Scenario::Shift> &shifts( solver.problem.scenario.shifts );
+    const vector<Scenario::Shift> &shifts( problem.scenario.shifts );
     const Scenario::Shift &oldShift( shifts[oldShiftID] );
     if (weekday == Weekday::Sun) {  // there is no block on the right
         if (Weekday::Sun == c.shiftLow[weekday]) {
@@ -1859,7 +1838,7 @@ NurseRostering::ObjValue NurseRostering::Solution::tryRemoveAssign( int weekday,
 
         // total working weekend
         if (!assign.isWorking( nurse, theOtherDay )) {
-            const History &history( solver.problem.history );
+            const History &history( problem.history );
             delta -= penalty.TotalWorkingWeekend() * exceedCount(
                 (history.totalWorkingWeekendNums[nurse] + 1) * totalWeekNum,
                 contract.maxWorkingWeekendNum * currentWeek ) / totalWeekNum;
@@ -1929,7 +1908,7 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapNurse( const Move &mov
 NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock( int weekday, int &weekday2, NurseID nurse, NurseID nurse2 ) const
 {
     // TODO : make sure they won't be the same and leave out this
-    if ((nurse == nurse2) || (weekday >= Weekday::SIZE)) {
+    if (nurse == nurse2) {
         return DefaultPenalty::FORBIDDEN_MOVE;
     }
 
@@ -1952,8 +1931,8 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock( int weekday, in
     // try each block length
     int count = 0;
     int notabuCount = 0;
-    while (solver.problem.scenario.nurses[nurse].skills[assign[nurse2][weekday].skill]
-        && solver.problem.scenario.nurses[nurse2].skills[assign[nurse][weekday].skill]) {
+    while (problem.scenario.nurses[nurse].skills[assign[nurse2][weekday].skill]
+        && problem.scenario.nurses[nurse2].skills[assign[nurse][weekday].skill]) {
         // longer blocks will also miss this skill
         delta += trySwapNurse( weekday, nurse, nurse2 );
 
@@ -2023,27 +2002,30 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock_fast( int &weekd
 
     // prepare for hard constraint check and tabu judgment
     bool hasSkill[Weekday::SIZE];
-    for (int w = Weekday::Mon; w < Weekday::SIZE; ++w) {
-        hasSkill[w] = (solver.problem.scenario.nurses[nurse].skills[assign[nurse2][w].skill]
-            && solver.problem.scenario.nurses[nurse2].skills[assign[nurse][w].skill]);
+    for (int w = Weekday::Mon; w <= Weekday::Sun; ++w) {
+        hasSkill[w] = (problem.scenario.nurses[nurse].skills[assign[nurse2][w].skill]
+            && problem.scenario.nurses[nurse2].skills[assign[nurse][w].skill]);
     }
 
     // try each block length
     int w = Weekday::Mon;
     int w2;
-    for (; w < Weekday::SIZE; ++w) {
+    for (; w <= Weekday::Sun; ++w) {
         if (!(isValidSuccession( nurse, assign[nurse2][w].shift, w )
             && isValidSuccession( nurse2, assign[nurse][w].shift, w ))) {
             continue;
         }
 
         w2 = w;
-        for (; (w2 < Weekday::SIZE) && hasSkill[w2]; ++w2) { // longer blocks will also miss this skill
+        for (; (w2 <= Weekday::Sun) && hasSkill[w2]; ++w2) { // longer blocks will also miss this skill
             // only record best move when current block swap is valid
             delta += trySwapNurse( w2, nurse, nurse2 );
-            (delta < DefaultPenalty::MAX_OBJ_VALUE)
-                ? (const_cast<Solution*>(this))->swapNurse( w2, nurse, nurse2 )
-                : (delta -= DefaultPenalty::FORBIDDEN_MOVE);    // two day off
+            if (delta < DefaultPenalty::MAX_OBJ_VALUE) {
+                (const_cast<Solution*>(this))->swapNurse( w2, nurse, nurse2 );
+            } else {    // two day off
+                delta -= DefaultPenalty::FORBIDDEN_MOVE;
+            }
+
             if (isValidPrior( nurse, assign[nurse][w2].shift, w2 )
                 && isValidPrior( nurse2, assign[nurse2][w2].shift, w2 )) {
                 if (rs.isMinimal( delta, minDelta )) {
@@ -2058,9 +2040,11 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock_fast( int &weekd
 
         do {
             delta += trySwapNurse( w, nurse, nurse2 );
-            (delta < DefaultPenalty::MAX_OBJ_VALUE)
-                ? (const_cast<Solution*>(this))->swapNurse( w, nurse, nurse2 )
-                : (delta -= DefaultPenalty::FORBIDDEN_MOVE);    // two day off
+            if (delta < DefaultPenalty::MAX_OBJ_VALUE) {
+                (const_cast<Solution*>(this))->swapNurse( w, nurse, nurse2 );
+            } else {    // two day off
+                (delta -= DefaultPenalty::FORBIDDEN_MOVE);
+            }
             ++w;
         } while ((w < w2)
             && !(isValidSuccession( nurse, assign[nurse][w].shift, w )
@@ -2077,9 +2061,11 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock_fast( int &weekd
             }
             // only record best move when current block swap is valid
             delta += trySwapNurse( w2, nurse, nurse2 );
-            (delta < DefaultPenalty::MAX_OBJ_VALUE)
-                ? (const_cast<Solution*>(this))->swapNurse( w2, nurse, nurse2 )
-                : (delta -= DefaultPenalty::FORBIDDEN_MOVE);    // two day off
+            if (delta < DefaultPenalty::MAX_OBJ_VALUE) {
+                (const_cast<Solution*>(this))->swapNurse( w2, nurse, nurse2 );
+            } else {    // two day off
+                delta -= DefaultPenalty::FORBIDDEN_MOVE;
+            }
         }
     }
 
@@ -2112,13 +2098,13 @@ NurseRostering::ObjValue NurseRostering::Solution::tryExchangeDay( int weekday, 
     ShiftID shift2 = assign[nurse][weekday2].shift;
     if (weekday == weekday2 + 1) {
         if (!(isValidSuccession( nurse, shift, weekday2 )
-            && solver.problem.scenario.shifts[shift].legalNextShifts[shift2]
+            && problem.scenario.shifts[shift].legalNextShifts[shift2]
             && isValidPrior( nurse, shift2, weekday ))) {
             return DefaultPenalty::FORBIDDEN_MOVE;
         }
     } else if (weekday == weekday2 - 1) {
         if (!(isValidSuccession( nurse, shift2, weekday )
-            && solver.problem.scenario.shifts[shift2].legalNextShifts[shift]
+            && problem.scenario.shifts[shift2].legalNextShifts[shift]
             && isValidPrior( nurse, shift, weekday2 ))) {
             return DefaultPenalty::FORBIDDEN_MOVE;
         }
@@ -2433,11 +2419,11 @@ bool NurseRostering::Solution::checkIncrementalUpdate()
 
 void NurseRostering::Solution::evaluateInsufficientStaff()
 {
-    for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
+    for (int weekday = Weekday::Mon; weekday <= Weekday::Sun; ++weekday) {
         for (ShiftID shift = NurseRostering::Scenario::Shift::ID_BEGIN;
-            shift < solver.problem.scenario.shiftSize; ++shift) {
+            shift < problem.scenario.shiftSize; ++shift) {
             for (SkillID skill = NurseRostering::Scenario::Skill::ID_BEGIN;
-                skill < solver.problem.scenario.skillSize; ++skill) {
+                skill < problem.scenario.skillSize; ++skill) {
                 if (missingNurseNums[weekday][shift][skill] > 0) {
                     objInsufficientStaff += penalty.InsufficientStaff() * missingNurseNums[weekday][shift][skill];
                 }
@@ -2448,13 +2434,13 @@ void NurseRostering::Solution::evaluateInsufficientStaff()
 
 void NurseRostering::Solution::evaluateConsecutiveShift()
 {
-    const History &history( solver.problem.history );
-    for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
+    const History &history( problem.history );
+    for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
         const Consecutive &c( consecutives[nurse] );
-        const vector<Scenario::Shift> &shifts( solver.problem.scenario.shifts );
+        const vector<Scenario::Shift> &shifts( problem.scenario.shifts );
 
         int nextday = c.shiftHigh[Weekday::Mon] + 1;
-        if (nextday < Weekday::SIZE) {   // the entire week is not one block
+        if (nextday <= Weekday::Sun) {   // the entire week is not one block
             // handle first block with history
             if (assign.isWorking( nurse, Weekday::Mon )) {
                 const Scenario::Shift &shift( shifts[assign[nurse][Weekday::Mon].shift] );
@@ -2495,7 +2481,7 @@ void NurseRostering::Solution::evaluateConsecutiveShift()
         int consecutiveShift = c.shiftHigh[Weekday::Sun] - c.shiftLow[Weekday::Sun] + 1;
         if (assign.isWorking( nurse, Weekday::Sun )) {
             const ShiftID &shiftID( assign[nurse][Weekday::Sun].shift );
-            const Scenario::Shift &shift( solver.problem.scenario.shifts[shiftID] );
+            const Scenario::Shift &shift( problem.scenario.shifts[shiftID] );
             if (c.isSingleConsecutiveShift()) { // the entire week is one block
                 if (history.lastShifts[nurse] == assign[nurse][Weekday::Sun].shift) {
                     if (history.consecutiveShiftNums[nurse] > shift.maxConsecutiveShiftNum) {
@@ -2528,14 +2514,14 @@ void NurseRostering::Solution::evaluateConsecutiveShift()
 
 void NurseRostering::Solution::evaluateConsecutiveDay()
 {
-    const History &history( solver.problem.history );
-    for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
+    const History &history( problem.history );
+    for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
         const Consecutive &c( consecutives[nurse] );
-        const ContractID &contractID( solver.problem.scenario.nurses[nurse].contract );
-        const Scenario::Contract &contract( solver.problem.scenario.contracts[contractID] );
+        const ContractID &contractID( problem.scenario.nurses[nurse].contract );
+        const Scenario::Contract &contract( problem.scenario.contracts[contractID] );
 
         int nextday = c.dayHigh[Weekday::Mon] + 1;
-        if (nextday < Weekday::SIZE) {   // the entire week is not one block
+        if (nextday <= Weekday::Sun) {   // the entire week is not one block
             // handle first block with history
             if (assign.isWorking( nurse, Weekday::Mon )) {
                 if (history.consecutiveDayNums[nurse] > contract.maxConsecutiveDayNum) {
@@ -2583,14 +2569,14 @@ void NurseRostering::Solution::evaluateConsecutiveDay()
 
 void NurseRostering::Solution::evaluateConsecutiveDayOff()
 {
-    const History &history( solver.problem.history );
-    for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
+    const History &history( problem.history );
+    for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
         const Consecutive &c( consecutives[nurse] );
-        const ContractID &contractID( solver.problem.scenario.nurses[nurse].contract );
-        const Scenario::Contract &contract( solver.problem.scenario.contracts[contractID] );
+        const ContractID &contractID( problem.scenario.nurses[nurse].contract );
+        const Scenario::Contract &contract( problem.scenario.contracts[contractID] );
 
         int nextday = c.dayHigh[Weekday::Mon] + 1;
-        if (nextday < Weekday::SIZE) {   // the entire week is not one block
+        if (nextday <= Weekday::Sun) {   // the entire week is not one block
             // handle first block with history
             if (!assign.isWorking( nurse, Weekday::Mon )) {
                 if (history.consecutiveDayoffNums[nurse] > contract.maxConsecutiveDayoffNum) {
@@ -2637,28 +2623,28 @@ void NurseRostering::Solution::evaluateConsecutiveDayOff()
 
 void NurseRostering::Solution::evaluatePreference()
 {
-    for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
-        for (int weekday = Weekday::Mon; weekday < Weekday::SIZE; ++weekday) {
+    for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
+        for (int weekday = Weekday::Mon; weekday <= Weekday::Sun; ++weekday) {
             const ShiftID &shift = assign[nurse][weekday].shift;
             objPreference += penalty.Preference() *
-                solver.problem.weekData.shiftOffs[weekday][shift][nurse];
+                problem.weekData.shiftOffs[weekday][shift][nurse];
         }
     }
 }
 
 void NurseRostering::Solution::evaluateCompleteWeekend()
 {
-    for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
+    for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
         objCompleteWeekend += penalty.CompleteWeekend() *
-            (solver.problem.scenario.contracts[solver.problem.scenario.nurses[nurse].contract].completeWeekend
+            (problem.scenario.contracts[problem.scenario.nurses[nurse].contract].completeWeekend
             && (assign.isWorking( nurse, Weekday::Sat ) != assign.isWorking( nurse, Weekday::Sun )));
     }
 }
 
 void NurseRostering::Solution::evaluateTotalAssign()
 {
-    const Scenario &scenario( solver.problem.scenario );
-    int totalWeekNum = solver.problem.scenario.totalWeekNum;
+    const Scenario &scenario( problem.scenario );
+    int totalWeekNum = problem.scenario.totalWeekNum;
 
     for (NurseID nurse = 0; nurse < scenario.nurseNum; ++nurse) {
         int min = scenario.contracts[scenario.nurses[nurse].contract].minShiftNum;
@@ -2666,34 +2652,34 @@ void NurseRostering::Solution::evaluateTotalAssign()
         int max = scenario.contracts[scenario.nurses[nurse].contract].maxShiftNum;
         objTotalAssign += penalty.TotalAssign() * distanceToRange(
             totalAssignNums[nurse] * totalWeekNum,
-            min * solver.problem.history.currentWeek,
-            max * solver.problem.history.currentWeek ) / totalWeekNum;
+            min * problem.history.currentWeek,
+            max * problem.history.currentWeek ) / totalWeekNum;
         // remove penalty in the history except the first week
-        if (solver.problem.history.pastWeekCount > 0) {
+        if (problem.history.pastWeekCount > 0) {
             objTotalAssign -= penalty.TotalAssign() * distanceToRange(
-                solver.problem.history.totalAssignNums[nurse] * totalWeekNum,
-                lastWeekMin * solver.problem.history.pastWeekCount,
-                max * solver.problem.history.pastWeekCount ) / totalWeekNum;
+                problem.history.totalAssignNums[nurse] * totalWeekNum,
+                lastWeekMin * problem.history.pastWeekCount,
+                max * problem.history.pastWeekCount ) / totalWeekNum;
         }
     }
 }
 
 void NurseRostering::Solution::evaluateTotalWorkingWeekend()
 {
-    int totalWeekNum = solver.problem.scenario.totalWeekNum;
+    int totalWeekNum = problem.scenario.totalWeekNum;
 
-    for (NurseID nurse = 0; nurse < solver.problem.scenario.nurseNum; ++nurse) {
-        int maxWeekend = solver.problem.scenario.contracts[solver.problem.scenario.nurses[nurse].contract].maxWorkingWeekendNum;
-        int historyWeekend = solver.problem.history.totalWorkingWeekendNums[nurse] * totalWeekNum;
-        int exceedingWeekend = historyWeekend - (maxWeekend * solver.problem.history.currentWeek) +
+    for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
+        int maxWeekend = problem.scenario.contracts[problem.scenario.nurses[nurse].contract].maxWorkingWeekendNum;
+        int historyWeekend = problem.history.totalWorkingWeekendNums[nurse] * totalWeekNum;
+        int exceedingWeekend = historyWeekend - (maxWeekend * problem.history.currentWeek) +
             ((assign.isWorking( nurse, Weekday::Sat ) || assign.isWorking( nurse, Weekday::Sun )) * totalWeekNum);
         if (exceedingWeekend > 0) {
             objTotalWorkingWeekend += penalty.TotalWorkingWeekend() *
                 exceedingWeekend / totalWeekNum;
         }
         // remove penalty in the history except the first week
-        if (solver.problem.history.pastWeekCount > 0) {
-            historyWeekend -= maxWeekend * solver.problem.history.pastWeekCount;
+        if (problem.history.pastWeekCount > 0) {
+            historyWeekend -= maxWeekend * problem.history.pastWeekCount;
             if (historyWeekend > 0) {
                 objTotalWorkingWeekend -= penalty.TotalWorkingWeekend() *
                     historyWeekend / totalWeekNum;

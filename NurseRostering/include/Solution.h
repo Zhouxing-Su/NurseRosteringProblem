@@ -23,6 +23,7 @@
 #include <bitset>
 #include <ctime>
 #include <cmath>
+#include <cstring>
 
 #include "DebugFlag.h"
 #include "NurseRostering.h"
@@ -123,6 +124,9 @@ public:
     static const ApplyMoveTable applyMove;
     static const UpdateTabuTable updateTabuTable;
 
+    const TabuSolver &solver;
+    const NurseRostering &problem;
+
 
     Solution( const TabuSolver &solver );
     Solution( const TabuSolver &solver, const AssignTable &assign );
@@ -194,8 +198,14 @@ public:
 
     const AssignTable& getAssignTable() const { return assign; }
     // shift must not be none shift
-    bool isValidSuccession( NurseID nurse, ShiftID shift, int weekday ) const;
-    bool isValidPrior( NurseID nurse, ShiftID shift, int weekday ) const;
+    bool isValidSuccession( NurseID nurse, ShiftID shift, int weekday ) const
+    {
+        return problem.scenario.shifts[assign[nurse][weekday - 1].shift].legalNextShifts[shift];
+    }
+    bool isValidPrior( NurseID nurse, ShiftID shift, int weekday ) const
+    {
+        return problem.scenario.shifts[shift].legalNextShifts[assign[nurse][weekday + 1].shift];
+    }
 
     // check if the result of incremental update, evaluate and checkObjValue is the same
     bool checkIncrementalUpdate();
@@ -579,7 +589,6 @@ private:
     void evaluateTotalAssign();
     void evaluateTotalWorkingWeekend();
 
-    const TabuSolver &solver;
 
     mutable Penalty penalty;    // trySwapNurse() will modify it
 
