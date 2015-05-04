@@ -277,3 +277,78 @@ NurseRostering::ObjValue getObjValueInValidatorResult()
     validatorResult.close();
     return totalObj;
 }
+
+void analyzeCheckResult( const std::string &checkFileName, const std::string &outputFileName )
+{
+    struct Info
+    {
+    public:
+        Info() : count( 0 ), objSum( 0 ), minObj( NurseRostering::MAX_OBJ_VALUE ) {}
+
+        string instance;
+        int count;
+        double objSum;
+        double minObj;
+    };
+
+    vector<Info> instInfo;
+
+
+    ifstream csvFile( checkFileName );
+    ofstream output( outputFileName );
+
+    char buf[MaxLen::LINE];
+
+    // clear first line of header
+    csvFile.getline( buf, MaxLen::LINE );
+    // create header
+    output << "Instance,AvgObj,MinObj" << endl;
+
+    while (true) {
+        string instance;
+        NurseRostering::ObjValue feasible;
+        double obj;
+        double accObj;
+
+        csvFile.getline( buf, MaxLen::LINE, ',' );  // time
+        csvFile.getline( buf, MaxLen::LINE, ',' );  // id
+        csvFile.getline( buf, MaxLen::LINE, ',' );  // instance
+        instance = buf;
+        csvFile >> obj;
+        csvFile.getline( buf, MaxLen::LINE, ',' );  // clear
+        csvFile >> feasible;
+        csvFile.getline( buf, MaxLen::LINE, ',' );  // clear
+        csvFile.getline( buf, MaxLen::LINE );       // clear line
+
+        if (csvFile.eof()) { break; }
+
+        if (feasible) {
+            auto iter = instInfo.begin();
+            for (; iter != instInfo.end(); ++iter) {
+                if (iter->instance == instance) {
+                    iter->objSum += obj;
+                    iter->minObj = (obj < iter->minObj) ? obj : iter->minObj;
+                    ++(iter->count);
+                    break;
+                }
+            }
+
+            if (iter == instInfo.end()) {
+                instInfo.push_back( Info() );
+                instInfo.back().instance = instance;
+                instInfo.back().count = 1;
+                instInfo.back().objSum = obj;
+                instInfo.back().minObj = obj;
+            }
+        }
+    }
+
+    for (auto iter = instInfo.begin(); iter != instInfo.end(); ++iter) {
+        output << iter->instance << ',' 
+            << iter->objSum / iter->count << ','
+            << iter->minObj << endl;
+    }
+
+    csvFile.close();
+    output.close();
+}

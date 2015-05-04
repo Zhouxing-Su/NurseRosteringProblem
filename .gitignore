@@ -194,6 +194,7 @@ log.csv
 err.csv
 checkResult.csv
 analysisResult.csv
+statistic.csv
 Validator-results.txt
 *.vsps
 RawLog

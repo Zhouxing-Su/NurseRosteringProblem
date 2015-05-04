@@ -12,7 +12,9 @@ NurseRostering::Solution::tryMove = {
     &NurseRostering::Solution::tryChangeAssign,
     &NurseRostering::Solution::trySwapNurse,
     &NurseRostering::Solution::tryExchangeDay,
-    &NurseRostering::Solution::trySwapBlock_fast     // TODO : use trySwapBlock_fast
+    // only select one of the trySwapBlock*()
+    //&NurseRostering::Solution::trySwapBlock,
+    &NurseRostering::Solution::trySwapBlock_fast
 };
 const NurseRostering::Solution::FindBestMoveTable
 NurseRostering::Solution::findBestMove = {
@@ -21,7 +23,11 @@ NurseRostering::Solution::findBestMove = {
     &NurseRostering::Solution::findBestChange,
     &NurseRostering::Solution::findBestSwap,
     &NurseRostering::Solution::findBestExchange,
-    &NurseRostering::Solution::findBestBlockSwap_fast,   // TODO : use findBestBlockSwap_fast
+    // only select one of the findBestBlockSwap*()
+    //&NurseRostering::Solution::findBestBlockSwap,
+    &NurseRostering::Solution::findBestBlockSwap_fast,
+    //&NurseRostering::Solution::findBestBlockSwap_part,
+    //&NurseRostering::Solution::findBestBlockSwap_rand,
     &NurseRostering::Solution::findBestARLoop,
     &NurseRostering::Solution::findBestARRand,
     &NurseRostering::Solution::findBestARBoth
@@ -33,7 +39,11 @@ NurseRostering::Solution::findBestMoveOnBlockBorder = {
     &NurseRostering::Solution::findBestChangeOnBlockBorder,
     &NurseRostering::Solution::findBestSwapOnBlockBorder,
     &NurseRostering::Solution::findBestExchangeOnBlockBorder,
-    &NurseRostering::Solution::findBestBlockSwap_fast,   // TODO : keep/break consecutive block swap?
+    // only select one of the findBestBlockSwap*()
+    //&NurseRostering::Solution::findBestBlockSwap,
+    &NurseRostering::Solution::findBestBlockSwap_fast,
+    //&NurseRostering::Solution::findBestBlockSwap_part,
+    //&NurseRostering::Solution::findBestBlockSwap_rand,
     &NurseRostering::Solution::findBestARLoopOnBlockBorder,
     &NurseRostering::Solution::findBestARRandOnBlockBorder,
     &NurseRostering::Solution::findBestARBothOnBlockBorder
@@ -395,16 +405,21 @@ bool NurseRostering::Solution::repair( const Timer &timer )
     };
 
     penalty.setRepairMode();
-    objValue = solver.checkFeasibility( assign );
+    ObjValue violation = solver.checkFeasibility( assign );
 
-    bool feasible;
-    do {
-        tabuSearch_Rand( timer, fbmt );
-        feasible = (optima.getObjValue() == 0);
-    } while (!(timer.isTimeOut() || feasible));
+    bool feasible = (violation == 0);
+    if (!feasible) {
+        objValue = violation;
+        while (!(timer.isTimeOut() || feasible)) {
+            tabuSearch_Rand( timer, fbmt );
+            feasible = (optima.getObjValue() == 0);
+        }
+    }
     penalty.setDefaultMode();
 
-    rebuild( optima.getAssignTable() );
+    if (violation != 0) {   // the tabu search has been proceed
+        rebuild( optima.getAssignTable() );
+    }
 
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t duration = clock() - startTime;
@@ -929,6 +944,95 @@ bool NurseRostering::Solution::findBestBlockSwap_fast( Move &bestMove ) const
     findBestBlockSwap_startNurse = move.nurse;
     penalty.setDefaultMode();
     return false;
+}
+
+bool NurseRostering::Solution::findBestBlockSwap_part( Move &bestMove ) const
+{
+    const int nurseNum_noTry = problem.scenario.nurseNum - problem.scenario.nurseNum / 4;
+
+    isBlockSwapSelected = true;
+    penalty.setBlockSwapMode();
+
+    NurseID maxNurseID = problem.scenario.nurseNum - 1;
+
+    RandSelect<ObjValue> rs;
+    Move bestMove_tabu;
+    RandSelect<ObjValue> rs_tabu;
+
+    Move move;
+    move.mode = Move::Mode::BlockSwap;
+    move.nurse = findBestBlockSwap_startNurse;
+    for (NurseID count = problem.scenario.nurseNum; count > nurseNum_noTry; --count) {
+        (move.nurse < maxNurseID) ? (++move.nurse) : (move.nurse = 0);
+        move.nurse2 = move.nurse;
+        for (NurseID count2 = count - 1; count2 > 0; --count2) {
+            (move.nurse2 < maxNurseID) ? (++move.nurse2) : (move.nurse2 = 0);
+            if (solver.hasSameSkill( move.nurse, move.nurse2 )) {
+                move.delta = trySwapBlock_fast( move.weekday, move.weekday2, move.nurse, move.nurse2 );
+                if (noBlockSwapTabu( move )) {
+                    if (rs.isMinimal( move.delta, bestMove.delta )) {
+                        bestMove = move;
+                    }
+                } else {    // tabu
+                    if (rs_tabu.isMinimal( move.delta, bestMove_tabu.delta )) {
+                        bestMove_tabu = move;
+                    }
+                }
+            }
+        }
+    }
+
+    if (aspirationCritiera( bestMove.delta, bestMove_tabu.delta )) {
+        bestMove = bestMove_tabu;
+    }
+
+    findBestBlockSwap_startNurse = move.nurse;
+    penalty.setDefaultMode();
+    return (bestMove.delta < 0);
+}
+
+bool NurseRostering::Solution::findBestBlockSwap_rand( Move &bestMove ) const
+{
+    const int nurseNum_noTry = problem.scenario.nurseNum - problem.scenario.nurseNum / 4;
+
+    isBlockSwapSelected = true;
+    penalty.setBlockSwapMode();
+
+    NurseID maxNurseID = problem.scenario.nurseNum - 1;
+
+    RandSelect<ObjValue> rs;
+    Move bestMove_tabu;
+    RandSelect<ObjValue> rs_tabu;
+
+    Move move;
+    move.mode = Move::Mode::BlockSwap;
+    for (NurseID count = problem.scenario.nurseNum; count > nurseNum_noTry; --count) {
+        move.nurse = rand() % problem.scenario.nurseNum;
+        move.nurse2 = move.nurse;
+        for (NurseID count2 = count - 1; count2 > 0; --count2) {
+            (move.nurse2 < maxNurseID) ? (++move.nurse2) : (move.nurse2 = 0);
+            if (solver.hasSameSkill( move.nurse, move.nurse2 )) {
+                move.delta = trySwapBlock_fast( move.weekday, move.weekday2, move.nurse, move.nurse2 );
+                if (noBlockSwapTabu( move )) {
+                    if (rs.isMinimal( move.delta, bestMove.delta )) {
+                        bestMove = move;
+                    }
+                } else {    // tabu
+                    if (rs_tabu.isMinimal( move.delta, bestMove_tabu.delta )) {
+                        bestMove_tabu = move;
+                    }
+                }
+            }
+        }
+    }
+
+    if (aspirationCritiera( bestMove.delta, bestMove_tabu.delta )) {
+        bestMove = bestMove_tabu;
+    }
+
+    findBestBlockSwap_startNurse = move.nurse;
+    penalty.setDefaultMode();
+    return (bestMove.delta < 0);
 }
 
 bool NurseRostering::Solution::findBestExchange( Move &bestMove ) const

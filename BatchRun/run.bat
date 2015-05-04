@@ -3,6 +3,7 @@ del err.csv
 INRC2_Simulator.exe 2>> err.csv
 TOOL-ValidatorCheck.exe
 TOOL-SolutionAnalysis.exe
+TOOL-CheckAnalysis.exe
 
 set platform=Win8.1
 set algorithm=GreedyInit+TSR+ACBR
@@ -11,3 +12,4 @@ set runDate=%runDate: =0%
 rename log.csv %runDate%--%platform%--%algorithm%.csv
 rename analysisResult.csv %runDate%--%platform%--%algorithm%--analysis.csv
 rename checkResult.csv %runDate%--%platform%--%algorithm%--check.csv
+rename statistic.csv %runDate%--%platform%--%algorithm%--statistic.csv

@@ -374,8 +374,10 @@ private:
     bool findBestChange( Move &bestMove ) const;
     bool findBestRemove( Move &bestMove ) const;
     bool findBestSwap( Move &bestMove ) const;
-    bool findBestBlockSwap( Move &bestMove ) const;
-    bool findBestBlockSwap_fast( Move &bestMove ) const;
+    bool findBestBlockSwap( Move &bestMove ) const;         // try all nurses
+    bool findBestBlockSwap_fast( Move &bestMove ) const;    // try all nurses
+    bool findBestBlockSwap_part( Move &bestMove ) const;    // try some nurses following index
+    bool findBestBlockSwap_rand( Move &bestMove ) const;    // try randomly picked nurses 
     bool findBestExchange( Move &bestMove ) const;
     bool findBestARLoop( Move &bestMove ) const;
     bool findBestARRand( Move &bestMove ) const;

@@ -58,12 +58,14 @@ void analyzeInstance();
 NurseRostering::ObjValue rebuildSolution( const std::string &logFileName, const std::string &logTime, const std::string id, ValidatorArgvPack &argv );
 
 // call validator to generate validator result
-int callValidator(const ValidatorArgvPack &vap);
+int callValidator( const ValidatorArgvPack &vap );
 
 // check all complete record in log file by calling validator
 void validatorCheck( const std::string &logFileName, const std::string &outputFileName );
 // return total objective value, -1 for infeasible
 NurseRostering::ObjValue getObjValueInValidatorResult();
+// count min and average objective value calulated in check result
+void analyzeCheckResult( const std::string &checkFileName, const std::string &outputFileName );
 
 
 // count average objective value on each stage

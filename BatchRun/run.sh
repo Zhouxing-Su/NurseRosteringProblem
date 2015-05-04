@@ -8,7 +8,7 @@ del err.csv
 platform=Linux
 algorithm=GreedyInit+TSR+TSLARrCSEB
 runDate=`date "+%Y%m%d%H%M"`
-rename log.csv $runDate--$platform--$(algorithm).csv
-rename analysisResult.csv $runDate--$platform--$algorithm--analysis.csv
-rename checkResult.csv $runDate--$platform--$algorithm--check.csv
-
+mv log.csv $runDate--$platform--$(algorithm).csv
+mv analysisResult.csv $runDate--$platform--$algorithm--analysis.csv
+mv checkResult.csv $runDate--$platform--$algorithm--check.csv
+mv statistic.csv $runDate--$platform--$algorithm--statistic.csv
