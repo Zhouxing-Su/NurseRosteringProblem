@@ -99,6 +99,8 @@ const vector<vector<int> > NurseRostering::Solution::modeSeqPatterns = {
 
 const double NurseRostering::Solution::NO_DIFF = -1;
 
+
+
 NurseRostering::Solution::Solution( const TabuSolver &s )
     : solver( s ), problem( s.problem ), iterCount( 1 )
 {
@@ -860,14 +862,16 @@ bool NurseRostering::Solution::findBestBlockSwap( Move &bestMove ) const
         move.nurse2 = move.nurse;
         for (NurseID count2 = count - 1; count2 > 0; --count2) {
             (move.nurse2 < maxNurseID) ? (++move.nurse2) : (move.nurse2 = 0);
-            for (move.weekday = Weekday::Mon; move.weekday <= Weekday::Sun; ++move.weekday) {
-                move.delta = trySwapBlock( move.weekday, move.weekday2, move.nurse, move.nurse2 );
-                if (rs.isMinimal( move.delta, bestMove.delta )) {
-                    bestMove = move;
-                    if (bestMove.delta < 0) {
-                        findBestBlockSwap_startNurse = move.nurse;
-                        penalty.setDefaultMode();
-                        return true;
+            if (solver.hasSameSkill( move.nurse, move.nurse2 )) {
+                for (move.weekday = Weekday::Mon; move.weekday <= Weekday::Sun; ++move.weekday) {
+                    move.delta = trySwapBlock( move.weekday, move.weekday2, move.nurse, move.nurse2 );
+                    if (rs.isMinimal( move.delta, bestMove.delta )) {
+                        bestMove = move;
+                        if (bestMove.delta < 0) {
+                            findBestBlockSwap_startNurse = move.nurse;
+                            penalty.setDefaultMode();
+                            return true;
+                        }
                     }
                 }
             }
@@ -898,19 +902,21 @@ bool NurseRostering::Solution::findBestBlockSwap_fast( Move &bestMove ) const
         move.nurse2 = move.nurse;
         for (NurseID count2 = count - 1; count2 > 0; --count2) {
             (move.nurse2 < maxNurseID) ? (++move.nurse2) : (move.nurse2 = 0);
-            move.delta = trySwapBlock_fast( move.weekday, move.weekday2, move.nurse, move.nurse2 );
-            if (noBlockSwapTabu( move )) {
-                if (rs.isMinimal( move.delta, bestMove.delta )) {
-                    bestMove = move;
-                    if (bestMove.delta < 0) {
-                        findBestBlockSwap_startNurse = move.nurse;
-                        penalty.setDefaultMode();
-                        return true;
+            if (solver.hasSameSkill( move.nurse, move.nurse2 )) {
+                move.delta = trySwapBlock_fast( move.weekday, move.weekday2, move.nurse, move.nurse2 );
+                if (noBlockSwapTabu( move )) {
+                    if (rs.isMinimal( move.delta, bestMove.delta )) {
+                        bestMove = move;
+                        if (bestMove.delta < 0) {
+                            findBestBlockSwap_startNurse = move.nurse;
+                            penalty.setDefaultMode();
+                            return true;
+                        }
                     }
-                }
-            } else {    // tabu
-                if (rs_tabu.isMinimal( move.delta, bestMove_tabu.delta )) {
-                    bestMove_tabu = move;
+                } else {    // tabu
+                    if (rs_tabu.isMinimal( move.delta, bestMove_tabu.delta )) {
+                        bestMove_tabu = move;
+                    }
                 }
             }
         }

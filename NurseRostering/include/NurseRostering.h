@@ -291,6 +291,8 @@ public:
     // NurseWithSkill[skill][skillNum-1] is a set of nurses 
     // who have that skill and have skillNum skills in total
     typedef std::vector< std::vector<std::vector<NurseID> > > NurseWithSkill;
+    // NursesHasSameSkill[nurse][nurse2] == true if both of them has certain skill
+    typedef std::vector< std::vector<bool> > NursesHasSameSkill;
 
 
     static const clock_t MAX_RUNNING_TIME;  // in clock count
@@ -298,6 +300,17 @@ public:
 
     // must set all data members by direct accessing!
     NurseRostering();
+
+    bool hasSameSkill( NurseID nurse, NurseID nurse2 ) const
+    {
+        for (SkillID sk = Scenario::Skill::ID_BEGIN; sk < scenario.skillSize; ++sk) {
+            if (scenario.nurses[nurse].skills[sk] && scenario.nurses[nurse2].skills[sk]) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
 
     // data to identify a nurse rostering problem

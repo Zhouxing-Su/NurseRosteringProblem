@@ -141,6 +141,10 @@ public:
 
     const NurseNumOfSkill& getNurseNumOfSkill() const { return nurseNumOfSkill; }
     const NurseWithSkill& getNurseWithSkill() const { return nurseWithSkill; }
+    bool hasSameSkill( NurseID nurse, NurseID nurse2 ) const
+    {
+        return nursesHasSameSkill[nurse][nurse2];
+    }
 
 protected:
     // create header of the table ( require ios::app flag or "a" mode )
@@ -165,6 +169,7 @@ protected:
     // nurse-skill relation
     NurseNumOfSkill nurseNumOfSkill;
     NurseWithSkill nurseWithSkill;
+    NursesHasSameSkill nursesHasSameSkill;
 
 
     Output optima;

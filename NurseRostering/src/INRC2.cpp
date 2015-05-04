@@ -181,7 +181,7 @@ namespace INRC2
         ifs >> scenario.skillTypeNum;
         scenario.skillSize = scenario.skillTypeNum + NurseRostering::Scenario::Skill::ID_BEGIN;
         input.names.skillNames.resize( scenario.skillSize );
-        for (int i = NurseRostering::Scenario::Skill::ID_BEGIN; i < scenario.skillSize; ++i) {
+        for (NurseRostering::SkillID i = NurseRostering::Scenario::Skill::ID_BEGIN; i < scenario.skillSize; ++i) {
             ifs >> input.names.skillNames[i];
             input.names.skillMap[input.names.skillNames[i]] = i;
         }
@@ -193,7 +193,7 @@ namespace INRC2
         scenario.shiftSize = scenario.shiftTypeNum + NurseRostering::Scenario::Shift::ID_BEGIN;
         scenario.shifts.resize( scenario.shiftSize );
         input.names.shiftNames.resize( scenario.shiftSize );
-        for (int i = NurseRostering::Scenario::Shift::ID_BEGIN; i < scenario.shiftSize; ++i) {
+        for (NurseRostering::ShiftID i = NurseRostering::Scenario::Shift::ID_BEGIN; i < scenario.shiftSize; ++i) {
             NurseRostering::Scenario::Shift &shift = scenario.shifts[i];
             ifs >> input.names.shiftNames[i] >> c    // name (
                 >> shift.minConsecutiveShiftNum >> c   // XX,
@@ -206,7 +206,7 @@ namespace INRC2
         ifs.getline( buf, MAX_BUF_LEN );        // FORBIDDEN_SHIFT_TYPES_SUCCESSIONS
         scenario.shifts[NurseRostering::Scenario::Shift::ID_NONE].legalNextShifts
             = vector<bool>( scenario.shiftSize, true );
-        for (int i = NurseRostering::Scenario::Shift::ID_BEGIN; i < scenario.shiftSize; ++i) {
+        for (NurseRostering::ShiftID i = NurseRostering::Scenario::Shift::ID_BEGIN; i < scenario.shiftSize; ++i) {
             NurseRostering::Scenario::Shift &shift = scenario.shifts[i];
             string shiftName, nextShiftName;
             int succesionNum;
@@ -225,7 +225,7 @@ namespace INRC2
         ifs >> contractNum;
         scenario.contracts.resize( contractNum );
         input.names.contractNames.resize( contractNum );
-        for (int i = 0; i < contractNum; ++i) {
+        for (NurseRostering::ContractID i = 0; i < contractNum; ++i) {
             NurseRostering::Scenario::Contract &contract = scenario.contracts[i];
             ifs >> input.names.contractNames[i] >> c         // name (
                 >> contract.minShiftNum >> c                 // XX,
@@ -246,7 +246,7 @@ namespace INRC2
         ifs >> scenario.nurseNum;
         scenario.nurses.resize( scenario.nurseNum );
         input.names.nurseNames.resize( scenario.nurseNum );
-        for (int i = 0; i < scenario.nurseNum; ++i) {
+        for (NurseRostering::NurseID i = 0; i < scenario.nurseNum; ++i) {
             NurseRostering::Scenario::Nurse &nurse = scenario.nurses[i];
             string contractName, skillName;
             ifs >> input.names.nurseNames[i] >> contractName >> nurse.skillNum;

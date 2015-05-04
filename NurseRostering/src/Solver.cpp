@@ -363,11 +363,12 @@ void NurseRostering::Solver::discoverNurseSkillRelation()
 {
     nurseNumOfSkill = vector<SkillID>( problem.scenario.skillSize, 0 );
     nurseWithSkill = vector< vector< vector<NurseID> > >( problem.scenario.skillSize );
+    nursesHasSameSkill = vector< vector<bool> >( problem.scenario.nurseNum, vector<bool>( problem.scenario.nurseNum ) );
 
     for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
         const vector<bool> &skills = problem.scenario.nurses[nurse].skills;
         unsigned skillNum = problem.scenario.nurses[nurse].skillNum;
-        for (int skill = NurseRostering::Scenario::Skill::ID_BEGIN; skill < problem.scenario.skillSize; ++skill) {
+        for (SkillID skill = NurseRostering::Scenario::Skill::ID_BEGIN; skill < problem.scenario.skillSize; ++skill) {
             if (skills[skill]) {
                 ++nurseNumOfSkill[skill];
                 if (skillNum > nurseWithSkill[skill].size()) {
@@ -375,6 +376,9 @@ void NurseRostering::Solver::discoverNurseSkillRelation()
                 }
                 nurseWithSkill[skill][skillNum - 1].push_back( nurse );
             }
+        }
+        for (NurseID nurse2 = 0; nurse2 < problem.scenario.nurseNum; ++nurse2) {
+            nursesHasSameSkill[nurse][nurse2] = problem.hasSameSkill( nurse, nurse2 );
         }
     }
 }
