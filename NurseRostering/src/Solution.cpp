@@ -97,6 +97,7 @@ const vector<vector<int> > NurseRostering::Solution::modeSeqPatterns = {
     { Solution::Move::Mode::Add, Solution::Move::Mode::Change, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap, Solution::Move::Mode::Remove }
 };
 
+const double NurseRostering::Solution::NO_DIFF = -1;
 
 NurseRostering::Solution::Solution( const TabuSolver &s )
     : solver( s ), problem( s.problem ), iterCount( 1 )
@@ -109,8 +110,10 @@ NurseRostering::Solution::Solution( const TabuSolver &s, const AssignTable &at )
     rebuild( at );
 }
 
-void NurseRostering::Solution::rebuild( const AssignTable &at )
+void NurseRostering::Solution::rebuild( const AssignTable &at, double diff )
 {
+    int selectBound = static_cast<int>(diff * RAND_MAX);
+
     const AssignTable &assignTable( (&at != &assign) ? at : AssignTable( at ) );
 
     resetAssign();
@@ -119,9 +122,15 @@ void NurseRostering::Solution::rebuild( const AssignTable &at )
     for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
         for (int weekday = Weekday::Mon; weekday <= Weekday::Sun; ++weekday) {
             if (assignTable[nurse][weekday].isWorking()) {
-                addAssign( weekday, nurse, assignTable[nurse][weekday] );
+                if (rand() >= selectBound) {
+                    addAssign( weekday, nurse, assignTable[nurse][weekday] );
+                }
             }
         }
+    }
+
+    if (selectBound > 0) {  // there may be difference
+        repair( solver.timer );
     }
 
     evaluateObjValue();
@@ -372,9 +381,10 @@ NurseRostering::History NurseRostering::Solution::genHistory() const
 
 bool NurseRostering::Solution::repair( const Timer &timer )
 {
-    penalty.setRepairMode();
-    objValue = solver.checkFeasibility( assign );
-
+#ifdef INRC2_PERFORMANCE_TEST
+    clock_t startTime = clock();
+    IterCount startIterCount = iterCount;
+#endif
     // must not use swap for swap mode is not compatible with repair mode
     // also, the repair procedure doesn't need the technique to jump through infeasible solutions
     Solution::FindBestMoveTable fbmt = {
@@ -382,13 +392,24 @@ bool NurseRostering::Solution::repair( const Timer &timer )
         &NurseRostering::Solution::findBestChange
     };
 
-    tabuSearch_Possibility( timer, fbmt );
+    penalty.setRepairMode();
+    objValue = solver.checkFeasibility( assign );
 
-    bool feasible = (objValue == 0);
-
+    bool feasible;
+    do {
+        tabuSearch_Rand( timer, fbmt );
+        feasible = (optima.getObjValue() == 0);
+    } while (!(timer.isTimeOut() || feasible));
     penalty.setDefaultMode();
-    evaluateObjValue();
 
+    rebuild( optima.getAssignTable() );
+
+#ifdef INRC2_PERFORMANCE_TEST
+    clock_t duration = clock() - startTime;
+    cout << "[RP] iter: " << (iterCount - startIterCount) << ' '
+        << "time: " << duration << ' '
+        << ((feasible) ? "(success)" : "(fail)") << endl;
+#endif
     return feasible;
 }
 

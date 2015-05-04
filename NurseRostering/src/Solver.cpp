@@ -5,8 +5,9 @@ using namespace std;
 
 
 const clock_t NurseRostering::Solver::SAVE_SOLUTION_TIME = CLOCKS_PER_SEC / 2;
-const double NurseRostering::Solver::INIT_PERTURB_STRENGTH = 0.6;
+const double NurseRostering::Solver::INIT_PERTURB_STRENGTH = 0.2;
 const double NurseRostering::Solver::PERTURB_STRENGTH_DELTA = 0.01;
+const double NurseRostering::Solver::MAX_PERTURB_STRENGTH = 0.8;
 
 const vector<string> NurseRostering::Solver::solveAlgorithmName = {
     "[RW]", "[ILS]", "[TSP]", "[TSL]", "[TSR]"
@@ -458,7 +459,7 @@ void NurseRostering::TabuSolver::greedyInit()
 
     discoverNurseSkillRelation();
 
-    if (sln.genInitAssign( problem.scenario.nurseNum / 4 ) == false) {
+    if (sln.genInitAssign( static_cast<int>(sqrt( problem.scenario.nurseNum )) + 1 ) == false) {
         errorLog( "fail to generate feasible init solution." );
     }
 }
@@ -530,7 +531,6 @@ void NurseRostering::TabuSolver::tabuSearch( Solution::ModeSeq modeSeq, Solution
 
     double perturbStrength = INIT_PERTURB_STRENGTH;
     while (!timer.isTimeOut()) {
-        ObjValue lastObj = optima.getObjValue();
         iterationCount -= sln.getIterCount();
 
         (sln.*search)(timer, fbmt);
@@ -538,14 +538,14 @@ void NurseRostering::TabuSolver::tabuSearch( Solution::ModeSeq modeSeq, Solution
         iterationCount += sln.getIterCount();
         ++generationCount;
 
-        updateOptima( sln.getOptima() );
-        sln.rebuild( (rand() % PERTURB_ORIGIN_SELECT)
-            ? optima.getAssignTable()
-            : sln.getOptima().getAssignTable() );
-        (optima.getObjValue() == lastObj)
-            ? (perturbStrength += PERTURB_STRENGTH_DELTA)
-            : (perturbStrength = INIT_PERTURB_STRENGTH);
-        sln.perturb( perturbStrength );
+        if (updateOptima( sln.getOptima() )) {
+            perturbStrength = INIT_PERTURB_STRENGTH;
+        } else if (perturbStrength < MAX_PERTURB_STRENGTH) {
+            perturbStrength += PERTURB_STRENGTH_DELTA;
+        }
+        const AssignTable &at( (rand() % PERTURB_ORIGIN_SELECT)
+            ? optima.getAssignTable() : sln.getOptima().getAssignTable() );
+        sln.rebuild( at, perturbStrength );
     }
 }
 

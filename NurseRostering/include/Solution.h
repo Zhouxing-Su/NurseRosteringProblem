@@ -11,6 +11,7 @@
 *           5.  perturb() should start from optima?
 *           6.  move mode setting to findBest rather than try.
 *           7.  just add max tabu tenure to iterCount rather than reset tabu table when rebuild (except the first time)
+*           8.  rebuild() may not function well if diff is too big or small.
 *
 */
 
@@ -124,6 +125,8 @@ public:
     static const ApplyMoveTable applyMove;
     static const UpdateTabuTable updateTabuTable;
 
+    static const double NO_DIFF;    // for building same assign in rebuild()
+
     const TabuSolver &solver;
     const NurseRostering &problem;
 
@@ -145,7 +148,7 @@ public:
         return false;
     }
     // set assign to at and rebuild assist data, at must be build from same problem
-    void rebuild( const AssignTable &at );
+    void rebuild( const AssignTable &at, double diff = NO_DIFF );
     void rebuild(); // must be called after direct access to AssignTable
     // evaluate objective by assist data structure
     // must be called after Penalty change or direct access to AssignTable

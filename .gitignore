@@ -195,4 +195,5 @@ err.csv
 checkResult.csv
 analysisResult.csv
 Validator-results.txt
-/*.vsps
+*.vsps
+RawLog

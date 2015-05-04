@@ -55,6 +55,7 @@ public:
     static const int PERTURB_ORIGIN_SELECT = 4;
     static const double INIT_PERTURB_STRENGTH;
     static const double PERTURB_STRENGTH_DELTA;
+    static const double MAX_PERTURB_STRENGTH;
 
     enum InitAlgorithm
     {
