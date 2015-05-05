@@ -370,7 +370,6 @@ NurseRostering::History NurseRostering::Solution::genHistory() const
     newHistory.currentWeek = history.currentWeek + 1;
     newHistory.totalAssignNums = totalAssignNums;
     newHistory.totalWorkingWeekendNums = history.totalWorkingWeekendNums;
-    newHistory.ignoreMinShiftConstraint = history.ignoreMinShiftConstraint;
 
     for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
         newHistory.totalWorkingWeekendNums[nurse] +=
@@ -877,7 +876,7 @@ bool NurseRostering::Solution::findBestBlockSwap( Move &bestMove ) const
         move.nurse2 = move.nurse;
         for (NurseID count2 = count - 1; count2 > 0; --count2) {
             (move.nurse2 < maxNurseID) ? (++move.nurse2) : (move.nurse2 = 0);
-            if (solver.hasSameSkill( move.nurse, move.nurse2 )) {
+            if (solver.haveSameSkill( move.nurse, move.nurse2 )) {
                 for (move.weekday = Weekday::Mon; move.weekday <= Weekday::Sun; ++move.weekday) {
                     move.delta = trySwapBlock( move.weekday, move.weekday2, move.nurse, move.nurse2 );
                     if (rs.isMinimal( move.delta, bestMove.delta )) {
@@ -917,7 +916,7 @@ bool NurseRostering::Solution::findBestBlockSwap_fast( Move &bestMove ) const
         move.nurse2 = move.nurse;
         for (NurseID count2 = count - 1; count2 > 0; --count2) {
             (move.nurse2 < maxNurseID) ? (++move.nurse2) : (move.nurse2 = 0);
-            if (solver.hasSameSkill( move.nurse, move.nurse2 )) {
+            if (solver.haveSameSkill( move.nurse, move.nurse2 )) {
                 move.delta = trySwapBlock_fast( move.weekday, move.weekday2, move.nurse, move.nurse2 );
                 if (noBlockSwapTabu( move )) {
                     if (rs.isMinimal( move.delta, bestMove.delta )) {
@@ -967,7 +966,7 @@ bool NurseRostering::Solution::findBestBlockSwap_part( Move &bestMove ) const
         move.nurse2 = move.nurse;
         for (NurseID count2 = count - 1; count2 > 0; --count2) {
             (move.nurse2 < maxNurseID) ? (++move.nurse2) : (move.nurse2 = 0);
-            if (solver.hasSameSkill( move.nurse, move.nurse2 )) {
+            if (solver.haveSameSkill( move.nurse, move.nurse2 )) {
                 move.delta = trySwapBlock_fast( move.weekday, move.weekday2, move.nurse, move.nurse2 );
                 if (noBlockSwapTabu( move )) {
                     if (rs.isMinimal( move.delta, bestMove.delta )) {
@@ -1011,7 +1010,7 @@ bool NurseRostering::Solution::findBestBlockSwap_rand( Move &bestMove ) const
         move.nurse2 = move.nurse;
         for (NurseID count2 = count - 1; count2 > 0; --count2) {
             (move.nurse2 < maxNurseID) ? (++move.nurse2) : (move.nurse2 = 0);
-            if (solver.hasSameSkill( move.nurse, move.nurse2 )) {
+            if (solver.haveSameSkill( move.nurse, move.nurse2 )) {
                 move.delta = trySwapBlock_fast( move.weekday, move.weekday2, move.nurse, move.nurse2 );
                 if (noBlockSwapTabu( move )) {
                     if (rs.isMinimal( move.delta, bestMove.delta )) {

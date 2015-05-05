@@ -36,9 +36,10 @@
 class NurseRostering::Output
 {
 public:
-    Output() : objValue( DefaultPenalty::FORBIDDEN_MOVE ) {}
-    Output( ObjValue objVal, const AssignTable &assignment )
-        : objValue( objVal ), assign( assignment ), findTime( clock() )
+    // assume initial solution will never be the global optima
+    Output() : objValue( DefaultPenalty::FORBIDDEN_MOVE ), secondaryObjValue( DefaultPenalty::FORBIDDEN_MOVE ) {}
+    Output( ObjValue objVal, const AssignTable &assignment, ObjValue secondaryObjVal = DefaultPenalty::FORBIDDEN_MOVE )
+        : objValue( objVal ), secondaryObjValue( secondaryObjVal ), assign( assignment ), findTime( clock() )
     {
     }
 
@@ -48,11 +49,13 @@ public:
     }
     const AssignTable& getAssignTable() const { return assign; }
     ObjValue getObjValue() const { return objValue; }
+    ObjValue getSecondaryObjValue() const { return secondaryObjValue; }
     clock_t getFindTime() const { return findTime; }
 
 protected:
     AssignTable assign;
     ObjValue objValue;
+    ObjValue secondaryObjValue;
     clock_t findTime;
 };
 
@@ -145,6 +148,16 @@ public:
             findTime = clock();
             optima = *this;
             return true;
+        } else if (objValue == optima.getObjValue()) {
+            secondaryObjValue = 0;
+            for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
+                secondaryObjValue += problem.scenario.shifts[assign[nurse][Weekday::Sun].shift].illegalNextShiftNum;
+            }
+            if (secondaryObjValue < optima.getSecondaryObjValue()) {
+                findTime = clock();
+                optima = *this;
+                return true;
+            }
         }
 
         return false;

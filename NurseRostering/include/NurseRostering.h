@@ -87,6 +87,7 @@ public:
             // (legalNextShift[nextShift] == true) means nextShift 
             // is available to be succession of this shift
             std::vector<bool> legalNextShifts;
+            int illegalNextShiftNum;
         };
         std::vector<Shift> shifts;
 
@@ -151,8 +152,6 @@ public:
         std::vector<int> consecutiveShiftNums;
         std::vector<int> consecutiveDayNums;
         std::vector<int> consecutiveDayoffNums;
-
-        bool ignoreMinShiftConstraint;  // generated after reading history for initializing minShiftNum_lastWeek next week
     };
 
     class Names
@@ -302,7 +301,11 @@ public:
     // must set all data members by direct accessing!
     NurseRostering();
 
-    bool hasSameSkill( NurseID nurse, NurseID nurse2 ) const
+    // do not count min shift number in early weeks
+    // max increase after week count and start with a initial value
+    void adjustRangeOfTotalAssignByWeekCount();
+    // return true if two nurses have same skill
+    bool haveSameSkill( NurseID nurse, NurseID nurse2 ) const
     {
         for (SkillID sk = Scenario::Skill::ID_BEGIN; sk < scenario.skillSize; ++sk) {
             if (scenario.nurses[nurse].skills[sk] && scenario.nurses[nurse2].skills[sk]) {

@@ -26,6 +26,27 @@ NurseRostering::NurseRostering()
     names.shiftMap[NurseRostering::Scenario::Shift::NAME_NONE] = NurseRostering::Scenario::Shift::ID_NONE;
 }
 
+void NurseRostering::adjustRangeOfTotalAssignByWeekCount()
+{
+    if (scenario.totalWeekNum > 1) {  // it must be count if there is only one week
+        for (auto iter = scenario.contracts.begin(); iter != scenario.contracts.end(); ++iter) {
+            int deltaAmp = iter->minShiftNum / scenario.totalWeekNum;
+            int delta_lastWeek = deltaAmp * (history.pastWeekCount - scenario.totalWeekNum - 1) / scenario.totalWeekNum;
+            iter->minShiftNum_lastWeek = delta_lastWeek + iter->minShiftNum  * history.pastWeekCount / scenario.totalWeekNum;
+            if (history.currentWeek < scenario.totalWeekNum) {
+                int delta = deltaAmp * (history.pastWeekCount - scenario.totalWeekNum) / scenario.totalWeekNum;
+                iter->minShiftNum = delta + iter->minShiftNum  * history.currentWeek / scenario.totalWeekNum;
+            }
+            if (iter->maxShiftNum > iter->maxConsecutiveDayNum) {
+                iter->maxShiftNum_lastWeek = iter->maxConsecutiveDayNum +
+                    ((iter->maxShiftNum - iter->maxConsecutiveDayNum) * history.pastWeekCount / scenario.totalWeekNum);
+                iter->maxShiftNum = iter->maxConsecutiveDayNum +
+                    ((iter->maxShiftNum - iter->maxConsecutiveDayNum) * history.currentWeek / scenario.totalWeekNum);
+            }
+        }
+    }
+}
+
 
 void NurseRostering::Penalty::setDefaultMode()
 {

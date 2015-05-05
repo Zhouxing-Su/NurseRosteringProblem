@@ -127,6 +127,7 @@ namespace INRC2
         }
 
         // start computation
+        input.adjustRangeOfTotalAssignByWeekCount();
         NurseRostering::TabuSolver solver( input, startTime );
         solver.init( parseConfig( argvMap[ARGV_CONFIG] ), argvMap[ARGV_ID] );
         solver.solve();
@@ -204,13 +205,14 @@ namespace INRC2
 
         ifs.getline( buf, MAX_BUF_LEN );        // empty line
         ifs.getline( buf, MAX_BUF_LEN );        // FORBIDDEN_SHIFT_TYPES_SUCCESSIONS
-        scenario.shifts[NurseRostering::Scenario::Shift::ID_NONE].legalNextShifts
-            = vector<bool>( scenario.shiftSize, true );
+        scenario.shifts[NurseRostering::Scenario::Shift::ID_NONE].legalNextShifts = vector<bool>( scenario.shiftSize, true );
+        scenario.shifts[NurseRostering::Scenario::Shift::ID_NONE].illegalNextShiftNum = 0;
         for (NurseRostering::ShiftID i = NurseRostering::Scenario::Shift::ID_BEGIN; i < scenario.shiftSize; ++i) {
             NurseRostering::Scenario::Shift &shift = scenario.shifts[i];
             string shiftName, nextShiftName;
             int succesionNum;
             ifs >> shiftName >> succesionNum;
+            shift.illegalNextShiftNum = succesionNum;
             shift.legalNextShifts = vector<bool>( scenario.shiftSize, true );
             for (int j = 0; j < succesionNum; ++j) {
                 ifs >> nextShiftName;
@@ -305,28 +307,6 @@ namespace INRC2
         }
 
         ifs.close();
-
-        // do not count min shift number in early weeks
-        // max increase after week count and start with a initial value
-        history.ignoreMinShiftConstraint = (history.currentWeek * 2 <= input.scenario.totalWeekNum);
-        if (input.scenario.totalWeekNum > 1) {  // it must be count if there is only one week
-            bool ignoreMinShiftConstraint = (history.pastWeekCount * 2 <= input.scenario.totalWeekNum);
-            for (auto iter = input.scenario.contracts.begin(); iter != input.scenario.contracts.end(); ++iter) {
-                if (ignoreMinShiftConstraint) {
-                    iter->minShiftNum_lastWeek = 0;
-                    if (history.ignoreMinShiftConstraint) {
-                        iter->minShiftNum = 0;
-                    }
-                }
-                if (iter->maxShiftNum > iter->maxConsecutiveDayNum) {
-                    iter->maxShiftNum_lastWeek = iter->maxConsecutiveDayNum +
-                        ((iter->maxShiftNum - iter->maxConsecutiveDayNum) * history.pastWeekCount / input.scenario.totalWeekNum);
-                    iter->maxShiftNum = iter->maxConsecutiveDayNum +
-                        ((iter->maxShiftNum - iter->maxConsecutiveDayNum) * history.currentWeek / input.scenario.totalWeekNum);
-                }
-            }
-        }
-
         return true;
     }
 
@@ -407,7 +387,6 @@ namespace INRC2
         int *consecutiveShiftNums = new int[nurseNum];
         int *consecutiveDayNums = new int[nurseNum];
         int *consecutiveDayoffNums = new int[nurseNum];
-        bool ignoreMinShiftConstraint;
 
         ifs.read( reinterpret_cast<char *>(&history.accObjValue), sizeof( history.accObjValue ) );
         ifs.read( reinterpret_cast<char *>(&history.pastWeekCount), sizeof( history.pastWeekCount ) );
@@ -418,7 +397,6 @@ namespace INRC2
         ifs.read( reinterpret_cast<char *>(consecutiveShiftNums), nurseNum * sizeof( int ) );
         ifs.read( reinterpret_cast<char *>(consecutiveDayNums), nurseNum * sizeof( int ) );
         ifs.read( reinterpret_cast<char *>(consecutiveDayoffNums), nurseNum * sizeof( int ) );
-        ifs.read( reinterpret_cast<char *>(&ignoreMinShiftConstraint), nurseNum * sizeof( ignoreMinShiftConstraint ) );
 
         history.totalAssignNums = vector<int>( totalAssignNums, totalAssignNums + nurseNum );
         history.totalWorkingWeekendNums = vector<int>( totalWorkingWeekendNums, totalWorkingWeekendNums + nurseNum );
@@ -433,45 +411,6 @@ namespace INRC2
         delete[] consecutiveShiftNums;
         delete[] consecutiveDayNums;
         delete[] consecutiveDayoffNums;
-
-        // do not count min shift number in early weeks
-        // max increase after week count and start with a initial value
-        if (input.scenario.totalWeekNum <= 1) { // it must be count if there is only one week
-            history.ignoreMinShiftConstraint = false;
-        } else {
-            int workload = 0;
-            int minNurseNum = 0;
-            for (NurseRostering::NurseID nurse = 0; nurse < input.scenario.nurseNum; ++nurse) {
-                workload += history.totalAssignNums[nurse]; // workload in previous weeks
-                minNurseNum += input.scenario.contracts[input.scenario.nurses[nurse].contract].minShiftNum;
-            }
-            // potentials workload in this week
-            for (int weekday = NurseRostering::Weekday::Mon; weekday <= NurseRostering::Weekday::Sun; ++weekday) {
-                for (NurseRostering::ShiftID shift = NurseRostering::Scenario::Shift::ID_BEGIN; shift < input.scenario.shiftSize; shift++) {
-                    for (NurseRostering::SkillID skill = NurseRostering::Scenario::Skill::ID_BEGIN; skill < input.scenario.skillSize; skill++) {
-                        workload += input.weekData.optNurseNums[weekday][shift][skill];
-                    }
-                }
-            }
-
-            history.ignoreMinShiftConstraint = (history.currentWeek >= input.scenario.totalWeekNum)
-                ? false : (workload > minNurseNum);
-
-            for (auto iter = input.scenario.contracts.begin(); iter != input.scenario.contracts.end(); ++iter) {
-                if (ignoreMinShiftConstraint) {
-                    iter->minShiftNum_lastWeek = 0;
-                    if (input.history.ignoreMinShiftConstraint) {
-                        iter->minShiftNum = 0;
-                    }
-                }
-                if (iter->maxShiftNum > iter->maxConsecutiveDayNum) {
-                    iter->maxShiftNum_lastWeek = iter->maxConsecutiveDayNum +
-                        ((iter->maxShiftNum - iter->maxConsecutiveDayNum) * history.pastWeekCount / input.scenario.totalWeekNum);
-                    iter->maxShiftNum = iter->maxConsecutiveDayNum +
-                        ((iter->maxShiftNum - iter->maxConsecutiveDayNum) * history.currentWeek / input.scenario.totalWeekNum);
-                }
-            }
-        }
 
         ifs.close();
         return true;
@@ -532,7 +471,6 @@ namespace INRC2
         ofs.write( reinterpret_cast<const char *>(history.consecutiveShiftNums.data()), history.consecutiveShiftNums.size() * sizeof( int ) );
         ofs.write( reinterpret_cast<const char *>(history.consecutiveDayNums.data()), history.consecutiveDayNums.size() * sizeof( int ) );
         ofs.write( reinterpret_cast<const char *>(history.consecutiveDayoffNums.data()), history.consecutiveDayoffNums.size() * sizeof( int ) );
-        ofs.write( reinterpret_cast<const char *>(&history.ignoreMinShiftConstraint), sizeof( history.ignoreMinShiftConstraint ) );
 
         ofs.close();
         return true;

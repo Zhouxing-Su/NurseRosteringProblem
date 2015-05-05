@@ -308,7 +308,6 @@ void analyzeCheckResult( const std::string &checkFileName, const std::string &ou
         string instance;
         NurseRostering::ObjValue feasible;
         double obj;
-        double accObj;
 
         csvFile.getline( buf, MaxLen::LINE, ',' );  // time
         csvFile.getline( buf, MaxLen::LINE, ',' );  // id

@@ -7,7 +7,7 @@ using namespace std;
 const clock_t NurseRostering::Solver::SAVE_SOLUTION_TIME = CLOCKS_PER_SEC / 2;
 const double NurseRostering::Solver::INIT_PERTURB_STRENGTH = 0.2;
 const double NurseRostering::Solver::PERTURB_STRENGTH_DELTA = 0.01;
-const double NurseRostering::Solver::MAX_PERTURB_STRENGTH = 0.8;
+const double NurseRostering::Solver::MAX_PERTURB_STRENGTH = 0.6;
 
 const vector<string> NurseRostering::Solver::solveAlgorithmName = {
     "[RW]", "[ILS]", "[TSP]", "[TSL]", "[TSR]"
@@ -377,7 +377,7 @@ void NurseRostering::Solver::discoverNurseSkillRelation()
             }
         }
         for (NurseID nurse2 = 0; nurse2 < problem.scenario.nurseNum; ++nurse2) {
-            nursesHasSameSkill[nurse][nurse2] = problem.hasSameSkill( nurse, nurse2 );
+            nursesHasSameSkill[nurse][nurse2] = problem.haveSameSkill( nurse, nurse2 );
         }
     }
 }
@@ -446,6 +446,11 @@ bool NurseRostering::TabuSolver::updateOptima( const Output &localOptima )
     if (localOptima.getObjValue() < optima.getObjValue()) {
         optima = localOptima;
         return true;
+    } else if (localOptima.getObjValue() == optima.getObjValue()) {
+        if (localOptima.getSecondaryObjValue() < optima.getSecondaryObjValue()) {
+            optima = localOptima;
+            return true;
+        }
     }
 
     return false;

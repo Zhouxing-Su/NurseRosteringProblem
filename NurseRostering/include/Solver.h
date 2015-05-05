@@ -141,7 +141,7 @@ public:
 
     const NurseNumOfSkill& getNurseNumOfSkill() const { return nurseNumOfSkill; }
     const NurseWithSkill& getNurseWithSkill() const { return nurseWithSkill; }
-    bool hasSameSkill( NurseID nurse, NurseID nurse2 ) const
+    bool haveSameSkill( NurseID nurse, NurseID nurse2 ) const
     {
         return nursesHasSameSkill[nurse][nurse2];
     }
