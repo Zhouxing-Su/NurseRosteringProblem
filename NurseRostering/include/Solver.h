@@ -10,15 +10,15 @@
 *           6.  [optimizable] evaluateConsecutiveDay() and evaluateConsecutiveDayOff() can
 *               be put together and not consider if there is an assignment. but there is
 *               a difficult problem with consecutive state on the beginning of the week.
-*           7.  [optimizable] make Weekday not related to Consecutive count from 0 to save space.
-*           8.  [optimizable] make shiftID count from 1 and make Shift::ID_NONE 0,
+*           x7.  [optimizable] make Weekday not related to Consecutive count from 0 to save space.
+*           v8.  [optimizable] make shiftID count from 1 and make Shift::ID_NONE 0,
 *               this will leave out isWorking() in isValidSuccesion().
 *               also, add a slot after Sun in assign with shift ID_NONE to
 *               leave out (weekday >= Weekday::Sun) in isValidPrior()
 *           9.  timeout may overflow in POSIX system since CLOCKS_PER_SEC is 1000000 which
 *               makes clock_t can only count to about 4000 seconds.
 *           v10. record() uses c style function to check file open state, change it to c++ style.
-*           11. reset solution to global optima or last local optima after each tabuSearch?
+*           v11. reset solution to global optima or last local optima after each tabuSearch?
 *           12. use constructor with assign string of AssignTable to rebuild solution.
 *
 */

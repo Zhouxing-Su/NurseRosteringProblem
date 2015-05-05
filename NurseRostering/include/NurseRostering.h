@@ -100,9 +100,10 @@ public:
         class Contract
         {
         public:
-            int minShiftNum;    // total assignments in the planning horizon
-            int minShiftNum_lastWeek;   // load from custom file. if there isn't, it is the same as minShiftNum
-            int maxShiftNum;    // total assignments in the planning horizon
+            int minShiftNum;    // total assignments until current week
+            int minShiftNum_lastWeek;   // generate according to history
+            int maxShiftNum;    // total assignments until current week
+            int maxShiftNum_lastWeek;   // generate according to history
             int minConsecutiveDayNum;
             int maxConsecutiveDayNum;
             int minConsecutiveDayoffNum;

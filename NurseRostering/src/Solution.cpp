@@ -1619,12 +1619,11 @@ NurseRostering::ObjValue NurseRostering::Solution::tryAddAssign( int weekday, Nu
     }
 
     // total assign
-    delta -= penalty.TotalAssign() * distanceToRange(
-        totalAssignNums[nurse] * totalWeekNum, contract.minShiftNum * currentWeek,
-        contract.maxShiftNum * currentWeek ) / totalWeekNum;
-    delta += penalty.TotalAssign() * distanceToRange(
-        (totalAssignNums[nurse] + 1) * totalWeekNum, contract.minShiftNum * currentWeek,
-        contract.maxShiftNum * currentWeek ) / totalWeekNum;
+    if (totalAssignNums[nurse] < contract.minShiftNum) {
+        delta -= penalty.TotalAssign();
+    } else if (totalAssignNums[nurse] >= contract.maxShiftNum) {
+        delta += penalty.TotalAssign();
+    }
 
     return delta;
 }
@@ -1980,12 +1979,11 @@ NurseRostering::ObjValue NurseRostering::Solution::tryRemoveAssign( int weekday,
     }
 
     // total assign
-    delta -= penalty.TotalAssign() * distanceToRange(
-        totalAssignNums[nurse] * totalWeekNum, contract.minShiftNum * currentWeek,
-        contract.maxShiftNum * currentWeek ) / totalWeekNum;
-    delta += penalty.TotalAssign() * distanceToRange(
-        (totalAssignNums[nurse] - 1) * totalWeekNum, contract.minShiftNum * currentWeek,
-        contract.maxShiftNum * currentWeek ) / totalWeekNum;
+    if (totalAssignNums[nurse] > contract.maxShiftNum) {
+        delta -= penalty.TotalAssign();
+    } else if (totalAssignNums[nurse] <= contract.minShiftNum) {
+        delta += penalty.TotalAssign();
+    }
 
     return delta;
 }
@@ -2775,22 +2773,18 @@ void NurseRostering::Solution::evaluateCompleteWeekend()
 void NurseRostering::Solution::evaluateTotalAssign()
 {
     const Scenario &scenario( problem.scenario );
-    int totalWeekNum = problem.scenario.totalWeekNum;
 
     for (NurseID nurse = 0; nurse < scenario.nurseNum; ++nurse) {
         int min = scenario.contracts[scenario.nurses[nurse].contract].minShiftNum;
         int lastWeekMin = scenario.contracts[scenario.nurses[nurse].contract].minShiftNum_lastWeek;
         int max = scenario.contracts[scenario.nurses[nurse].contract].maxShiftNum;
+        int lastWeekMax = scenario.contracts[scenario.nurses[nurse].contract].maxShiftNum_lastWeek;
         objTotalAssign += penalty.TotalAssign() * distanceToRange(
-            totalAssignNums[nurse] * totalWeekNum,
-            min * problem.history.currentWeek,
-            max * problem.history.currentWeek ) / totalWeekNum;
+            totalAssignNums[nurse], min, max );
         // remove penalty in the history except the first week
         if (problem.history.pastWeekCount > 0) {
             objTotalAssign -= penalty.TotalAssign() * distanceToRange(
-                problem.history.totalAssignNums[nurse] * totalWeekNum,
-                lastWeekMin * problem.history.pastWeekCount,
-                max * problem.history.pastWeekCount ) / totalWeekNum;
+                problem.history.totalAssignNums[nurse], lastWeekMin, lastWeekMax );
         }
     }
 }

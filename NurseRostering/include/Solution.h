@@ -4,14 +4,16 @@
 *
 *   note :  v1.  use repair mode of penalty to fix infeasible solution in repair().
 *           v2.  merge add and remove to a single neighborhood, abreast of swap and change.
-*           3.  const solver will not be able to call updateOptima,
+*           x3.  const solver will not be able to call updateOptima,
 *               but none-const solver will stub the construction in solver.genHistory().
 *           4.  create a fastRepair() which is separate repair and local search
 *               to improve efficiency since repair process is more similar to generating initial assignment?
-*           5.  perturb() should start from optima?
-*           6.  move mode setting to findBest rather than try.
+*           v5.  perturb() should start from optima?
+*           v6.  move mode setting to findBest rather than try.
 *           7.  just add max tabu tenure to iterCount rather than reset tabu table when rebuild (except the first time)
 *           8.  rebuild() may not function well if diff is too big or small.
+*           v9.  there will be problem on total assignment violation calculation if
+*               total assignment in initial history is not 0.
 *
 */
 
