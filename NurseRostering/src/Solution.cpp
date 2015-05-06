@@ -148,6 +148,24 @@ void NurseRostering::Solution::rebuild( const AssignTable &at, double diff )
     evaluateObjValue();
 }
 
+void NurseRostering::Solution::rebuild( const AssignTable &at )
+{
+    const AssignTable &assignTable( (&at != &assign) ? at : AssignTable( at ) );
+
+    resetAssign();
+    resetAssistData();
+
+    for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
+        for (int weekday = Weekday::Mon; weekday <= Weekday::Sun; ++weekday) {
+            if (assignTable[nurse][weekday].isWorking()) {
+                addAssign( weekday, nurse, assignTable[nurse][weekday] );
+            }
+        }
+    }
+
+    evaluateObjValue();
+}
+
 void NurseRostering::Solution::rebuild()
 {
     rebuild( assign );
@@ -161,7 +179,7 @@ bool NurseRostering::Solution::genInitAssign( int greedyRetryCount )
         feasible = genInitAssign_Greedy();
         if (!feasible) {
             Timer timer( (solver.timer.restTime() - timeForBranchAndCut) / greedyRetryCount );
-            feasible = repair( solver.timer );
+            feasible = repair( timer );
         }
     } while (!feasible && (--greedyRetryCount > 0));
 
@@ -341,7 +359,6 @@ void NurseRostering::Solution::evaluateObjValue()
     objTotalAssign = 0;
     objTotalWorkingWeekend = 0;
 
-#ifdef INRC2_DEBUG
     evaluateInsufficientStaff();
     evaluateConsecutiveShift();
     evaluateConsecutiveDay();
@@ -350,7 +367,6 @@ void NurseRostering::Solution::evaluateObjValue()
     evaluateCompleteWeekend();
     evaluateTotalAssign();
     evaluateTotalWorkingWeekend();
-#endif
 
     objValue = objInsufficientStaff + objConsecutiveShift + objConsecutiveDay + objConsecutiveDayOff
         + objPreference + objCompleteWeekend + objTotalAssign + objTotalWorkingWeekend;
@@ -704,7 +720,7 @@ void NurseRostering::Solution::perturb( double strength )
 {
     // TODO : make this change solution structure in certain complexity
     int randomWalkStepCount = static_cast<int>(strength *
-        problem.scenario.nurseNum * Weekday::NUM);
+        problem.scenario.shiftTypeNum * problem.scenario.nurseNum * Weekday::NUM);
 
     randomWalk( solver.timer, randomWalkStepCount );
 
@@ -2136,6 +2152,8 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock_fast( int &weekd
     }
 
     // try each block length
+    weekday = Weekday::Mon;
+    weekday2 = Weekday::Mon;
     int w = Weekday::Mon;
     int w2;
     for (; w <= Weekday::Sun; ++w) {
@@ -2519,7 +2537,6 @@ void NurseRostering::Solution::updateShiftTabu( NurseID nurse, int weekday, cons
 }
 
 
-#ifdef INRC2_DEBUG
 bool NurseRostering::Solution::checkIncrementalUpdate()
 {
     bool correct = true;
@@ -2780,11 +2797,13 @@ void NurseRostering::Solution::evaluateTotalAssign()
         int lastWeekMax = scenario.contracts[scenario.nurses[nurse].contract].maxShiftNum_lastWeek;
         objTotalAssign += penalty.TotalAssign() * distanceToRange(
             totalAssignNums[nurse], min, max );
+#ifdef INRC2_DEBUG
         // remove penalty in the history except the first week
         if (problem.history.pastWeekCount > 0) {
             objTotalAssign -= penalty.TotalAssign() * distanceToRange(
                 problem.history.totalAssignNums[nurse], lastWeekMin, lastWeekMax );
         }
+#endif
     }
 }
 
@@ -2801,6 +2820,7 @@ void NurseRostering::Solution::evaluateTotalWorkingWeekend()
             objTotalWorkingWeekend += penalty.TotalWorkingWeekend() *
                 exceedingWeekend / totalWeekNum;
         }
+#ifdef INRC2_DEBUG
         // remove penalty in the history except the first week
         if (problem.history.pastWeekCount > 0) {
             historyWeekend -= maxWeekend * problem.history.pastWeekCount;
@@ -2809,9 +2829,9 @@ void NurseRostering::Solution::evaluateTotalWorkingWeekend()
                     historyWeekend / totalWeekNum;
             }
         }
+#endif
     }
 }
-#endif
 
 
 

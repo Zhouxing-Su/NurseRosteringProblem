@@ -151,7 +151,7 @@ public:
         } else if (objValue == optima.getObjValue()) {
             secondaryObjValue = 0;
             for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
-                secondaryObjValue += problem.scenario.shifts[assign[nurse][Weekday::Sun].shift].illegalNextShiftNum;
+                secondaryObjValue += totalAssignNums[nurse];
             }
             if (secondaryObjValue < optima.getSecondaryObjValue()) {
                 findTime = clock();
@@ -163,7 +163,8 @@ public:
         return false;
     }
     // set assign to at and rebuild assist data, at must be build from same problem
-    void rebuild( const AssignTable &at, double diff = NO_DIFF );
+    void rebuild( const AssignTable &at, double diff );
+    void rebuild( const AssignTable &at );
     void rebuild(); // must be called after direct access to AssignTable
     // evaluate objective by assist data structure
     // must be called after Penalty change or direct access to AssignTable
@@ -523,12 +524,21 @@ private:
     bool noBlockSwapTabu( const Move &move ) const
     {
         // TODO : more effective strategy?
-        int tabuCount = (move.weekday2 - move.weekday + 1) / 2;
+        int noTabuCount = -(move.weekday2 - move.weekday + 1) / 2;
         for (int w = move.weekday; w <= move.weekday2; ++w) {
-            --tabuCount;
+            noTabuCount += noSwapTabu( w, move.nurse, move.nurse2 );
         }
 
-        return (tabuCount > 0);
+        return (noTabuCount > 0);
+
+        //// TODO : more effective strategy?
+        //for (int w = move.weekday; w <= move.weekday2; ++w) {
+        //    if (noSwapTabu( w, move.nurse, move.nurse2 )) {
+        //        return false;
+        //    }
+        //}
+
+        //return true;
     }
 
     bool aspirationCritiera( ObjValue bestMoveDelta, ObjValue bestMoveDelta_tabu ) const

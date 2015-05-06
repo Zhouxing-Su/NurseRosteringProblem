@@ -301,9 +301,12 @@ public:
     // must set all data members by direct accessing!
     NurseRostering();
 
-    // do not count min shift number in early weeks
+    // min shift is less than average in early weeks
     // max increase after week count and start with a initial value
     void adjustRangeOfTotalAssignByWeekCount();
+    // do not count min shift number in early weeks
+    // max increase with same delta each week
+    void adjustRangeOfTotalAssignByWorkload();
     // return true if two nurses have same skill
     bool haveSameSkill( NurseID nurse, NurseID nurse2 ) const
     {

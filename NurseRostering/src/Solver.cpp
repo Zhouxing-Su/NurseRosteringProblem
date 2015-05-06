@@ -184,7 +184,7 @@ NurseRostering::ObjValue NurseRostering::Solver::checkObjValue( const AssignTabl
         if (exceedingWeekend > 0) {
             objValue += DefaultPenalty::TotalWorkingWeekend * exceedingWeekend / totalWeekNum;
         }
-
+#ifdef INRC2_DEBUG
         // remove penalty in the history except the first week
         if (problem.history.pastWeekCount > 0) {
             objValue -= DefaultPenalty::TotalAssign * distanceToRange(
@@ -195,6 +195,7 @@ NurseRostering::ObjValue NurseRostering::Solver::checkObjValue( const AssignTabl
                 objValue -= DefaultPenalty::TotalWorkingWeekend * historyWeekend / totalWeekNum;
             }
         }
+#endif
     }
 
     return objValue;
@@ -554,6 +555,8 @@ void NurseRostering::TabuSolver::tabuSearch( Solution::ModeSeq modeSeq, Solution
         const AssignTable &at( (rand() % PERTURB_ORIGIN_SELECT)
             ? optima.getAssignTable() : sln.getOptima().getAssignTable() );
         sln.rebuild( at, perturbStrength );
+        //sln.rebuild( at );
+        //sln.perturb( perturbStrength );
     }
 }
 
