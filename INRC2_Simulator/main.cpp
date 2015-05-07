@@ -16,7 +16,7 @@ void debugRun()
     char weekdata[WEEKDATA_SEQ_SIZE] = "5533";
     int randSeed = static_cast<int>(time( NULL ));
     double runningTime = instTimeout[getNurseNum( instIndex )];
-    test_customIO( id.str(), outputDirPrefix + id.str(), instIndex, initHis, weekdata, runningTime, randSeed );
+    test_customIO_r( id.str(), outputDirPrefix + id.str(), instIndex, initHis, weekdata, runningTime, randSeed );
 }
 
 // all instances with random weekdata sequence on multi-threads
@@ -86,6 +86,15 @@ void sprintRun()
     }
 }
 
+// make use of hardware concurrency in a single round rather than between rounds
+void parallelRun()
+{
+    int threadNum = thread::hardware_concurrency();
+    int round = 6;
+
+    testAllInstancesParallel( threadNum, round );
+}
+
 int main()
 {
     loadConfig();
@@ -97,6 +106,7 @@ int main()
     //realRun();
     benchmarkRun();
     //sprintRun();
+    //parallelRun();
 
     //system( "pause" );
     return 0;

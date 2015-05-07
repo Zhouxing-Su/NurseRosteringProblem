@@ -212,19 +212,19 @@ bool NurseRostering::Solution::genInitAssign_Greedy()
         class CmpDailyRequire
         {
         public:
-            CmpDailyRequire( vector<double> &dr ) :dailyRequire( dr ) {}
+            CmpDailyRequire( vector<double> &dr ) : dailyRequire( dr ) {}
 
             bool operator()( const int &l, const int &r )
             {
                 return (dailyRequire[l] > dailyRequire[r]);
             }
         private:
-            vector<double> &dailyRequire;
+            const vector<double> &dailyRequire;
 
         private:    // forbidden operators
             CmpDailyRequire& operator=(const CmpDailyRequire &) { return *this; }
-        }cmpDailyRequire( dailyRequire );
-        sort( skillRank.begin(), skillRank.end(), cmpDailyRequire );
+        };
+        sort( skillRank.begin(), skillRank.end(), CmpDailyRequire( dailyRequire ) );
 
         // start assigning nurses
         for (int rank = 0; rank < problem.scenario.skillTypeNum; ++rank) {

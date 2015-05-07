@@ -61,12 +61,78 @@ const std::string cusPrefix( "/custom-week" );
 const char *FeasibleCheckerHost = "themis.playhost.be";
 
 
+void testAllInstancesParallel( int threadNum, int round )
+{
+    struct Inst
+    {
+        int index;
+        double timeout;
+    };
+
+    class TimeCmp
+    {
+    public:
+        TimeCmp( const vector<Inst> &instances ) : inst( instances ) {}
+        // sort to (greater ... less)
+        bool operator()( const Inst &l, const Inst &r )
+        {
+            return (l.timeout > r.timeout);
+        }
+
+    private:
+        const vector<Inst> &inst;
+
+    private:    // forbidden operators
+        TimeCmp& operator=(const TimeCmp &) { return *this; }
+    };
+
+    vector<Inst> inst( instance.size() );
+    for (int instIndex = InstIndex::n005w4; instIndex <= InstIndex::n120w8; ++instIndex) {
+        inst[instIndex].index = instIndex;
+        inst[instIndex].timeout = instTimeout[getNurseNum( instIndex )] * getWeekNum( instIndex );
+    }
+    sort( inst.begin(), inst.end(), TimeCmp( inst ) );
+
+    vector<double> timespend( threadNum, 0 );
+    vector<thread> vt( threadNum );
+
+    queue<int> idleThread;
+    for (int i = 0; i < threadNum; ++i) {
+        idleThread.push( i );
+    }
+    for (; round > 0; --round) {
+        for (int i = InstIndex::n005w4; i <= InstIndex::n120w8; ++i) {
+            if (!idleThread.empty()) {
+                int newThread = idleThread.front();
+                idleThread.pop();
+                timespend[newThread] += inst[i].timeout;
+
+                ostringstream id;
+                id << newThread;
+                int randSeed = static_cast<int>(rand() + time( NULL ) + clock());
+                if (vt[newThread].joinable()) { vt[newThread].join(); }
+                vt[newThread] = thread( test_customIO_r, id.str(), outputDirPrefix + id.str(), inst[i].index,
+                    instInitHis[inst[i].index], instWeekdataSeq[inst[i].index].c_str(), instTimeout[getNurseNum( inst[i].index )], randSeed );
+            } else {
+                int firstFinishThread = 0;
+                for (int t = 0; t < threadNum; ++t) {
+                    if (timespend[t] < timespend[firstFinishThread]) {
+                        firstFinishThread = t;
+                    }
+                }
+                vt[firstFinishThread].join();
+                idleThread.push( firstFinishThread );
+            }
+        }
+    }
+    for (int i = 0; i < threadNum; ++i) {
+        vt[i].join();
+    }
+}
+
 void testHeterogeneousInstancesWithPreloadedInstSeq( const std::string &id, int runCount )
 {
-    unsigned instIndex;
-    int randSeed;
-
-    for (instIndex = 0; instIndex < instance.size(); ++instIndex) {
+    for (int instIndex = InstIndex::n005w4; instIndex <= InstIndex::n120w8; ++instIndex) {
         // instances which have no need for test
         if ((instIndex == InstIndex::n120w8)
             || (instIndex == InstIndex::n100w8)) {
@@ -74,8 +140,8 @@ void testHeterogeneousInstancesWithPreloadedInstSeq( const std::string &id, int 
         }
 
         for (int i = runCount; i > 0; --i) {
-            randSeed = static_cast<int>(rand() + time( NULL ) + clock());
-            test_customIO( id, outputDirPrefix + id, instIndex,
+            int randSeed = static_cast<int>(rand() + time( NULL ) + clock());
+            test_customIO_r( id, outputDirPrefix + id, instIndex,
                 instInitHis[instIndex], instWeekdataSeq[instIndex].c_str(), instTimeout[getNurseNum( instIndex )], randSeed );
         }
     }
@@ -83,13 +149,10 @@ void testHeterogeneousInstancesWithPreloadedInstSeq( const std::string &id, int 
 
 void testAllInstancesWithPreloadedInstSeq( const std::string &id, int runCount )
 {
-    unsigned instIndex;
-    int randSeed;
-
-    for (instIndex = 0; instIndex < instance.size(); ++instIndex) {
+    for (int instIndex = InstIndex::n005w4; instIndex <= InstIndex::n120w8; ++instIndex) {
         for (int i = runCount; i > 0; --i) {
-            randSeed = static_cast<int>(rand() + time( NULL ) + clock());
-            test_customIO( id, outputDirPrefix + id, instIndex,
+            int randSeed = static_cast<int>(rand() + time( NULL ) + clock());
+            test_customIO_r( id, outputDirPrefix + id, instIndex,
                 instInitHis[instIndex], instWeekdataSeq[instIndex].c_str(), instTimeout[getNurseNum( instIndex )], randSeed );
         }
     }
@@ -97,22 +160,22 @@ void testAllInstancesWithPreloadedInstSeq( const std::string &id, int runCount )
 
 void testAllInstances( const std::string &id, int runCount, int seedForInstSeq )
 {
-    unsigned instIndex;
     char initHis;
     char weekdata[WEEKDATA_SEQ_SIZE];
     int randSeed;
 
-    for (instIndex = 0; instIndex < instance.size(); ++instIndex) {
+    for (int instIndex = InstIndex::n005w4; instIndex <= InstIndex::n120w8; ++instIndex) {
         for (int i = runCount; i > 0; --i) {
             srand( seedForInstSeq );
             seedForInstSeq = rand();
             genInstanceSequence( instIndex, initHis, weekdata );
             randSeed = static_cast<int>(rand() + time( NULL ) + clock());
-            test_customIO( id, outputDirPrefix + id, instIndex,
+            test_customIO_r( id, outputDirPrefix + id, instIndex,
                 initHis, weekdata, instTimeout[getNurseNum( instIndex )], randSeed );
         }
     }
 }
+
 
 void loadConfig()
 {
@@ -164,7 +227,7 @@ int getNurseNum( int instIndex )
 
 int getWeekNum( int instIndex )
 {
-    return instance[instIndex][5] - '1';
+    return instance[instIndex][5] - '0';
 }
 
 char genInitHisIndex()
@@ -176,7 +239,7 @@ void genWeekdataSequence( int instIndex, char weekdata[WEEKDATA_SEQ_SIZE] )
 {
     memset( weekdata, 0, WEEKDATA_SEQ_SIZE * sizeof( char ) );
     int weekNum = getWeekNum( instIndex );
-    for (; weekNum >= 0; --weekNum) {
+    for (; weekNum > 0; --weekNum) {
         weekdata[weekNum] = (rand() % WEEKDATA_NUM) + '0';
     }
 }
@@ -190,7 +253,7 @@ void genInstanceSequence( int instIndex, char &initHis, char weekdata[WEEKDATA_S
 
 #ifdef INRC2_CHECK_INSTANCE_FEASIBILITY_ONLINE
         string file = "/" + instance[instIndex] + "/H0-" + instance[instIndex] + "-" + initHis;
-        for (int weekNum = getWeekNum( instIndex ); weekNum >= 0; --weekNum) {
+        for (int weekNum = getWeekNum( instIndex ); weekNum > 0; --weekNum) {
             file += ("/WD-" + instance[instIndex] + "-" + weekdata[weekNum]);
         }
 
@@ -239,7 +302,7 @@ void test( const std::string &id, const std::string &outputDir, int instIndex, c
     }
 }
 
-void test( const std::string &id, const std::string &outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec, int randSeed )
+void test_r( const std::string &id, const std::string &outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec, int randSeed )
 {
     makeSureDirExist( outputDir );
     ostringstream t, r;
@@ -288,7 +351,7 @@ void test_customIO( const std::string &id, const std::string &outputDir, int ins
     run( argc, argv );
 }
 
-void test_customIO( const std::string &id, const std::string &outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec, int randSeed )
+void test_customIO_r( const std::string &id, const std::string &outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec, int randSeed )
 {
     makeSureDirExist( outputDir );
     ostringstream t, r;

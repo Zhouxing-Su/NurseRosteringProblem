@@ -16,6 +16,8 @@
 #include <ctime>
 #include <thread>
 #include <chrono>
+#include <algorithm>
+#include <queue>
 #include <cstring>
 #include <cstdlib>
 
@@ -106,13 +108,14 @@ void genInstanceSequence( int instIndex, char &initHis, char weekdata[WEEKDATA_S
 
 void makeSureDirExist( const std::string &dir );
 
+void testAllInstancesParallel( int threadNum, int round );
 void testHeterogeneousInstancesWithPreloadedInstSeq( const std::string &id, int runCount );
 void testAllInstancesWithPreloadedInstSeq( const std::string &id, int runCount );
 void testAllInstances( const std::string &id, int runCount, int seedForInstSeq );
 void test( const std::string &id, const std::string &outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec );
-void test( const std::string &id, const std::string &outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec, int randSeed );
+void test_r( const std::string &id, const std::string &outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec, int randSeed );
 void test_customIO( const std::string &id, const std::string &outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec );
-void test_customIO( const std::string &id, const std::string &outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec, int randSeed );
+void test_customIO_r( const std::string &id, const std::string &outputDir, int instIndex, char initHis, const char *weeks, double timeoutInSec, int randSeed );
 void prepareArgv_FirstWeek( const std::string &id, const std::string &outputDir, char *argv[], char argvBuf[][MAX_ARGV_LEN], int instIndex, char initHis,
     char week, const std::string &timeoutInSec, const std::string &randSeed = "", const std::string &cusOut = "" );
 void prepareArgv( const std::string &id, const std::string &outputDir, char *argv[], char argvBuf[][MAX_ARGV_LEN], int instIndex, const char *weeks, char week,
