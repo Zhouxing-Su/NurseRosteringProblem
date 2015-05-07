@@ -128,7 +128,6 @@ namespace INRC2
 
         // start computation
         input.adjustRangeOfTotalAssignByWorkload();
-        //input.adjustRangeOfTotalAssignByWeekCount();
         NurseRostering::TabuSolver solver( input, startTime );
         solver.init( parseConfig( argvMap[ARGV_CONFIG] ), argvMap[ARGV_ID] );
         solver.solve();

@@ -1634,11 +1634,11 @@ NurseRostering::ObjValue NurseRostering::Solution::tryAddAssign( int weekday, Nu
     }
 
     // total assign
-    if (totalAssignNums[nurse] < contract.minShiftNum) {
-        delta -= penalty.TotalAssign();
-    } else if (totalAssignNums[nurse] >= contract.maxShiftNum) {
-        delta += penalty.TotalAssign();
-    }
+    int totalAssign = totalAssignNums[nurse] * totalWeekNum;
+    delta -= penalty.TotalAssign() * distanceToRange( totalAssign,
+        contract.minShiftNum, contract.maxShiftNum ) / totalWeekNum;
+    delta += penalty.TotalAssign() * distanceToRange( totalAssign + totalWeekNum,
+        contract.minShiftNum, contract.maxShiftNum ) / totalWeekNum;
 
     return delta;
 }
@@ -1994,11 +1994,11 @@ NurseRostering::ObjValue NurseRostering::Solution::tryRemoveAssign( int weekday,
     }
 
     // total assign
-    if (totalAssignNums[nurse] > contract.maxShiftNum) {
-        delta -= penalty.TotalAssign();
-    } else if (totalAssignNums[nurse] <= contract.minShiftNum) {
-        delta += penalty.TotalAssign();
-    }
+    int totalAssign = totalAssignNums[nurse] * totalWeekNum;
+    delta -= penalty.TotalAssign() * distanceToRange( totalAssign,
+        contract.minShiftNum, contract.maxShiftNum ) / totalWeekNum;
+    delta += penalty.TotalAssign() * distanceToRange( totalAssign - totalWeekNum,
+        contract.minShiftNum, contract.maxShiftNum ) / totalWeekNum;
 
     return delta;
 }
@@ -2796,12 +2796,14 @@ void NurseRostering::Solution::evaluateTotalAssign()
         int max = scenario.contracts[scenario.nurses[nurse].contract].maxShiftNum;
         int lastWeekMax = scenario.contracts[scenario.nurses[nurse].contract].maxShiftNum_lastWeek;
         objTotalAssign += penalty.TotalAssign() * distanceToRange(
-            totalAssignNums[nurse], min, max );
+            totalAssignNums[nurse] * problem.scenario.totalWeekNum,
+            min, max ) / problem.scenario.totalWeekNum;
 #ifdef INRC2_DEBUG
         // remove penalty in the history except the first week
         if (problem.history.pastWeekCount > 0) {
             objTotalAssign -= penalty.TotalAssign() * distanceToRange(
-                problem.history.totalAssignNums[nurse], lastWeekMin, lastWeekMax );
+                problem.history.totalAssignNums[nurse] * problem.scenario.totalWeekNum,
+                lastWeekMin, lastWeekMax ) / problem.scenario.totalWeekNum;
         }
 #endif
     }

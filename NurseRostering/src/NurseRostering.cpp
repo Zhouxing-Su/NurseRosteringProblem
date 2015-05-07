@@ -26,32 +26,6 @@ NurseRostering::NurseRostering()
     names.shiftMap[NurseRostering::Scenario::Shift::NAME_NONE] = NurseRostering::Scenario::Shift::ID_NONE;
 }
 
-void NurseRostering::adjustRangeOfTotalAssignByWeekCount()
-{
-    if (scenario.totalWeekNum > 1) {  // it must be count if there is only one week
-        for (auto iter = scenario.contracts.begin(); iter != scenario.contracts.end(); ++iter) {
-            int deltaAmp = iter->minShiftNum / scenario.totalWeekNum;
-            //int deltaAmp = 0;
-            int delta_lastWeek = deltaAmp * (history.pastWeekCount - scenario.totalWeekNum - 1) / scenario.totalWeekNum;
-            iter->minShiftNum_lastWeek = delta_lastWeek + iter->minShiftNum  * history.pastWeekCount / scenario.totalWeekNum;
-            if (history.currentWeek < scenario.totalWeekNum) {
-                int delta = deltaAmp * (history.pastWeekCount - scenario.totalWeekNum) / scenario.totalWeekNum;
-                iter->minShiftNum = delta + iter->minShiftNum  * history.currentWeek / scenario.totalWeekNum;
-            }
-            //int initMax = iter->maxConsecutiveDayNum;
-            //int initMax = (iter->minConsecutiveDayNum + iter->maxConsecutiveDayNum) / 2;
-            int initMax = iter->minConsecutiveDayNum;
-            //int initMax = 0;
-            if (iter->maxShiftNum > initMax) {
-                iter->maxShiftNum_lastWeek = initMax +
-                    ((iter->maxShiftNum - initMax) * history.pastWeekCount / scenario.totalWeekNum);
-                iter->maxShiftNum = initMax +
-                    ((iter->maxShiftNum - initMax) * history.currentWeek / scenario.totalWeekNum);
-            }
-        }
-    }
-}
-
 void NurseRostering::adjustRangeOfTotalAssignByWorkload()
 {
     if (scenario.totalWeekNum > 1) {  // it must be count if there is only one week
@@ -59,14 +33,10 @@ void NurseRostering::adjustRangeOfTotalAssignByWorkload()
             int weekToStartCountMin = scenario.totalWeekNum * iter->minShiftNum;
             bool ignoreMinShift_lastWeek = ((history.pastWeekCount * iter->maxShiftNum) < weekToStartCountMin);
             bool ignoreMinShift = ((history.currentWeek * iter->maxShiftNum) < weekToStartCountMin);
-            if (ignoreMinShift_lastWeek) {
-                iter->minShiftNum_lastWeek = 0;
-                if (ignoreMinShift) {
-                    iter->minShiftNum = 0;
-                }
-            }
-            iter->maxShiftNum_lastWeek = ((iter->maxShiftNum * history.pastWeekCount + scenario.totalWeekNum - 1) / scenario.totalWeekNum);
-            iter->maxShiftNum = ((iter->maxShiftNum * history.currentWeek + scenario.totalWeekNum - 1) / scenario.totalWeekNum);
+            iter->minShiftNum_lastWeek = (ignoreMinShift_lastWeek) ? 0 : (iter->minShiftNum_lastWeek * history.pastWeekCount);
+            iter->minShiftNum = (ignoreMinShift) ? 0 : (iter->minShiftNum * history.currentWeek);
+            iter->maxShiftNum_lastWeek *= history.pastWeekCount;
+            iter->maxShiftNum *= history.currentWeek;
         }
     }
 }
