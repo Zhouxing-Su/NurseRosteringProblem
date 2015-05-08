@@ -301,9 +301,6 @@ public:
     // must set all data members by direct accessing!
     NurseRostering();
 
-    // min shift is less than average in early weeks
-    // max increase after week count and start with a initial value
-    void adjustRangeOfTotalAssignByWeekCount();
     // do not count min shift number in early weeks
     // max increase with same delta each week
     void adjustRangeOfTotalAssignByWorkload();

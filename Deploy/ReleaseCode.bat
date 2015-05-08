@@ -1,3 +1,5 @@
+mkdir simulator
+mkdir analyzer
 copy "..\INRC2_Simulator\BatchTest.cpp" simulator
 copy "..\INRC2_Simulator\BatchTest.h" simulator
 copy "..\INRC2_Simulator\main.cpp" simulator

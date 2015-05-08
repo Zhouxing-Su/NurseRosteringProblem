@@ -9,33 +9,26 @@
 *   note :  1.
 */
 
+#ifndef INRC2_DEBUG_FLAG_H
+#define INRC2_DEBUG_FLAG_H
 
-#ifndef INRC2_LOG
+
+// performance switch
 #define INRC2_LOG
-#endif
 
-#ifndef INRC2_DEBUG
 #define INRC2_DEBUG
-#endif
 
-#ifndef INRC2_PERFORMANCE_TEST
 //#define INRC2_PERFORMANCE_TEST
-#endif
 
-#ifndef INRC2_CHECK_INSTANCE_FEASIBILITY_ONLINE
+
+// input switch
 //#define INRC2_CHECK_INSTANCE_FEASIBILITY_ONLINE
-#endif
 
 
-
-#ifndef INRC2_PERTRUB_IN_REBUILD
+// algorithm switch
 #define INRC2_PERTRUB_IN_REBUILD
-#endif
 
-
-#ifndef INRC2_BLOCK_SWAP_FIRST_IMPROVE
 #define INRC2_BLOCK_SWAP_FIRST_IMPROVE
-#endif
 
 #define INRC2_BLOCK_SWAP_AVERAGE_TABU 0
 #define INRC2_BLOCK_SWAP_STRONG_TABU 1
@@ -48,3 +41,6 @@
 #define INRC2_BLOCK_SWAP_PART 2
 #define INRC2_BLOCK_SWAP_RAND 3
 #define INRC2_BLOCK_SWAP_FIND_BEST INRC2_BLOCK_SWAP_FAST
+
+
+#endif

@@ -48,7 +48,7 @@ void benchmarkRun()
 {
     ostringstream id;
 
-    int runCount = 3;
+    int runCount = 4;
     int threadBeginInterval = 3;
     int threadNum = 2;
     threadNum += (threadNum == 0);
