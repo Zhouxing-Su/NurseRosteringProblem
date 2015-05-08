@@ -29,7 +29,7 @@ char *fullArgv[ArgcVal::full] = {
 };
 
 const std::string outputDirPrefix( "output" );
-const std::string instanceDir( "../NurseRostering/instance/" );
+const std::string instanceDir( "../Instance/" );
 const std::vector<std::string> instance = {
     "n005w4", "n012w8", "n021w4", // 0 1 2
     "n030w4", "n030w8", // 3 4
@@ -126,7 +126,7 @@ void testAllInstancesParallel( int threadNum, int round )
         }
     }
     for (int i = 0; i < threadNum; ++i) {
-        vt[i].join();
+        if (vt[i].joinable()) { vt[i].join(); }
     }
 }
 

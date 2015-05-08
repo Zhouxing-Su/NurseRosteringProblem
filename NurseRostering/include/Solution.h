@@ -49,13 +49,13 @@ public:
     }
     const AssignTable& getAssignTable() const { return assign; }
     ObjValue getObjValue() const { return objValue; }
-    ObjValue getSecondaryObjValue() const { return secondaryObjValue; }
+    double getSecondaryObjValue() const { return secondaryObjValue; }
     clock_t getFindTime() const { return findTime; }
 
 protected:
     AssignTable assign;
     ObjValue objValue;
-    ObjValue secondaryObjValue;
+    double secondaryObjValue;
     clock_t findTime;
 };
 
@@ -151,7 +151,7 @@ public:
         } else if (objValue == optima.getObjValue()) {
             secondaryObjValue = 0;
             for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
-                secondaryObjValue += totalAssignNums[nurse];
+                secondaryObjValue += totalAssignNums[nurse] / problem.scenario.contracts[problem.scenario.nurses[nurse].contract].maxShiftNum;
             }
             if (secondaryObjValue < optima.getSecondaryObjValue()) {
                 findTime = clock();
@@ -521,24 +521,17 @@ private:
             }
         }
     }
-    bool noBlockSwapTabu( const Move &move ) const
+    bool noBlockSwapTabu( int noTabuCount, int totalSwap ) const
     {
-        // TODO : more effective strategy?
-        int noTabuCount = -(move.weekday2 - move.weekday + 1) / 2;
-        for (int w = move.weekday; w <= move.weekday2; ++w) {
-            noTabuCount += noSwapTabu( w, move.nurse, move.nurse2 );
-        }
-
+#if INRC2_BLOCK_SWAP_TABU_STRENGTH == INRC2_BLOCK_SWAP_AVERAGE_TABU
+        return (2 * noTabuCount > totalSwap);   // over half of swaps are no tabu
+#elif INRC2_BLOCK_SWAP_TABU_STRENGTH == INRC2_BLOCK_SWAP_STRONG_TABU
+        return (noTabuCount == totalSwap);
+#elif INRC2_BLOCK_SWAP_TABU_STRENGTH == INRC2_BLOCK_SWAP_WEAK_TABU
         return (noTabuCount > 0);
-
-        //// TODO : more effective strategy?
-        //for (int w = move.weekday; w <= move.weekday2; ++w) {
-        //    if (noSwapTabu( w, move.nurse, move.nurse2 )) {
-        //        return false;
-        //    }
-        //}
-
-        //return true;
+#elif INRC2_BLOCK_SWAP_TABU_STRENGTH == INRC2_BLOCK_SWAP_NO_TABU
+        return true;
+#endif
     }
 
     bool aspirationCritiera( ObjValue bestMoveDelta, ObjValue bestMoveDelta_tabu ) const

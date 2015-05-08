@@ -198,3 +198,4 @@ statistic.csv
 Validator-results.txt
 *.vsps
 RawLog
+/Deploy/*/*.exe

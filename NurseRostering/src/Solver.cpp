@@ -555,9 +555,12 @@ void NurseRostering::TabuSolver::tabuSearch( Solution::ModeSeq modeSeq, Solution
         }
         const AssignTable &at( (rand() % PERTURB_ORIGIN_SELECT)
             ? optima.getAssignTable() : sln.getOptima().getAssignTable() );
+#ifdef INRC2_PERTRUB_IN_REBUILD
         sln.rebuild( at, perturbStrength );
-        //sln.rebuild( at );
-        //sln.perturb( perturbStrength );
+#else
+        sln.rebuild( at );
+        sln.perturb( perturbStrength );
+#endif
     }
 }
 
@@ -573,8 +576,8 @@ void NurseRostering::TabuSolver::setTabuTenure()
     setShiftTabuTenure_DayNum( config.shiftTabuCoefficient[TabuTenureCoefficientIndex::DayNum] );
     setShiftTabuTenure_ShiftNum( config.shiftTabuCoefficient[TabuTenureCoefficientIndex::ShiftNum] );
 
-    if (dayTabuTenureBase > MIN_TABU_BASE) { dayTabuTenureBase = MIN_TABU_BASE; }
-    if (shiftTabuTenureBase > MIN_TABU_BASE) { shiftTabuTenureBase = MIN_TABU_BASE; }
+    if (dayTabuTenureBase < MIN_TABU_BASE) { dayTabuTenureBase = MIN_TABU_BASE; }
+    if (shiftTabuTenureBase < MIN_TABU_BASE) { shiftTabuTenureBase = MIN_TABU_BASE; }
     dayTabuTenureAmp = 1 + dayTabuTenureBase / TABU_BASE_TO_AMP;
     shiftTabuTenureAmp = 1 + shiftTabuTenureBase / TABU_BASE_TO_AMP;
 }
