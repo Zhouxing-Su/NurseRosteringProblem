@@ -144,16 +144,25 @@ public:
     // return true if update succeed
     bool updateOptima()
     {
+#ifdef INRC2_SECONDARY_OBJ_VALUE
+        if (objValue <= optima.getObjValue()) {
+            secondaryObjValue = 0;
+            for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
+                secondaryObjValue += static_cast<double>(totalAssignNums[nurse]) / problem.scenario.contracts[problem.scenario.nurses[nurse].contract].maxShiftNum;
+            }
+        }
+#endif
         if (objValue < optima.getObjValue()) {
             findTime = clock();
             optima = *this;
             return true;
         } else if (objValue == optima.getObjValue()) {
-            secondaryObjValue = 0;
-            for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
-                secondaryObjValue += totalAssignNums[nurse] / problem.scenario.contracts[problem.scenario.nurses[nurse].contract].maxShiftNum;
-            }
-            if (secondaryObjValue < optima.getSecondaryObjValue()) {
+#ifdef INRC2_SECONDARY_OBJ_VALUE
+            bool isSelected = (secondaryObjValue < optima.getSecondaryObjValue());
+#else
+            bool isSelected = ((rand() % 2) == 0);
+#endif
+            if (isSelected) {
                 findTime = clock();
                 optima = *this;
                 return true;

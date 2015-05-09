@@ -449,7 +449,12 @@ bool NurseRostering::TabuSolver::updateOptima( const Output &localOptima )
         optima = localOptima;
         return true;
     } else if (localOptima.getObjValue() == optima.getObjValue()) {
-        if (localOptima.getSecondaryObjValue() < optima.getSecondaryObjValue()) {
+#ifdef INRC2_SECONDARY_OBJ_VALUE
+        bool  isSelected = (localOptima.getSecondaryObjValue() < optima.getSecondaryObjValue());
+#else
+        bool isSelected = ((rand() % 2) == 0);
+#endif
+        if (isSelected) {
             optima = localOptima;
             return true;
         }

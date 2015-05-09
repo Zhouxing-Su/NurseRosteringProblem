@@ -437,13 +437,10 @@ bool NurseRostering::Solution::repair( const Timer &timer )
         objValue = violation;
         // reduced tabuSearch_Rand()
         {
-            optima = *this;
-
             int modeNum = fbmt.size();
 
-            const int weight_NoImprove = 512;   // min weight
-            const int weight_ImproveCur = 1024;
-            const int weight_ImproveOpt = 4096; // max weight (less than (RAND_MAX / modeNum))
+            const int weight_NoImprove = 256;   // min weight
+            const int weight_ImproveCur = 1024; // max weight (less than (RAND_MAX / modeNum))
             const int initWeight = (weight_ImproveCur + weight_NoImprove) / 2;
             const int deltaIncRatio = 8;    // = weights[mode] / weightDelta
             const int incError = deltaIncRatio - 1;
@@ -465,17 +462,10 @@ bool NurseRostering::Solution::repair( const Timer &timer )
                 (this->*applyMove[bestMove.mode])(bestMove);
                 objValue += bestMove.delta;
 
-                if (objValue < optima.getObjValue()) {   // improve optima
-                    updateOptima();
-                    weightDelta = (incError + weight_ImproveOpt - weights[modeSelect]) / deltaIncRatio;
-                } else {
-                    if (bestMove.delta < 0) {    // improve current solution
-                        weightDelta = (weights[modeSelect] < weight_ImproveCur)
-                            ? (incError + weight_ImproveCur - weights[modeSelect]) / deltaIncRatio
-                            : (decError + weight_ImproveCur - weights[modeSelect]) / deltaDecRatio;
-                    } else {    // no improve but valid
-                        weightDelta = (decError + weight_NoImprove - weights[modeSelect]) / deltaDecRatio;
-                    }
+                if (bestMove.delta < 0) {    // improve current solution
+                    weightDelta = (incError + weight_ImproveCur - weights[modeSelect]) / deltaIncRatio;
+                } else {    // no improve but valid
+                    weightDelta = (decError + weight_NoImprove - weights[modeSelect]) / deltaDecRatio;
                 }
 
                 weights[modeSelect] += weightDelta;
@@ -486,7 +476,7 @@ bool NurseRostering::Solution::repair( const Timer &timer )
     penalty.setDefaultMode();
 
     if (violation != 0) {   // the tabu search has been proceed
-        rebuild( optima.getAssignTable() );
+        evaluateObjValue();
     }
 
 #ifdef INRC2_PERFORMANCE_TEST
@@ -758,8 +748,6 @@ void NurseRostering::Solution::randomWalk( const Timer &timer, IterCount stepNum
             (this->*applyMove[moveMode])(move);
             --stepNum;
         }
-
-        updateOptima();
     }
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t duration = clock() - startTime;

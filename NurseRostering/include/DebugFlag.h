@@ -26,8 +26,13 @@
 
 
 // algorithm switch
+// comment to use random pick
+//#define INRC2_SECONDARY_OBJ_VALUE
+
+// comment to use perturb
 #define INRC2_PERTRUB_IN_REBUILD
 
+// comment to use best improvement
 #define INRC2_BLOCK_SWAP_FIRST_IMPROVE
 
 #define INRC2_BLOCK_SWAP_AVERAGE_TABU 0
