@@ -1003,10 +1003,6 @@ bool NurseRostering::Solution::findBestBlockSwap_fast( Move &bestMove ) const
         }
     }
 
-    if (aspirationCritiera( bestMove.delta, bestMove_tabu.delta )) {
-        bestMove = bestMove_tabu;
-    }
-
     findBestBlockSwap_startNurse = move.nurse;
     penalty.setDefaultMode();
     return false;
@@ -1049,10 +1045,6 @@ bool NurseRostering::Solution::findBestBlockSwap_part( Move &bestMove ) const
         }
     }
 
-    if (aspirationCritiera( bestMove.delta, bestMove_tabu.delta )) {
-        bestMove = bestMove_tabu;
-    }
-
     findBestBlockSwap_startNurse = move.nurse;
     penalty.setDefaultMode();
     return (bestMove.delta < 0);
@@ -1092,10 +1084,6 @@ bool NurseRostering::Solution::findBestBlockSwap_rand( Move &bestMove ) const
                 }
             }
         }
-    }
-
-    if (aspirationCritiera( bestMove.delta, bestMove_tabu.delta )) {
-        bestMove = bestMove_tabu;
     }
 
     findBestBlockSwap_startNurse = move.nurse;
@@ -2243,12 +2231,12 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock_fast( int &weekd
                         minDelta = delta;
                         weekday = w;
                         weekday2 = w2;
-                    } else {    // tabu
-                        if (rs_tabu.isMinimal( delta, minDelta_tabu )) {
-                            minDelta_tabu = delta;
-                            weekday_tabu = w;
-                            weekday2_tabu = w2;
-                        }
+                    }
+                } else {    // tabu
+                    if (rs_tabu.isMinimal( delta, minDelta_tabu )) {
+                        minDelta_tabu = delta;
+                        weekday_tabu = w;
+                        weekday2_tabu = w2;
                     }
                 }
             }
@@ -2276,12 +2264,12 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock_fast( int &weekd
                         minDelta = delta;
                         weekday = w;
                         weekday2 = w2;
-                    } else {    // tabu
-                        if (rs_tabu.isMinimal( delta, minDelta_tabu )) {
-                            minDelta_tabu = delta;
-                            weekday_tabu = w;
-                            weekday2_tabu = w2;
-                        }
+                    }
+                } else {    // tabu
+                    if (rs_tabu.isMinimal( delta, minDelta_tabu )) {
+                        minDelta_tabu = delta;
+                        weekday_tabu = w;
+                        weekday2_tabu = w2;
                     }
                 }
             }
