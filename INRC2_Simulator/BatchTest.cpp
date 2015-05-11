@@ -91,7 +91,6 @@ void testAllInstancesParallel( int threadNum, int round )
         inst[instIndex].index = instIndex;
         inst[instIndex].timeout = instTimeout[getNurseNum( instIndex )] * getWeekNum( instIndex );
     }
-    sort( inst.begin(), inst.end(), TimeCmp( inst ) );
 
     vector<double> timespend( threadNum, 0 );
     vector<thread> vt( threadNum );
@@ -101,7 +100,7 @@ void testAllInstancesParallel( int threadNum, int round )
         idleThread.push( i );
     }
     for (; round > 0; --round) {
-        for (int i = InstIndex::n005w4; i <= InstIndex::n120w8; ++i) {
+        for (unsigned i = 0; i < inst.size();) {
             if (!idleThread.empty()) {
                 int newThread = idleThread.front();
                 idleThread.pop();
@@ -113,6 +112,7 @@ void testAllInstancesParallel( int threadNum, int round )
                 if (vt[newThread].joinable()) { vt[newThread].join(); }
                 vt[newThread] = thread( test_customIO_r, id.str(), outputDirPrefix + id.str(), inst[i].index,
                     instInitHis[inst[i].index], instWeekdataSeq[inst[i].index].c_str(), instTimeout[getNurseNum( inst[i].index )], randSeed );
+                ++i;
             } else {
                 int firstFinishThread = 0;
                 for (int t = 0; t < threadNum; ++t) {
@@ -132,14 +132,14 @@ void testAllInstancesParallel( int threadNum, int round )
 
 void testHeterogeneousInstancesWithPreloadedInstSeq( const std::string &id, int runCount )
 {
-    for (int instIndex = InstIndex::n005w4; instIndex <= InstIndex::n120w8; ++instIndex) {
-        // instances which have no need for test
-        if ((instIndex == InstIndex::n120w8)
-            || (instIndex == InstIndex::n100w8)) {
-            continue;
-        }
+    for (int i = runCount; i > 0; --i) {
+        for (int instIndex = InstIndex::n005w4; instIndex <= InstIndex::n120w8; ++instIndex) {
+            // instances which have no need for test
+            if ((instIndex == InstIndex::n120w8)
+                || (instIndex == InstIndex::n100w8)) {
+                continue;
+            }
 
-        for (int i = runCount; i > 0; --i) {
             int randSeed = static_cast<int>(rand() + time( NULL ) + clock());
             test_customIO_r( id, outputDirPrefix + id, instIndex,
                 instInitHis[instIndex], instWeekdataSeq[instIndex].c_str(), instTimeout[getNurseNum( instIndex )], randSeed );
@@ -149,8 +149,8 @@ void testHeterogeneousInstancesWithPreloadedInstSeq( const std::string &id, int 
 
 void testAllInstancesWithPreloadedInstSeq( const std::string &id, int runCount )
 {
-    for (int instIndex = InstIndex::n005w4; instIndex <= InstIndex::n120w8; ++instIndex) {
-        for (int i = runCount; i > 0; --i) {
+    for (int i = runCount; i > 0; --i) {
+        for (int instIndex = InstIndex::n005w4; instIndex <= InstIndex::n120w8; ++instIndex) {
             int randSeed = static_cast<int>(rand() + time( NULL ) + clock());
             test_customIO_r( id, outputDirPrefix + id, instIndex,
                 instInitHis[instIndex], instWeekdataSeq[instIndex].c_str(), instTimeout[getNurseNum( instIndex )], randSeed );
@@ -164,8 +164,8 @@ void testAllInstances( const std::string &id, int runCount, int seedForInstSeq )
     char weekdata[WEEKDATA_SEQ_SIZE];
     int randSeed;
 
-    for (int instIndex = InstIndex::n005w4; instIndex <= InstIndex::n120w8; ++instIndex) {
-        for (int i = runCount; i > 0; --i) {
+    for (int i = runCount; i > 0; --i) {
+        for (int instIndex = InstIndex::n005w4; instIndex <= InstIndex::n120w8; ++instIndex) {
             srand( seedForInstSeq );
             seedForInstSeq = rand();
             genInstanceSequence( instIndex, initHis, weekdata );

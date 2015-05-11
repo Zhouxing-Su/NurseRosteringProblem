@@ -1,10 +1,5 @@
 /**
 *   usage : 1. make the program print and record debug information.
-*           2. comment the INRC2_LOG to reduce error messages and log.
-*           3. comment the INRC2_PERFORMANCE_TEST to reduce console output.
-*           4. uncomment the INRC2_CHECK_INSTANCE_FEASIBILITY_ONLINE to
-*               check the feasibility of the instance from the online feasible checker.
-*           5. comment the INRC2_DEBUG to reduce unnecessary calculation.
 *
 *   note :  1.
 */
@@ -14,26 +9,30 @@
 
 
 // performance switch
+// comment to reduce error messages and log
 #define INRC2_LOG
 
+// comment to reduce unnecessary calculation
 #define INRC2_DEBUG
 
+// comment to reduce console output
 //#define INRC2_PERFORMANCE_TEST
 
 
 // input switch
+// uncomment to check the feasibility of the instance from the online feasible checker
 //#define INRC2_CHECK_INSTANCE_FEASIBILITY_ONLINE
 
 
 // algorithm switch
 // comment to use random pick
-//#define INRC2_SECONDARY_OBJ_VALUE
+#define INRC2_SECONDARY_OBJ_VALUE
 
 // comment to use perturb
 #define INRC2_PERTRUB_IN_REBUILD
 
 // comment to use best improvement
-#define INRC2_BLOCK_SWAP_FIRST_IMPROVE
+//#define INRC2_BLOCK_SWAP_FIRST_IMPROVE
 
 #define INRC2_BLOCK_SWAP_AVERAGE_TABU 0
 #define INRC2_BLOCK_SWAP_STRONG_TABU 1

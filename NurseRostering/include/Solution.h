@@ -75,9 +75,9 @@ public:
             // atomic moves are not composed by other moves
             Add, Remove, Change, ATOMIC_MOVE_SIZE,
             // basic moves are used in randomWalk()
-            Swap = ATOMIC_MOVE_SIZE, Exchange, BASIC_MOVE_SIZE,
-            // compound moves
-            BlockSwap = BASIC_MOVE_SIZE, ARLoop, ARRand, ARBoth, SIZE
+            Swap = ATOMIC_MOVE_SIZE, Exchange, BlockSwap, BASIC_MOVE_SIZE,
+            // compound moves which can not be used by a single tryXXX()
+            BlockShift = BASIC_MOVE_SIZE, ARLoop, ARRand, ARBoth, SIZE
         };
 
         Move() : delta( DefaultPenalty::FORBIDDEN_MOVE ) {}
@@ -189,6 +189,13 @@ public:
     bool repair( const Timer &timer );  // make infeasible solution feasible
 
 
+    // start with a best block swap (for a single nurse), 
+    // the (more) improved nurse is the head of the link which
+    // the other one is the tail and the head of next link.
+    // each tail has two branches. the first one is make add, remove, change
+    // or block shift which will stop the chain. the second one is to 
+    // find a block swap to improve this nurse which will continue the chain.
+    void swapChain( const Timer &timer, IterCount maxChainLen );
     // select single neighborhood to search in each iteration randomly
     // the random select process is a discrete distribution
     // the possibility to be selected will increase if the neighborhood
@@ -404,6 +411,7 @@ private:
     bool findBestBlockSwap_part( Move &bestMove ) const;    // try some nurses following index
     bool findBestBlockSwap_rand( Move &bestMove ) const;    // try randomly picked nurses 
     bool findBestExchange( Move &bestMove ) const;
+    bool findBestBlockShift( Move &bestMove ) const;
     bool findBestARLoop( Move &bestMove ) const;
     bool findBestARRand( Move &bestMove ) const;
     bool findBestARBoth( Move &bestMove ) const;
@@ -435,6 +443,7 @@ private:
     ObjValue trySwapBlock( const Move &move ) const;
     // evaluate cost of swapping Assign of two nurses in consecutive days in a week
     // and record the block information into weekday and weekday2
+    // the recorded move will always be no tabu move or meet aspiration criteria
     ObjValue trySwapBlock_fast( int &weekday, int &weekday2, NurseID nurse, NurseID nurse2 ) const;
     ObjValue trySwapBlock_fast( const Move &move ) const;
     // evaluate cost of exchanging Assign of a nurse on two days

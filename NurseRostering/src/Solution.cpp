@@ -34,6 +34,7 @@ NurseRostering::Solution::findBestMove = {
 #elif INRC2_BLOCK_SWAP_FIND_BEST == INRC2_BLOCK_SWAP_RAND
     &NurseRostering::Solution::findBestBlockSwap_rand,
 #endif
+    &NurseRostering::Solution::findBestBlockShift,
     &NurseRostering::Solution::findBestARLoop,
     &NurseRostering::Solution::findBestARRand,
     &NurseRostering::Solution::findBestARBoth
@@ -54,6 +55,7 @@ NurseRostering::Solution::findBestMoveOnBlockBorder = {
 #elif INRC2_BLOCK_SWAP_FIND_BEST == INRC2_BLOCK_SWAP_RAND
     &NurseRostering::Solution::findBestBlockSwap_rand,
 #endif
+    &NurseRostering::Solution::findBestBlockShift,
     &NurseRostering::Solution::findBestARLoopOnBlockBorder,
     &NurseRostering::Solution::findBestARRandOnBlockBorder,
     &NurseRostering::Solution::findBestARBothOnBlockBorder
@@ -96,25 +98,25 @@ const vector<vector<int> > NurseRostering::Solution::modeSeqPatterns = {
     { Solution::Move::Mode::ARBoth, Solution::Move::Mode::Swap, Solution::Move::Mode::Change, Solution::Move::Mode::BlockSwap },
     { Solution::Move::Mode::Add, Solution::Move::Mode::Swap, Solution::Move::Mode::Change, Solution::Move::Mode::BlockSwap, Solution::Move::Mode::Remove },
 
-    { Solution::Move::Mode::ARLoop, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::Exchange },
-    { Solution::Move::Mode::ARRand, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::Exchange },
-    { Solution::Move::Mode::ARBoth, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::Exchange },
-    { Solution::Move::Mode::Add, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::Exchange, Solution::Move::Mode::Remove },
+    { Solution::Move::Mode::ARLoop, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::BlockShift },
+    { Solution::Move::Mode::ARRand, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::BlockShift },
+    { Solution::Move::Mode::ARBoth, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::BlockShift },
+    { Solution::Move::Mode::Add, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::BlockShift, Solution::Move::Mode::Remove },
 
-    { Solution::Move::Mode::ARLoop, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap },
-    { Solution::Move::Mode::ARRand, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap },
-    { Solution::Move::Mode::ARBoth, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap },
-    { Solution::Move::Mode::Add, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap, Solution::Move::Mode::Remove },
+    { Solution::Move::Mode::ARLoop, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::BlockShift, Solution::Move::Mode::BlockSwap },
+    { Solution::Move::Mode::ARRand, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::BlockShift, Solution::Move::Mode::BlockSwap },
+    { Solution::Move::Mode::ARBoth, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::BlockShift, Solution::Move::Mode::BlockSwap },
+    { Solution::Move::Mode::Add, Solution::Move::Mode::Change, Solution::Move::Mode::Swap, Solution::Move::Mode::BlockShift, Solution::Move::Mode::BlockSwap, Solution::Move::Mode::Remove },
 
     { Solution::Move::Mode::ARLoop, Solution::Move::Mode::Change, Solution::Move::Mode::BlockSwap },
     { Solution::Move::Mode::ARRand, Solution::Move::Mode::Change, Solution::Move::Mode::BlockSwap },
     { Solution::Move::Mode::ARBoth, Solution::Move::Mode::Change, Solution::Move::Mode::BlockSwap },
     { Solution::Move::Mode::Add, Solution::Move::Mode::Change, Solution::Move::Mode::BlockSwap, Solution::Move::Mode::Remove },
 
-    { Solution::Move::Mode::ARLoop, Solution::Move::Mode::Change, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap },
-    { Solution::Move::Mode::ARRand, Solution::Move::Mode::Change, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap },
-    { Solution::Move::Mode::ARBoth, Solution::Move::Mode::Change, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap },
-    { Solution::Move::Mode::Add, Solution::Move::Mode::Change, Solution::Move::Mode::Exchange, Solution::Move::Mode::BlockSwap, Solution::Move::Mode::Remove }
+    { Solution::Move::Mode::ARLoop, Solution::Move::Mode::Change, Solution::Move::Mode::BlockShift, Solution::Move::Mode::BlockSwap },
+    { Solution::Move::Mode::ARRand, Solution::Move::Mode::Change, Solution::Move::Mode::BlockShift, Solution::Move::Mode::BlockSwap },
+    { Solution::Move::Mode::ARBoth, Solution::Move::Mode::Change, Solution::Move::Mode::BlockShift, Solution::Move::Mode::BlockSwap },
+    { Solution::Move::Mode::Add, Solution::Move::Mode::Change, Solution::Move::Mode::BlockShift, Solution::Move::Mode::BlockSwap, Solution::Move::Mode::Remove }
 };
 
 const double NurseRostering::Solution::NO_DIFF = -1;
@@ -488,6 +490,11 @@ bool NurseRostering::Solution::repair( const Timer &timer )
     return feasible;
 }
 
+
+void NurseRostering::Solution::swapChain( const Timer &timer, IterCount maxChainLen )
+{
+
+}
 
 void NurseRostering::Solution::tabuSearch_Rand( const Timer &timer, const FindBestMoveTable &findBestMoveTable )
 {
@@ -953,7 +960,7 @@ bool NurseRostering::Solution::findBestBlockSwap( Move &bestMove ) const
 
     findBestBlockSwap_startNurse = move.nurse;
     penalty.setDefaultMode();
-    return false;
+    return (bestMove.delta < 0);
 }
 
 bool NurseRostering::Solution::findBestBlockSwap_fast( Move &bestMove ) const
@@ -993,7 +1000,7 @@ bool NurseRostering::Solution::findBestBlockSwap_fast( Move &bestMove ) const
 
     findBestBlockSwap_startNurse = move.nurse;
     penalty.setDefaultMode();
-    return false;
+    return (bestMove.delta < 0);
 }
 
 bool NurseRostering::Solution::findBestBlockSwap_part( Move &bestMove ) const
@@ -1102,6 +1109,49 @@ bool NurseRostering::Solution::findBestExchange( Move &bestMove ) const
                         bestMove_tabu = move;
                     }
                 }
+            }
+        }
+    }
+
+    if (aspirationCritiera( bestMove.delta, bestMove_tabu.delta )) {
+        bestMove = bestMove_tabu;
+    }
+
+    penalty.setDefaultMode();
+    return (bestMove.delta < 0);
+}
+
+bool NurseRostering::Solution::findBestBlockShift( Move &bestMove ) const
+{
+    penalty.setExchangeMode();
+
+    RandSelect<ObjValue> rs;
+    Move bestMove_tabu;
+    RandSelect<ObjValue> rs_tabu;
+
+    Move move;
+    move.mode = Move::Mode::Exchange;
+    for (move.nurse = 0; move.nurse < problem.scenario.nurseNum; ++move.nurse) {
+        const Consecutive &c( consecutives[move.nurse] );
+        move.weekday = Weekday::Mon;
+        move.weekday2 = c.dayHigh[move.weekday] + 1;
+        while (move.weekday2 <= Weekday::Sun) {
+            move.delta = tryExchangeDay( move.weekday, move.nurse, move.weekday2 );
+            if (noExchangeTabu( move )) {
+                if (rs.isMinimal( move.delta, bestMove.delta )) {
+                    bestMove = move;
+                }
+            } else {    // tabu
+                if (rs_tabu.isMinimal( move.delta, bestMove_tabu.delta )) {
+                    bestMove_tabu = move;
+                }
+            }
+            if (move.weekday != c.dayHigh[move.weekday]) {  // start of a block
+                move.weekday = c.dayHigh[move.weekday];
+                move.weekday2 = c.dayHigh[move.weekday + 1];
+            } else {    // end of a block
+                ++move.weekday;
+                move.weekday2 = c.dayHigh[move.weekday] + 1;
             }
         }
     }

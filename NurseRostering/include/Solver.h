@@ -73,28 +73,21 @@ public:
         TableSize, NurseNum, DayNum, ShiftNum, SIZE
     };
 
-    static const std::vector<std::string> solveAlgorithmName;
-
-    const NurseRostering &problem;
-    const clock_t startTime;
-    const Timer timer;
-
-
     class Config
     {
     public:
         Config() : initAlgorithm( InitAlgorithm::Greedy ),
             solveAlgorithm( SolveAlgorithm::TabuSearch_Rand ),
-            modeSeq( Solution::ModeSeq::ACBR ),
+            modeSeq( Solution::ModeSeq::ACEBR ),
             maxNoImproveCoefficient( 1 )
         {
             dayTabuCoefficient[TabuTenureCoefficientIndex::TableSize] = 0;
-            dayTabuCoefficient[TabuTenureCoefficientIndex::NurseNum] = 1.2;
+            dayTabuCoefficient[TabuTenureCoefficientIndex::NurseNum] = 0.5;
             dayTabuCoefficient[TabuTenureCoefficientIndex::DayNum] = 0;
             dayTabuCoefficient[TabuTenureCoefficientIndex::ShiftNum] = 0;
 
             shiftTabuCoefficient[TabuTenureCoefficientIndex::TableSize] = 0;
-            shiftTabuCoefficient[TabuTenureCoefficientIndex::NurseNum] = 1.2;
+            shiftTabuCoefficient[TabuTenureCoefficientIndex::NurseNum] = 0.5;
             shiftTabuCoefficient[TabuTenureCoefficientIndex::DayNum] = 0;
             shiftTabuCoefficient[TabuTenureCoefficientIndex::ShiftNum] = 0;
         }
@@ -106,6 +99,13 @@ public:
         double dayTabuCoefficient[TabuTenureCoefficientIndex::SIZE];
         double shiftTabuCoefficient[TabuTenureCoefficientIndex::SIZE];
     };
+
+
+    static const std::vector<std::string> solveAlgorithmName;
+
+    const NurseRostering &problem;
+    const clock_t startTime;
+    const Timer timer;
 
 
     Solver( const NurseRostering &input, clock_t startTime );
