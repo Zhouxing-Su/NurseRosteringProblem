@@ -14,7 +14,8 @@ void debugRun()
     int instIndex = InstIndex::n005w4;
     char initHis = '0';
     char weekdata[WEEKDATA_SEQ_SIZE] = "5533";
-    int randSeed = static_cast<int>(time( NULL ));
+    int randSeed = 8787;
+    //int randSeed = static_cast<int>(time( NULL ));
     double runningTime = instTimeout[getNurseNum( instIndex )];
     test_customIO_r( id.str(), outputDirPrefix + id.str(), instIndex, initHis, weekdata, runningTime, randSeed );
 }
@@ -48,7 +49,7 @@ void benchmarkRun()
 {
     ostringstream id;
 
-    int runCount = 4;
+    int runCount = 2;
     int threadBeginInterval = 3;
     int threadNum = 2;
     threadNum += (threadNum == 0);
@@ -90,7 +91,7 @@ void sprintRun()
 void parallelRun()
 {
     int threadNum = thread::hardware_concurrency();
-    int round = 6;
+    int round = 4;
 
     testAllInstancesParallel( threadNum, round );
 }

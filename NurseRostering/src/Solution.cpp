@@ -474,6 +474,7 @@ bool NurseRostering::Solution::repair( const Timer &timer )
                 totalWeight += weightDelta;
             }
         }
+        feasible = (objValue == 0);
     }
     penalty.setDefaultMode();
 
@@ -971,8 +972,6 @@ bool NurseRostering::Solution::findBestBlockSwap_fast( Move &bestMove ) const
     NurseID maxNurseID = problem.scenario.nurseNum - 1;
 
     RandSelect<ObjValue> rs;
-    Move bestMove_tabu;
-    RandSelect<ObjValue> rs_tabu;
 
     Move move;
     move.mode = Move::Mode::BlockSwap;
@@ -2094,29 +2093,29 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapNurse( int weekday, Nu
         return DefaultPenalty::FORBIDDEN_MOVE;
     }
 
-    ObjValue delta = 0;
-
     if (assign.isWorking( nurse, weekday )) {
         if (assign.isWorking( nurse2, weekday )) {
-            delta += tryChangeAssign( weekday, nurse, assign[nurse2][weekday] );
-            delta += ((delta < DefaultPenalty::MAX_OBJ_VALUE)
+            nurseDelta = tryChangeAssign( weekday, nurse, assign[nurse2][weekday] );
+            nurse2Delta = ((nurseDelta < DefaultPenalty::MAX_OBJ_VALUE)
                 ? tryChangeAssign( weekday, nurse2, assign[nurse][weekday] ) : 0);
         } else {
-            delta += tryRemoveAssign( weekday, nurse );
-            delta += ((delta < DefaultPenalty::MAX_OBJ_VALUE)
+            nurseDelta = tryRemoveAssign( weekday, nurse );
+            nurse2Delta = ((nurseDelta < DefaultPenalty::MAX_OBJ_VALUE)
                 ? tryAddAssign( weekday, nurse2, assign[nurse][weekday] ) : 0);
         }
     } else {
         if (assign.isWorking( nurse2, weekday )) {
-            delta += tryAddAssign( weekday, nurse, assign[nurse2][weekday] );
-            delta += ((delta < DefaultPenalty::MAX_OBJ_VALUE)
+            nurseDelta = tryAddAssign( weekday, nurse, assign[nurse2][weekday] );
+            nurse2Delta = ((nurseDelta < DefaultPenalty::MAX_OBJ_VALUE)
                 ? tryRemoveAssign( weekday, nurse2 ) : 0);
         } else {    // no change
-            delta = DefaultPenalty::FORBIDDEN_MOVE;
+            nurseDelta = 0;
+            nurse2Delta = 0;
+            return DefaultPenalty::FORBIDDEN_MOVE;
         }
     }
 
-    return delta;
+    return (nurseDelta + nurse2Delta);
 }
 
 NurseRostering::ObjValue NurseRostering::Solution::trySwapNurse( const Move &move ) const
@@ -2144,38 +2143,60 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock( int weekday, in
     RandSelect<ObjValue> rs_tabu;
 
     ObjValue delta = 0;
+    ObjValue delta1 = 0;
+    ObjValue delta2 = 0;
     ObjValue minDelta = DefaultPenalty::FORBIDDEN_MOVE;
+    ObjValue minNurseDelta = DefaultPenalty::FORBIDDEN_MOVE;
+    ObjValue minNurse2Delta = DefaultPenalty::FORBIDDEN_MOVE;
+#if INRC2_BLOCK_SWAP_TABU_STRENGTH != INRC2_BLOCK_SWAP_NO_TABU
     ObjValue minDelta_tabu = DefaultPenalty::FORBIDDEN_MOVE;
+    ObjValue minNurseDelta_tabu = DefaultPenalty::FORBIDDEN_MOVE;
+    ObjValue minNurse2Delta_tabu = DefaultPenalty::FORBIDDEN_MOVE;
     int weekday2_tabu = weekday;
+#endif
 
     // backup original data
     int startWeekday = weekday;
 
     // try each block length
+#if INRC2_BLOCK_SWAP_TABU_STRENGTH != INRC2_BLOCK_SWAP_NO_TABU
     int count = 0;
     int noTabuCount = 0;
+#endif
     while (problem.scenario.nurses[nurse].skills[assign[nurse2][weekday].skill]
         && problem.scenario.nurses[nurse2].skills[assign[nurse][weekday].skill]) {
         // longer blocks will also miss this skill
         delta += trySwapNurse( weekday, nurse, nurse2 );
+        delta1 += nurseDelta;
+        delta2 += nurse2Delta;
 
+#if INRC2_BLOCK_SWAP_TABU_STRENGTH != INRC2_BLOCK_SWAP_NO_TABU
         ++count;
         noTabuCount += noSwapTabu( weekday, nurse, nurse2 );
+#endif
 
         if (delta < DefaultPenalty::MAX_OBJ_VALUE) {
             if (isValidPrior( nurse, assign[nurse2][weekday].shift, weekday )
                 && isValidPrior( nurse2, assign[nurse][weekday].shift, weekday )) {
+#if INRC2_BLOCK_SWAP_TABU_STRENGTH != INRC2_BLOCK_SWAP_NO_TABU
                 if (noBlockSwapTabu( noTabuCount, count )) {
+#endif
                     if (rs.isMinimal( delta, minDelta )) {
                         minDelta = delta;
                         weekday2 = weekday;
+                        minNurseDelta = delta1;
+                        minNurse2Delta = delta2;
                     }
+#if INRC2_BLOCK_SWAP_TABU_STRENGTH != INRC2_BLOCK_SWAP_NO_TABU
                 } else {    // tabu
                     if (rs_tabu.isMinimal( delta, minDelta_tabu )) {
                         minDelta_tabu = delta;
                         weekday2_tabu = weekday;
+                        minNurseDelta_tabu = delta1;
+                        minNurse2Delta_tabu = delta2;
                     }
                 }
+#endif
             }
         } else {    // two day off
             delta -= DefaultPenalty::FORBIDDEN_MOVE;
@@ -2187,10 +2208,17 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock( int weekday, in
         ++weekday;
     }
 
+#if INRC2_BLOCK_SWAP_TABU_STRENGTH != INRC2_BLOCK_SWAP_NO_TABU
     if (aspirationCritiera( minDelta, minDelta_tabu )) {
         minDelta = minDelta_tabu;
         weekday2 = weekday2_tabu;
+        nurseDelta = minNurseDelta_tabu;
+        nurse2Delta = minNurse2Delta_tabu;
+    } else {
+        nurseDelta = minNurseDelta;
+        nurse2Delta = minNurse2Delta;
     }
+#endif
 
     // recover original data
     for (; startWeekday < weekday; ++startWeekday) {
@@ -2217,19 +2245,32 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock_fast( int &weekd
     }
 
     RandSelect<ObjValue> rs;
-    RandSelect<ObjValue> rs_tabu;
-
     ObjValue delta = 0;
+    ObjValue delta1 = 0;
+    ObjValue delta2 = 0;
     ObjValue minDelta = DefaultPenalty::FORBIDDEN_MOVE;
-    ObjValue minDelta_tabu = DefaultPenalty::FORBIDDEN_MOVE;
+    ObjValue minNurseDelta = DefaultPenalty::FORBIDDEN_MOVE;
+    ObjValue minNurse2Delta = DefaultPenalty::FORBIDDEN_MOVE;
 
     // prepare for hard constraint check and tabu judgment
     bool hasSkill[Weekday::SIZE];
-    int noTabuCount[Weekday::SIZE][Weekday::SIZE];
-    bool noTabu[Weekday::SIZE][Weekday::SIZE];
     for (int w = Weekday::Mon; w <= Weekday::Sun; ++w) {
         hasSkill[w] = (problem.scenario.nurses[nurse].skills[assign[nurse2][w].skill]
             && problem.scenario.nurses[nurse2].skills[assign[nurse][w].skill]);
+    }
+
+    weekday = Weekday::Mon;
+    weekday2 = Weekday::Mon;
+
+#if INRC2_BLOCK_SWAP_TABU_STRENGTH != INRC2_BLOCK_SWAP_NO_TABU
+    RandSelect<ObjValue> rs_tabu;
+    ObjValue minDelta_tabu = DefaultPenalty::FORBIDDEN_MOVE;
+    ObjValue minNurseDelta_tabu = DefaultPenalty::FORBIDDEN_MOVE;
+    ObjValue minNurse2Delta_tabu = DefaultPenalty::FORBIDDEN_MOVE;
+
+    int noTabuCount[Weekday::SIZE][Weekday::SIZE];
+    bool noTabu[Weekday::SIZE][Weekday::SIZE];
+    for (int w = Weekday::Mon; w <= Weekday::Sun; ++w) {
         noTabuCount[w][w] = noSwapTabu( w, nurse, nurse2 );
         noTabu[w][w] = (noTabuCount[w][w] > 0);
     }
@@ -2240,11 +2281,11 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock_fast( int &weekd
         }
     }
 
-    // try each block length
-    weekday = Weekday::Mon;
-    weekday2 = Weekday::Mon;
     int weekday_tabu = weekday;
     int weekday2_tabu = weekday2;
+#endif
+
+    // try each block length
     int w = Weekday::Mon;
     int w2;
     for (; w <= Weekday::Sun; ++w) {
@@ -2256,27 +2297,38 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock_fast( int &weekd
         w2 = w;
         for (; (w2 <= Weekday::Sun) && hasSkill[w2]; ++w2) { // longer blocks will also miss this skill
             delta += trySwapNurse( w2, nurse, nurse2 );
+            delta1 += nurseDelta;
+            delta2 += nurse2Delta;
+
             if (delta < DefaultPenalty::MAX_OBJ_VALUE) {
                 (const_cast<Solution*>(this))->swapNurse( w2, nurse, nurse2 );
+
+                if (isValidPrior( nurse, assign[nurse][w2].shift, w2 )
+                    && isValidPrior( nurse2, assign[nurse2][w2].shift, w2 )) {
+#if INRC2_BLOCK_SWAP_TABU_STRENGTH != INRC2_BLOCK_SWAP_NO_TABU
+                    if (noTabu[w][w2]) {
+#endif
+                        if (rs.isMinimal( delta, minDelta )) {
+                            minDelta = delta;
+                            weekday = w;
+                            weekday2 = w2;
+                            minNurseDelta = delta1;
+                            minNurse2Delta = delta2;
+                        }
+#if INRC2_BLOCK_SWAP_TABU_STRENGTH != INRC2_BLOCK_SWAP_NO_TABU
+                    } else {    // tabu
+                        if (rs_tabu.isMinimal( delta, minDelta_tabu )) {
+                            minDelta_tabu = delta;
+                            weekday_tabu = w;
+                            weekday2_tabu = w2;
+                            minNurseDelta_tabu = delta1;
+                            minNurse2Delta_tabu = delta2;
+                        }
+                    }
+#endif
+                }
             } else {    // two day off
                 delta -= DefaultPenalty::FORBIDDEN_MOVE;
-            }
-
-            if (isValidPrior( nurse, assign[nurse][w2].shift, w2 )
-                && isValidPrior( nurse2, assign[nurse2][w2].shift, w2 )) {
-                if (noTabu[w][w2]) {
-                    if (rs.isMinimal( delta, minDelta )) {
-                        minDelta = delta;
-                        weekday = w;
-                        weekday2 = w2;
-                    }
-                } else {    // tabu
-                    if (rs_tabu.isMinimal( delta, minDelta_tabu )) {
-                        minDelta_tabu = delta;
-                        weekday_tabu = w;
-                        weekday2_tabu = w2;
-                    }
-                }
             }
         }
 
@@ -2284,6 +2336,8 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock_fast( int &weekd
 
         do {
             delta += trySwapNurse( w, nurse, nurse2 );
+            delta1 += nurseDelta;
+            delta2 += nurse2Delta;
             if (delta < DefaultPenalty::MAX_OBJ_VALUE) {
                 (const_cast<Solution*>(this))->swapNurse( w, nurse, nurse2 );
             } else {    // two day off
@@ -2297,22 +2351,32 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock_fast( int &weekd
         while (w < (w2--)) {
             if (isValidPrior( nurse, assign[nurse][w2].shift, w2 )
                 && isValidPrior( nurse2, assign[nurse2][w2].shift, w2 )) {
+#if INRC2_BLOCK_SWAP_TABU_STRENGTH != INRC2_BLOCK_SWAP_NO_TABU
                 if (noTabu[w][w2]) {
+#endif
                     if (rs.isMinimal( delta, minDelta )) {
                         minDelta = delta;
                         weekday = w;
                         weekday2 = w2;
+                        minNurseDelta = delta1;
+                        minNurse2Delta = delta2;
                     }
+#if INRC2_BLOCK_SWAP_TABU_STRENGTH != INRC2_BLOCK_SWAP_NO_TABU
                 } else {    // tabu
                     if (rs_tabu.isMinimal( delta, minDelta_tabu )) {
                         minDelta_tabu = delta;
                         weekday_tabu = w;
                         weekday2_tabu = w2;
+                        minNurseDelta_tabu = delta1;
+                        minNurse2Delta_tabu = delta2;
                     }
                 }
+#endif
             }
 
             delta += trySwapNurse( w2, nurse, nurse2 );
+            delta1 += nurseDelta;
+            delta2 += nurse2Delta;
             if (delta < DefaultPenalty::MAX_OBJ_VALUE) {
                 (const_cast<Solution*>(this))->swapNurse( w2, nurse, nurse2 );
             } else {    // two day off
@@ -2321,12 +2385,18 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock_fast( int &weekd
         }
     }
 
+#if INRC2_BLOCK_SWAP_TABU_STRENGTH != INRC2_BLOCK_SWAP_NO_TABU
     if (aspirationCritiera( minDelta, minDelta_tabu )) {
         minDelta = minDelta_tabu;
         weekday = weekday_tabu;
         weekday2 = weekday2_tabu;
+        nurseDelta = minNurseDelta_tabu;
+        nurse2Delta = minNurse2Delta_tabu;
+    } else {
+        nurseDelta = minNurseDelta;
+        nurse2Delta = minNurse2Delta;
     }
-
+#endif
     return minDelta;
 }
 

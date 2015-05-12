@@ -539,6 +539,7 @@ private:
             }
         }
     }
+#if INRC2_BLOCK_SWAP_TABU_STRENGTH != INRC2_BLOCK_SWAP_NO_TABU
     bool noBlockSwapTabu( int noTabuCount, int totalSwap ) const
     {
 #if INRC2_BLOCK_SWAP_TABU_STRENGTH == INRC2_BLOCK_SWAP_AVERAGE_TABU
@@ -547,10 +548,9 @@ private:
         return (noTabuCount == totalSwap);
 #elif INRC2_BLOCK_SWAP_TABU_STRENGTH == INRC2_BLOCK_SWAP_WEAK_TABU
         return (noTabuCount > 0);
-#elif INRC2_BLOCK_SWAP_TABU_STRENGTH == INRC2_BLOCK_SWAP_NO_TABU
-        return true;
 #endif
     }
+#endif
 
     bool aspirationCritiera( ObjValue bestMoveDelta, ObjValue bestMoveDelta_tabu ) const
     {
@@ -642,6 +642,9 @@ private:
     // for controlling swap and block swap will not be selected both in possibility select
     bool isPossibilitySelect;
     mutable bool isBlockSwapSelected;    // tabuSearch_Possibility() and findBestBlockSwap() wil modify it
+    // trySwapNurse() and trySwapBlock() will guarentee they are always corresponding to the selected swap
+    mutable ObjValue nurseDelta;    // trySwapNurse() and trySwapBlock() will modify it
+    mutable ObjValue nurse2Delta;   // trySwapNurse() and trySwapBlock() will modify it
 
     ShiftTabu shiftTabu;
     DayTabu dayTabu;
