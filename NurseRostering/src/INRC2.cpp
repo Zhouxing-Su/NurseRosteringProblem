@@ -52,7 +52,7 @@ namespace INRC2
             "               c for char, d for real number, comma is used to separate numbers.\n"
             "               the first char can be 'g'(for greedy init) or 'e'(for exact init).\n"
             "               the second char can be 'w'(Random Walk), 'i'(Iterative Local Search),\n"
-            "               'p'(Tabu Search Possibility), 'l'(TS Loop), 'r'(TS Rand).\n"
+            "               'p'(TS Possibility), 'l'(TS Loop), 'r'(TS Rand), 's'(Swap Chain).\n"
             "               i for a non-negative integer corresponding to Solution::ModeSeq.\n"
             "               first real number for coefficient of max no improve count.\n"
             "               following 4 real numbers are coefficients for TableSize, NurseNum,\n"
@@ -503,6 +503,8 @@ namespace INRC2
             config.solveAlgorithm = NurseRostering::Solver::SolveAlgorithm::TabuSearch_Loop;
         } else if (c == 'r') {
             config.solveAlgorithm = NurseRostering::Solver::SolveAlgorithm::TabuSearch_Rand;
+        } else if (c == 's') {
+            config.solveAlgorithm = NurseRostering::Solver::SolveAlgorithm::SwapChainSearch;
         } else {
             return config;
         }

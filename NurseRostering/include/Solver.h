@@ -65,7 +65,8 @@ public:
     enum SolveAlgorithm
     {
         RandomWalk, IterativeLocalSearch,
-        TabuSearch_Possibility, TabuSearch_Loop, TabuSearch_Rand
+        TabuSearch_Possibility, TabuSearch_Loop, TabuSearch_Rand,
+        SwapChainSearch
     };
 
     enum TabuTenureCoefficientIndex
@@ -213,11 +214,15 @@ public:
 
     IterCount MaxNoImproveForSingleNeighborhood() const { return maxNoImproveForSingleNeighborhood; }
     IterCount MaxNoImproveForAllNeighborhood() const { return maxNoImproveForAllNeighborhood; }
+    IterCount MaxNoImproveSwapChainLength() const { return maxNoImproveSwapChainLength; }
+    IterCount MaxSwapChainRestartCount() const { return maxSwapChainRestartCount; }
 
 private:
     void greedyInit();
     void exactInit();
 
+    // search with tabu search and swap chain search by turn
+    void swapChainSearch( Solution::ModeSeq modeSeq );
     // search with tabu table
     void tabuSearch( Solution::ModeSeq modeSeq, Solution::Search search );
     // iteratively run local search and perturb
@@ -251,6 +256,8 @@ private:
         maxNoImproveForAllNeighborhood = static_cast<IterCount>(
             coefficient * problem.scenario.nurseNum * Weekday::NUM *
             sqrt( problem.scenario.shiftTypeNum * problem.scenario.skillTypeNum ));
+        maxNoImproveSwapChainLength = maxNoImproveForAllNeighborhood;
+        maxSwapChainRestartCount = static_cast<IterCount>(sqrt( problem.scenario.nurseNum ));
     }
 
     IterCount dayTabuTenureBase;
@@ -260,6 +267,8 @@ private:
 
     IterCount maxNoImproveForSingleNeighborhood;
     IterCount maxNoImproveForAllNeighborhood;
+    IterCount maxNoImproveSwapChainLength;
+    IterCount maxSwapChainRestartCount;
 
     Solution sln;
 

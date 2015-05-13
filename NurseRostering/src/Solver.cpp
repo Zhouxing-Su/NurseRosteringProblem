@@ -10,7 +10,7 @@ const double NurseRostering::Solver::PERTURB_STRENGTH_DELTA = 0.01;
 const double NurseRostering::Solver::MAX_PERTURB_STRENGTH = 0.6;
 
 const vector<string> NurseRostering::Solver::solveAlgorithmName = {
-    "[RW]", "[ILS]", "[TSP]", "[TSL]", "[TSR]"
+    "[RW]", "[ILS]", "[TSP]", "[TSL]", "[TSR]", "[SCS]"
 };
 
 
@@ -433,12 +433,15 @@ void NurseRostering::TabuSolver::solve()
         case SolveAlgorithm::TabuSearch_Loop:
             tabuSearch( config.modeSeq, &Solution::tabuSearch_Loop );
             break;
-        case SolveAlgorithm::TabuSearch_Rand:
-            tabuSearch( config.modeSeq, &Solution::tabuSearch_Rand );
-            break;
         case SolveAlgorithm::TabuSearch_Possibility:
-        default:
             tabuSearch( config.modeSeq, &Solution::tabuSearch_Possibility );
+            break;
+        case Solver::SolveAlgorithm::SwapChainSearch:
+            swapChainSearch( config.modeSeq );
+            break;
+        case SolveAlgorithm::TabuSearch_Rand:
+        default:
+            tabuSearch( config.modeSeq, &Solution::tabuSearch_Rand );
             break;
     }
 }
@@ -465,7 +468,7 @@ bool NurseRostering::TabuSolver::updateOptima( const Output &localOptima )
 
 NurseRostering::History NurseRostering::TabuSolver::genHistory() const
 {
-    return Solution( *this, optima.getAssignTable() ).genHistory();
+    return Solution( *this, optima ).genHistory();
 }
 
 void NurseRostering::TabuSolver::greedyInit()
@@ -558,14 +561,41 @@ void NurseRostering::TabuSolver::tabuSearch( Solution::ModeSeq modeSeq, Solution
         } else if (perturbStrength < MAX_PERTURB_STRENGTH) {
             perturbStrength += PERTURB_STRENGTH_DELTA;
         }
-        const AssignTable &at( (rand() % PERTURB_ORIGIN_SELECT)
-            ? optima.getAssignTable() : sln.getOptima().getAssignTable() );
+        const Output &output( (rand() % PERTURB_ORIGIN_SELECT)
+            ? optima : sln.getOptima() );
 #ifdef INRC2_PERTRUB_IN_REBUILD
-        sln.rebuild( at, perturbStrength );
+        sln.rebuild( output, perturbStrength );
 #else
-        sln.rebuild( at );
+        sln.rebuild( output );
         sln.perturb( perturbStrength );
 #endif
+    }
+}
+
+void NurseRostering::TabuSolver::swapChainSearch( Solution::ModeSeq modeSeq )
+{
+    algorithmName += solveAlgorithmName[config.solveAlgorithm];
+    algorithmName += Solution::modeSeqNames[modeSeq];
+
+    const vector<int> &modeSeqPat( Solution::modeSeqPatterns[modeSeq] );
+    int modeSeqLen = modeSeqPat.size();
+
+    Solution::FindBestMoveTable fbmt( modeSeqLen );
+
+    for (int i = 0; i < modeSeqLen; ++i) {
+        fbmt[i] = Solution::findBestMove[modeSeqPat[i]];
+    }
+
+    while (!timer.isTimeOut()) {
+        iterationCount -= sln.getIterCount();
+
+        sln.tabuSearch_Rand( timer, fbmt );
+
+        iterationCount += sln.getIterCount();
+        ++generationCount;
+
+        sln.rebuild( (rand() % PERTURB_ORIGIN_SELECT) ? optima : sln.getOptima() );
+        sln.swapChainSearch( timer, maxSwapChainRestartCount );
     }
 }
 

@@ -137,7 +137,7 @@ public:
 
 
     Solution( const TabuSolver &solver );
-    Solution( const TabuSolver &solver, const AssignTable &assign );
+    Solution( const TabuSolver &solver, const Output &output );
 
     // get local optima in the search trajectory
     const Output& getOptima() const { return optima; }
@@ -172,9 +172,9 @@ public:
         return false;
     }
     // set assign to at and rebuild assist data, at must be build from same problem
-    void rebuild( const AssignTable &at, double diff );
-    void rebuild( const AssignTable &at );
-    void rebuild(); // must be called after direct access to AssignTable
+    void rebuild( const Output &output, double diff );  // objValue will be recalculated
+    void rebuild( const Output &output );   // objValue is copied from output
+    void rebuild(); // must be called after direct access to AssignTable (objValue will be recalculated)
     // evaluate objective by assist data structure
     // must be called after Penalty change or direct access to AssignTable
     void evaluateObjValue();
@@ -189,13 +189,15 @@ public:
     bool repair( const Timer &timer );  // make infeasible solution feasible
 
 
+    // 
+    void swapChainSearch( const Timer &timer, IterCount noImproveCount );
     // start with a best block swap (for a single nurse), 
     // the (more) improved nurse is the head of the link which
     // the other one is the tail and the head of next link.
     // each tail has two branches. the first one is make add, remove, change
     // or block shift which will stop the chain. the second one is to 
     // find a block swap to improve this nurse which will continue the chain.
-    void swapChain( const Timer &timer, IterCount maxChainLen );
+    void genSwapChain( const Timer &timer, const Move &head, IterCount noImproveLen );
     // select single neighborhood to search in each iteration randomly
     // the random select process is a discrete distribution
     // the possibility to be selected will increase if the neighborhood
@@ -642,7 +644,7 @@ private:
     // for controlling swap and block swap will not be selected both in possibility select
     bool isPossibilitySelect;
     mutable bool isBlockSwapSelected;    // tabuSearch_Possibility() and findBestBlockSwap() wil modify it
-    // trySwapNurse() and trySwapBlock() will guarentee they are always corresponding to the selected swap
+    // trySwapNurse() and trySwapBlock() will guarantee they are always corresponding to the selected swap
     mutable ObjValue nurseDelta;    // trySwapNurse() and trySwapBlock() will modify it
     mutable ObjValue nurse2Delta;   // trySwapNurse() and trySwapBlock() will modify it
 
