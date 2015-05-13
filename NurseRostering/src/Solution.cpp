@@ -497,49 +497,66 @@ bool NurseRostering::Solution::repair( const Timer &timer )
 void NurseRostering::Solution::swapChainSearch( const Timer &timer, IterCount noImproveCount )
 {
     RandSelect<ObjValue> rs;
+    // TODO : efficiency problem
+    set<Move> bestMoves;
+    set<SwapLink> bestMovesForOneNurse;
 
     IterCount count = noImproveCount;
     while (count > 0) {
-        Move bestMove;  // nurse and nurse2 are a single link of the chain
-        Move bestMoveForOneNurse;
-        ObjValue bestDeltaForOneNurse = DefaultPenalty::FORBIDDEN_MOVE;
-
         // find a start link for the chain of block swap
-        penalty.setBlockSwapMode();
-        Move move;
-        move.mode = Move::Mode::BlockSwap;
-        for (move.nurse = 0; move.nurse < problem.scenario.nurseNum; ++move.nurse) {
-            for (move.nurse2 = move.nurse + 1; move.nurse2 < problem.scenario.nurseNum; ++move.nurse2) {
-                if (solver.haveSameSkill( move.nurse, move.nurse2 )) {
-                    for (move.weekday = Weekday::Mon; move.weekday <= Weekday::Sun; ++move.weekday) {
-                        move.delta = trySwapBlock( move.weekday, move.weekday2, move.nurse, move.nurse2 );
-                        if (move.delta < DefaultPenalty::MAX_OBJ_VALUE) {
-                            bool isSwap = (nurseDelta > nurse2Delta);
-                            if (isSwap) { swap( nurseDelta, nurse2Delta ); }
-                            if (objValue + nurseDelta < optima.getObjValue()) {
-                                if (rs.isMinimal( move.delta, bestMove.delta )) {
-                                    bestMove = move;
-                                    if (isSwap) { swap( bestMove.nurse, bestMove.nurse2 ); }
+        if (bestMoves.empty() && bestMovesForOneNurse.empty()) {
+            penalty.setBlockSwapMode();
+            Move move;
+            move.mode = Move::Mode::BlockSwap;
+            for (move.nurse = 0; move.nurse < problem.scenario.nurseNum; ++move.nurse) {
+                for (move.nurse2 = move.nurse + 1; move.nurse2 < problem.scenario.nurseNum; ++move.nurse2) {
+                    if (solver.haveSameSkill( move.nurse, move.nurse2 )) {
+                        for (move.weekday = Weekday::Mon; move.weekday <= Weekday::Sun; ++move.weekday) {
+                            move.delta = trySwapBlock( move.weekday, move.weekday2, move.nurse, move.nurse2 );
+                            if (move.delta < DefaultPenalty::MAX_OBJ_VALUE) {
+                                bool isSwap = (nurseDelta > nurse2Delta);
+                                if (isSwap) { swap( nurseDelta, nurse2Delta ); }
+                                if ((objValue + nurseDelta < optima.getObjValue())
+                                    || (objValue + move.delta < optima.getObjValue())) {
+                                    bestMoves.insert( move );
+                                    if (bestMoves.size() + bestMovesForOneNurse.size() > static_cast<size_t>(count)) {
+                                        if (bestMovesForOneNurse.empty()) {
+                                            bestMoves.erase( *bestMoves.rbegin() );
+                                        } else {
+                                            bestMovesForOneNurse.erase( *bestMovesForOneNurse.rbegin() );
+                                        }
+                                    }
+                                } else { // in case no swap meet requirement above
+                                    bestMovesForOneNurse.insert( SwapLink( move, nurseDelta, isSwap ) );
+                                    if (bestMoves.size() + bestMovesForOneNurse.size() > static_cast<size_t>(count)) {
+                                        bestMovesForOneNurse.erase( *bestMovesForOneNurse.rbegin() );
+                                    }
                                 }
-                            } else if (nurseDelta < bestDeltaForOneNurse) { // in case no swap meet requirement above
-                                bestMoveForOneNurse = move;
-                                bestDeltaForOneNurse = nurseDelta;
-                                if (isSwap) { swap( bestMoveForOneNurse.nurse, bestMoveForOneNurse.nurse2 ); }
                             }
                         }
                     }
                 }
             }
-        }
-        penalty.setDefaultMode();
-
-        if (bestMove.delta >= DefaultPenalty::MAX_OBJ_VALUE) {
-            bestMove = bestMoveForOneNurse;
+            penalty.setDefaultMode();
         }
 
+        Move bestMove;
+        if (bestMoves.empty()) {
+            bestMove.delta = bestMovesForOneNurse.begin()->delta;
+            bestMove.weekday = bestMovesForOneNurse.begin()->weekday;
+            bestMove.weekday2 = bestMovesForOneNurse.begin()->weekday2;
+            bestMove.nurse = bestMovesForOneNurse.begin()->nurse;
+            bestMove.nurse2 = bestMovesForOneNurse.begin()->nurse2;
+            bestMovesForOneNurse.erase( *bestMovesForOneNurse.rbegin() );
+        } else {
+            bestMove = *bestMoves.begin();
+            bestMoves.erase( *bestMoves.rbegin() );
+        }
         genSwapChain( timer, bestMove, solver.MaxNoImproveSwapChainLength() );
         if (objValue < optima.getObjValue()) {
             count = noImproveCount;
+            bestMoves.clear();
+            bestMovesForOneNurse.clear();
         } else if ((--count) > 0) {
             rebuild( optima );
         } // else exit and regard it as a perturb
@@ -627,7 +644,8 @@ void NurseRostering::Solution::genSwapChain( const Timer &timer, const Move &hea
                     if (move.delta < DefaultPenalty::MAX_OBJ_VALUE) {
                         bool isSwap = (nurseDelta > nurse2Delta);
                         if (isSwap) { swap( nurseDelta, nurse2Delta ); }
-                        if (objValue + nurseDelta < optima.getObjValue()) {
+                        if ((objValue + nurseDelta < optima.getObjValue())
+                            || (objValue + move.delta < optima.getObjValue())) {
                             if (rs.isMinimal( move.delta, bestMove.delta )) {
                                 bestMove = move;
                                 if (isSwap) { swap( bestMove.nurse, bestMove.nurse2 ); }
