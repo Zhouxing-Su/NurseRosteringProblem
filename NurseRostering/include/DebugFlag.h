@@ -64,4 +64,22 @@
 #define INRC2_BLOCK_SWAP_FIND_BEST INRC2_BLOCK_SWAP_ORGN
 #endif
 
+// comment to use double head version of swap chain 
+// (incompatible with quick restart)
+#ifndef INRC2_SWAP_CHAIN_DOUBLE_HEAD
+#define INRC2_SWAP_CHAIN_DOUBLE_HEAD
+#endif
+
+// comment to keep searching after ACER improved the worsened nurse
+#ifndef INRC2_SWAP_CHAIN_QUICK_RESTART
+#define INRC2_SWAP_CHAIN_QUICK_RESTART
+#endif
+
+
+// deal with conflicts
+#ifdef INRC2_SWAP_CHAIN_DOUBLE_HEAD
+#undef INRC2_SWAP_CHAIN_QUICK_RESTART
+#endif
+
+
 #endif

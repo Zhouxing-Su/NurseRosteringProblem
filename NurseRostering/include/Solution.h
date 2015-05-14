@@ -23,7 +23,7 @@
 
 #include <algorithm>
 #include <vector>
-#include <set>
+#include <queue>
 #include <ctime>
 #include <cmath>
 #include <cstring>
@@ -86,7 +86,10 @@ public:
         {
         }
 
-        friend bool operator<(const Move &l, const Move &r) { return (l.delta < r.delta); }
+        friend bool operator<(const Move &l, const Move &r)
+        {
+            return (l.delta == r.delta) ? (rand() % 2 == 0) : (l.delta < r.delta);
+        }
 
         ObjValue delta;
         Mode mode;
@@ -96,25 +99,6 @@ public:
         NurseID nurse;
         NurseID nurse2;
         Assign assign;
-    };
-
-    class SwapLink
-    {
-    public:
-        SwapLink( const Move &move = Move(), ObjValue improvedNurseDelta = 0, bool isSwap = false )
-            : delta( move.delta ), nurseDelta( improvedNurseDelta ), weekday( move.weekday ), weekday2( move.weekday2 ),
-            nurse( isSwap ? move.nurse : move.nurse2 ), nurse2( isSwap ? move.nurse2 : move.nurse )
-        {
-        }
-
-        friend bool operator<(const SwapLink &l, const SwapLink &r) { return (l.nurseDelta < r.nurseDelta); }
-
-        ObjValue delta;
-        ObjValue nurseDelta;    // delta for the improved nurse
-        int weekday;
-        int weekday2;
-        NurseID nurse;
-        NurseID nurse2;
     };
 
     typedef ObjValue( Solution::*TryMove )(const Move &move) const;
@@ -210,16 +194,19 @@ public:
     bool repair( const Timer &timer );  // make infeasible solution feasible
 
 
+    // try to start with a best block swap or a best block swap for single nurse
+    // until no improvement on the optima
+    void swapChainSearch_DoubleHead( const Timer &timer, IterCount maxNoImproveChainLength );
     // iteratively call genSwapChain() with different start link
     // until given count of no improvement.
-    void swapChainSearch( const Timer &timer, IterCount noImproveCount );
+    void swapChainSearch( const Timer &timer, IterCount maxNoImproveChainLength );
     // start with a given block swap (will improve at least one nurse), 
     // the (more) improved nurse is the head of the link which
     // the other one is the tail and the head of next link.
     // each tail has two branches. the first one is make add, remove, change
     // or block shift which will stop the chain if improved. the second one is to 
     // find a block swap to improve this nurse which will continue the chain.
-    void genSwapChain( const Timer &timer, const Move &head, IterCount noImproveLen );
+    bool genSwapChain( const Timer &timer, const Move &head, IterCount noImproveLen );
     // select single neighborhood to search in each iteration randomly
     // the random select process is a discrete distribution
     // the possibility to be selected will increase if the neighborhood
