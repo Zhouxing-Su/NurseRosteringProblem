@@ -11,9 +11,9 @@ void debugRun()
 {
     ostringstream id( "0" );
 
-    int instIndex = InstIndex::n005w4;
+    int instIndex = InstIndex::n030w4;
     char initHis = '0';
-    char weekdata[WEEKDATA_SEQ_SIZE] = "5533";
+    char weekdata[WEEKDATA_SEQ_SIZE] = "3378";
     int randSeed = 8787;
     //int randSeed = static_cast<int>(time( NULL ));
     double runningTime = instTimeout[getNurseNum( instIndex )];
@@ -49,10 +49,9 @@ void benchmarkRun()
 {
     ostringstream id;
 
-    int runCount = 2;
+    int runCount = 512;
     int threadBeginInterval = 3;
-    int threadNum = 2;
-    threadNum += (threadNum == 0);
+    int threadNum = 4;
     vector<thread> vt;
     for (int i = 0; i < threadNum; ++i) {
         id.str( string() );
@@ -91,17 +90,18 @@ void sprintRun()
 void parallelRun()
 {
     int threadNum = thread::hardware_concurrency();
-    int round = 4;
+    int round = 2;
 
     testAllInstancesParallel( threadNum, round );
 }
 
 int main()
 {
+    FileLock::unlock( LOG_FILE_NAME );
+
     loadConfig();
     loadInstTimeOut();
     loadInstSeq();
-    FileLock::unlock( LOG_FILE_NAME );
 
     //debugRun();
     //realRun();

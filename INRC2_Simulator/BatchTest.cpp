@@ -40,12 +40,30 @@ const std::vector<std::string> instance = {
     "n100w4", "n100w8", // 13 14
     "n120w4", "n120w8"  // 15 16
 };
+const std::map<std::string, int> instIndexMap = {
+    { instance[InstIndex::n005w4], InstIndex::n005w4 },
+    { instance[InstIndex::n012w8], InstIndex::n012w8 },
+    { instance[InstIndex::n021w4], InstIndex::n021w4 },
+    { instance[InstIndex::n030w4], InstIndex::n030w4 },
+    { instance[InstIndex::n030w8], InstIndex::n030w8 },
+    { instance[InstIndex::n040w4], InstIndex::n040w4 },
+    { instance[InstIndex::n040w8], InstIndex::n040w8 },
+    { instance[InstIndex::n050w4], InstIndex::n050w4 },
+    { instance[InstIndex::n050w8], InstIndex::n050w8 },
+    { instance[InstIndex::n060w4], InstIndex::n060w4 },
+    { instance[InstIndex::n060w8], InstIndex::n060w8 },
+    { instance[InstIndex::n080w4], InstIndex::n080w4 },
+    { instance[InstIndex::n080w8], InstIndex::n080w8 },
+    { instance[InstIndex::n100w4], InstIndex::n100w4 },
+    { instance[InstIndex::n100w8], InstIndex::n100w8 },
+    { instance[InstIndex::n120w4], InstIndex::n120w4 },
+    { instance[InstIndex::n120w8], InstIndex::n120w8 }
+};
 
 const std::string timoutFileName( "timeout.txt" );
 std::map<int, double> instTimeout;
 const std::string instSeqFileName( "seq.txt" );
-std::vector<char> instInitHis;
-std::vector<std::string> instWeekdataSeq;
+std::vector<TestCase> testCases;
 
 const std::string configFileName( "config.txt" );
 std::string configString;
@@ -86,11 +104,13 @@ void testAllInstancesParallel( int threadNum, int round )
         TimeCmp& operator=(const TimeCmp &) { return *this; }
     };
 
-    vector<Inst> inst( instance.size() );
-    for (int instIndex = InstIndex::n005w4; instIndex <= InstIndex::n120w8; ++instIndex) {
-        inst[instIndex].index = instIndex;
-        inst[instIndex].timeout = instTimeout[getNurseNum( instIndex )] * getWeekNum( instIndex );
+    vector<Inst> inst( testCases.size() );
+    for (unsigned i = 0; i < inst.size(); ++i) {
+        int instIndex = instIndexMap.at( testCases[i].instName );
+        inst[i].index = i;
+        inst[i].timeout = instTimeout[getNurseNum( instIndex )] * getWeekNum( instIndex );
     }
+    sort( inst.begin(), inst.end(), TimeCmp( inst ) );
 
     vector<double> timespend( threadNum, 0 );
     vector<thread> vt( threadNum );
@@ -100,19 +120,20 @@ void testAllInstancesParallel( int threadNum, int round )
         idleThread.push( i );
     }
     for (; round > 0; --round) {
-        for (unsigned i = 0; i < inst.size();) {
+        for (auto iter = inst.begin(); iter != inst.end();) {
             if (!idleThread.empty()) {
                 int newThread = idleThread.front();
                 idleThread.pop();
-                timespend[newThread] += inst[i].timeout;
+                timespend[newThread] += iter->timeout;
 
                 ostringstream id;
                 id << newThread;
                 int randSeed = static_cast<int>(rand() + time( NULL ) + clock());
                 if (vt[newThread].joinable()) { vt[newThread].join(); }
-                vt[newThread] = thread( test_customIO_r, id.str(), outputDirPrefix + id.str(), inst[i].index,
-                    instInitHis[inst[i].index], instWeekdataSeq[inst[i].index].c_str(), instTimeout[getNurseNum( inst[i].index )], randSeed );
-                ++i;
+                int instIndex = instIndexMap.at( testCases[iter->index].instName );
+                vt[newThread] = thread( test_customIO_r, id.str(), outputDirPrefix + id.str(), instIndex,
+                    testCases[iter->index].initHis, testCases[iter->index].weekdataSeq.c_str(), instTimeout[getNurseNum( instIndex )], randSeed );
+                ++iter;
             } else {
                 int firstFinishThread = 0;
                 for (int t = 0; t < threadNum; ++t) {
@@ -133,16 +154,16 @@ void testAllInstancesParallel( int threadNum, int round )
 void testHeterogeneousInstancesWithPreloadedInstSeq( const std::string &id, int runCount )
 {
     for (int i = runCount; i > 0; --i) {
-        for (int instIndex = InstIndex::n005w4; instIndex <= InstIndex::n120w8; ++instIndex) {
+        for (auto iter = testCases.begin(); iter != testCases.end(); ++iter) {
+            int instIndex = instIndexMap.at( iter->instName );
             // instances which have no need for test
             if ((instIndex == InstIndex::n120w8)
                 || (instIndex == InstIndex::n100w8)) {
                 continue;
             }
-
             int randSeed = static_cast<int>(rand() + time( NULL ) + clock());
             test_customIO_r( id, outputDirPrefix + id, instIndex,
-                instInitHis[instIndex], instWeekdataSeq[instIndex].c_str(), instTimeout[getNurseNum( instIndex )], randSeed );
+                iter->initHis, iter->weekdataSeq.c_str(), instTimeout[getNurseNum( instIndex )], randSeed );
         }
     }
 }
@@ -150,10 +171,11 @@ void testHeterogeneousInstancesWithPreloadedInstSeq( const std::string &id, int 
 void testAllInstancesWithPreloadedInstSeq( const std::string &id, int runCount )
 {
     for (int i = runCount; i > 0; --i) {
-        for (int instIndex = InstIndex::n005w4; instIndex <= InstIndex::n120w8; ++instIndex) {
+        for (auto iter = testCases.begin(); iter != testCases.end(); ++iter) {
+            int instIndex = instIndexMap.at( iter->instName );
             int randSeed = static_cast<int>(rand() + time( NULL ) + clock());
             test_customIO_r( id, outputDirPrefix + id, instIndex,
-                instInitHis[instIndex], instWeekdataSeq[instIndex].c_str(), instTimeout[getNurseNum( instIndex )], randSeed );
+                iter->initHis, iter->weekdataSeq.c_str(), instTimeout[getNurseNum( instIndex )], randSeed );
         }
     }
 }
@@ -202,16 +224,16 @@ void loadInstTimeOut()
     timoutFile.close();
 }
 
-void loadInstSeq()
+void loadInstSeq( const std::string &filename )
 {
-    ifstream instSeqFile( instSeqFileName );
+    ifstream instSeqFile( filename );
 
     std::string instName;
     char initHis;
     std::string weekdataSeq;
+    testCases.clear();
     while (instSeqFile >> instName >> initHis >> weekdataSeq) {
-        instInitHis.push_back( initHis );
-        instWeekdataSeq.push_back( weekdataSeq );
+        testCases.push_back( TestCase( instName, initHis, weekdataSeq ) );
     }
 
     instSeqFile.close();

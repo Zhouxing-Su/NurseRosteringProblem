@@ -57,6 +57,19 @@ enum InstIndex
     n120w4, n120w8
 };
 
+struct TestCase
+{
+public:
+    TestCase( const std::string &name, char his, std::string &seq )
+        : instName( name ), initHis( his ), weekdataSeq( seq )
+    {
+    }
+
+    std::string instName;
+    char initHis;
+    std::string weekdataSeq;
+};
+
 static const int MAX_ARGV_LEN = 256;
 static const int INIT_HIS_NUM = 3;
 static const int WEEKDATA_NUM = 10;
@@ -68,12 +81,12 @@ extern char *fullArgv[ArgcVal::full];
 extern const std::string outputDirPrefix;
 extern const std::string instanceDir;
 extern const std::vector<std::string> instance;
+extern const std::map<std::string, int> instIndexMap;
 
 extern const std::string timoutFileName;
 extern std::map<int, double> instTimeout;
 extern const std::string instSeqFileName;
-extern std::vector<char> instInitHis;
-extern std::vector<std::string> instWeekdataSeq;
+extern std::vector<TestCase> testCases;
 
 extern const std::string configFileName;
 extern std::string configString;
@@ -94,7 +107,7 @@ void loadConfig();
 // load timeout from timoutFile
 void loadInstTimeOut();
 // load instance sequence from instSeqFile
-void loadInstSeq();
+void loadInstSeq( const std::string &filename = instSeqFileName );
 
 int getNurseNum( int instIndex );
 int getWeekNum( int instIndex );

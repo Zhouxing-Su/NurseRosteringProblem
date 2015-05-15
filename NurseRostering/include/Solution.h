@@ -88,7 +88,7 @@ public:
 
         friend bool operator<(const Move &l, const Move &r)
         {
-            return (l.delta == r.delta) ? (rand() % 2 == 0) : (l.delta < r.delta);
+            return (l.delta == r.delta) ? (rand() % 2 == 0) : (l.delta > r.delta);
         }
 
         ObjValue delta;

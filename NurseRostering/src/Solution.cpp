@@ -562,7 +562,7 @@ void NurseRostering::Solution::swapChainSearch( const Timer &timer, IterCount ma
     priority_queue<Move> bestMoves;
 
     IterCount count = solver.MaxSwapChainRestartCount();
-    while (count > 0) {
+    while ((--count) > 0) {
         rebuild( optima );
 
         // find start links for the chain of block swap
@@ -686,6 +686,7 @@ bool NurseRostering::Solution::genSwapChain( const Timer &timer, const Move &hea
         }
         penalty.setDefaultMode();
 
+        // apply add/change/remove/shift if there is improvement
         if (bestMove.delta < 0) {
             (this->*applyMove[bestMove.mode])(bestMove);
             objValue += bestMove.delta;
@@ -697,29 +698,41 @@ bool NurseRostering::Solution::genSwapChain( const Timer &timer, const Move &hea
         }
 
         // find next link
+        penalty.setBlockSwapMode();
         bestMove.delta = DefaultPenalty::FORBIDDEN_MOVE;
+        Move bestMoveForOneNurse;
+        ObjValue bestDeltaForOneNurse = DefaultPenalty::FORBIDDEN_MOVE;
         for (move.nurse2 = 0; move.nurse2 < problem.scenario.nurseNum; ++move.nurse2) {
             if (solver.haveSameSkill( move.nurse, move.nurse2 )) {
                 for (move.weekday = Weekday::Mon; move.weekday <= Weekday::Sun; ++move.weekday) {
                     move.delta = trySwapBlock( move.weekday, move.weekday2, move.nurse, move.nurse2 );
                     if (move.delta < DefaultPenalty::MAX_OBJ_VALUE) {
-                        if ((objValue + nurse2Delta < optima.getObjValue())
+                        if ((objValue + nurseDelta < optima.getObjValue())
                             || (objValue + move.delta < optima.getObjValue())) {
                             if (rs.isMinimal( move.delta, bestMove.delta )) {
                                 bestMove = move;
                             }
+#ifndef INRC2_SWAP_CHAIN_QUICK_RESTART
+                        } else if (nurseDelta < bestDeltaForOneNurse) { // in case no swap meet requirement above
+                            bestMoveForOneNurse = move;
+                            bestDeltaForOneNurse = nurseDelta;
+#endif
                         }
                     }
                 }
             }
         }
+        penalty.setDefaultMode();
 
-        // pick one nurse to swap randomly if no accepted swap
-        while (bestMove.delta >= DefaultPenalty::MAX_OBJ_VALUE) {
-            bestMove.weekday = (rand() % Weekday::NUM) + Weekday::Mon;
-            bestMove.nurse2 = rand() % problem.scenario.nurseNum;
-            bestMove.delta = trySwapBlock( head );
+#ifndef INRC2_SWAP_CHAIN_QUICK_RESTART
+        if (bestMove.delta >= DefaultPenalty::MAX_OBJ_VALUE) {
+            bestMove = bestMoveForOneNurse;
         }
+#endif
+        if (bestMove.delta >= DefaultPenalty::MAX_OBJ_VALUE) {
+            return isImproved;
+        }
+
         (objValue + bestMove.delta < optima.getObjValue())
             ? (len = noImproveLen) : (--len);
     }

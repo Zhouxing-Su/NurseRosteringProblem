@@ -603,9 +603,7 @@ void NurseRostering::TabuSolver::swapChainSearch( Solution::ModeSeq modeSeq )
         iterationCount += sln.getIterCount();
         ++generationCount;
 
-#ifdef INRC2_SWAP_CHAIN_QUICK_RESTART
         sln.perturb( INIT_PERTURB_STRENGTH );
-#endif
     }
 }
 
