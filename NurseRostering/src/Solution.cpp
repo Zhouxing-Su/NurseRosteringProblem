@@ -712,18 +712,16 @@ bool NurseRostering::Solution::genSwapChain( const Timer &timer, const Move &hea
                         if (move.delta < DefaultPenalty::MAX_OBJ_VALUE) {
                             if (isValidPrior( move.nurse, assign[move.nurse2][move.weekday2].shift, move.weekday2 )
                                 && isValidPrior( move.nurse2, assign[move.nurse][move.weekday2].shift, move.weekday2 )) {
-                                if (move.delta < DefaultPenalty::MAX_OBJ_VALUE) {
-                                    if ((objValue + headDelta < optima.getObjValue())
-                                        || (objValue + move.delta < optima.getObjValue())) {
-                                        if (rs.isMinimal( move.delta, bestMove.delta )) {
-                                            bestMove = move;
-                                        }
-#ifdef INRC2_SWAP_CHAIN_MAKE_BAD_MOVE
-                                    } else if (headDelta < bestDeltaForOneNurse) { // in case no swap meet requirement above
-                                        bestMoveForOneNurse = move;
-                                        bestDeltaForOneNurse = nurseDelta;
-#endif
+                                if ((objValue + headDelta < optima.getObjValue())
+                                    || (objValue + move.delta < optima.getObjValue())) {
+                                    if (rs.isMinimal( move.delta, bestMove.delta )) {
+                                        bestMove = move;
                                     }
+#ifdef INRC2_SWAP_CHAIN_MAKE_BAD_MOVE
+                                } else if (headDelta < bestDeltaForOneNurse) { // in case no swap meet requirement above
+                                    bestMoveForOneNurse = move;
+                                    bestDeltaForOneNurse = nurseDelta;
+#endif
                                 }
                             }
                         } else {    // two day off
@@ -2427,7 +2425,7 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock( int weekday, in
 
 #if INRC2_BLOCK_SWAP_TABU_STRENGTH != INRC2_BLOCK_SWAP_NO_TABU
         ++count;
-        noTabuCount += noSwapTabu( weekday, nurse, nurse2 );
+        noTabuCount += noSwapTabu( w, nurse, nurse2 );
 #endif
 
         if (delta < DefaultPenalty::MAX_OBJ_VALUE) {
@@ -2446,7 +2444,7 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock( int weekday, in
                 } else {    // tabu
                     if (rs_tabu.isMinimal( delta, minDelta_tabu )) {
                         minDelta_tabu = delta;
-                        weekday2_tabu = weekday;
+                        weekday2_tabu = w;
                         minNurseDelta_tabu = delta1;
                         minNurse2Delta_tabu = delta2;
                     }
