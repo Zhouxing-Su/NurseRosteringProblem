@@ -256,7 +256,7 @@ private:
         maxNoImproveForAllNeighborhood = static_cast<IterCount>(
             coefficient * problem.scenario.nurseNum * Weekday::NUM *
             sqrt( problem.scenario.shiftTypeNum * problem.scenario.skillTypeNum ));
-        maxNoImproveSwapChainLength = maxNoImproveForAllNeighborhood;
+        maxNoImproveSwapChainLength = maxNoImproveForSingleNeighborhood;
         maxSwapChainRestartCount = static_cast<IterCount>(sqrt( problem.scenario.nurseNum ));
     }
 

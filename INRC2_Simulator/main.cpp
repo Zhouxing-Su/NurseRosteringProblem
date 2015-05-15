@@ -12,8 +12,8 @@ void debugRun()
     ostringstream id( "0" );
 
     int instIndex = InstIndex::n030w4;
-    char initHis = '0';
-    char weekdata[WEEKDATA_SEQ_SIZE] = "3378";
+    char initHis = '1';
+    char weekdata[WEEKDATA_SEQ_SIZE] = "6291";
     int randSeed = 8787;
     //int randSeed = static_cast<int>(time( NULL ));
     double runningTime = instTimeout[getNurseNum( instIndex )];
@@ -103,9 +103,9 @@ int main()
     loadInstTimeOut();
     loadInstSeq();
 
-    //debugRun();
+    debugRun();
     //realRun();
-    benchmarkRun();
+    //benchmarkRun();
     //sprintRun();
     //parallelRun();
 

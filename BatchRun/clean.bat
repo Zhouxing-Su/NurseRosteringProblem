@@ -4,4 +4,4 @@ del err.csv
 del checkResult.csv
 del analysisResult.csv
 del statistic.csv
-del output*
+for /d %%a in (output*) do rd /s /q %%a
