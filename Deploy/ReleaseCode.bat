@@ -15,7 +15,7 @@ copy "..\NurseRostering\include\DebugFlag.h" simulator
 copy "..\NurseRostering\include\INRC2.h" simulator
 copy "..\NurseRostering\include\NurseRostering.h" simulator
 
-#copy "..\Analysis\main.cpp" simulator
+#copy "..\Analysis\main.cpp" analyzer
 copy "..\INRC2_Simulator\BatchTest.cpp" analyzer
 copy "..\INRC2_Simulator\BatchTest.h" analyzer
 copy "..\NurseRostering\src\Solution.cpp" analyzer
