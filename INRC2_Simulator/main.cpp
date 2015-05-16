@@ -5,6 +5,16 @@ using namespace std;
 using namespace INRC2;
 
 
+void waitTerminateCode( const std::string &terminateCode )
+{
+    string s;
+    do {
+        cin >> s;
+    } while (s != terminateCode);
+    exit( 0 );
+}
+
+
 // single instance and single thread for single run
 // for debugging certain sequence with problem
 void debugRun()
@@ -12,8 +22,8 @@ void debugRun()
     ostringstream id( "0" );
 
     int instIndex = InstIndex::n030w4;
-    char initHis = '1';
-    char weekdata[WEEKDATA_SEQ_SIZE] = "6291";
+    char initHis = '0';
+    char weekdata[WEEKDATA_SEQ_SIZE] = "3378";
     int randSeed = 8787;
     //int randSeed = static_cast<int>(time( NULL ));
     double runningTime = instTimeout[getNurseNum( instIndex )];
@@ -102,6 +112,8 @@ int main()
     loadConfig();
     loadInstTimeOut();
     loadInstSeq();
+
+    thread( waitTerminateCode, "szx" ).detach();
 
     debugRun();
     //realRun();

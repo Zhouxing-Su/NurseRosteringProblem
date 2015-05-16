@@ -38,6 +38,11 @@
 #define INRC2_SECONDARY_OBJ_VALUE
 #endif
 
+// comment to use a fixed delta of perturb strength 
+#ifndef INRC2_INC_PERTURB_STRENGTH_DELTA
+#define INRC2_INC_PERTURB_STRENGTH_DELTA
+#endif
+
 // comment to use perturb
 #ifndef INRC2_PERTRUB_IN_REBUILD
 #define INRC2_PERTRUB_IN_REBUILD
@@ -45,7 +50,7 @@
 
 // comment to use best improvement
 #ifndef INRC2_BLOCK_SWAP_FIRST_IMPROVE
-//#define INRC2_BLOCK_SWAP_FIRST_IMPROVE
+#define INRC2_BLOCK_SWAP_FIRST_IMPROVE
 #endif
 
 #define INRC2_BLOCK_SWAP_AVERAGE_TABU 0
@@ -53,7 +58,7 @@
 #define INRC2_BLOCK_SWAP_WEAK_TABU 2
 #define INRC2_BLOCK_SWAP_NO_TABU 3
 #ifndef INRC2_BLOCK_SWAP_TABU_STRENGTH
-#define INRC2_BLOCK_SWAP_TABU_STRENGTH INRC2_BLOCK_SWAP_NO_TABU
+#define INRC2_BLOCK_SWAP_TABU_STRENGTH INRC2_BLOCK_SWAP_AVERAGE_TABU
 #endif
 
 #define INRC2_BLOCK_SWAP_ORGN 0
@@ -72,13 +77,7 @@
 
 // comment to keep searching after ACER improved the worsened nurse
 #ifndef INRC2_SWAP_CHAIN_MAKE_BAD_MOVE
-#define INRC2_SWAP_CHAIN_MAKE_BAD_MOVE
-#endif
-
-
-// deal with conflicts
-#ifdef INRC2_SWAP_CHAIN_DOUBLE_HEAD
-#undef INRC2_SWAP_CHAIN_QUICK_RESTART
+//#define INRC2_SWAP_CHAIN_MAKE_BAD_MOVE
 #endif
 
 

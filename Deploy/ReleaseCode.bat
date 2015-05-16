@@ -1,8 +1,8 @@
 mkdir simulator
 mkdir analyzer
+#copy "..\INRC2_Simulator\main.cpp" simulator
 copy "..\INRC2_Simulator\BatchTest.cpp" simulator
 copy "..\INRC2_Simulator\BatchTest.h" simulator
-copy "..\INRC2_Simulator\main.cpp" simulator
 copy "..\NurseRostering\src\Solution.cpp" simulator
 copy "..\NurseRostering\src\Solver.cpp" simulator
 copy "..\NurseRostering\src\utility.cpp" simulator
@@ -15,9 +15,9 @@ copy "..\NurseRostering\include\DebugFlag.h" simulator
 copy "..\NurseRostering\include\INRC2.h" simulator
 copy "..\NurseRostering\include\NurseRostering.h" simulator
 
+#copy "..\Analysis\main.cpp" simulator
 copy "..\INRC2_Simulator\BatchTest.cpp" analyzer
 copy "..\INRC2_Simulator\BatchTest.h" analyzer
-copy "..\INRC2_Simulator\main.cpp" analyzer
 copy "..\NurseRostering\src\Solution.cpp" analyzer
 copy "..\NurseRostering\src\Solver.cpp" analyzer
 copy "..\NurseRostering\src\utility.cpp" analyzer

@@ -558,10 +558,14 @@ void NurseRostering::TabuSolver::tabuSearch( Solution::ModeSeq modeSeq, Solution
         ++generationCount;
 
         if (updateOptima( sln.getOptima() )) {
+#ifdef INRC2_INC_PERTURB_STRENGTH_DELTA
             perturbStrengthDelta = PERTURB_STRENGTH_DELTA;
+#endif
             perturbStrength = INIT_PERTURB_STRENGTH;
         } else if (perturbStrength < MAX_PERTURB_STRENGTH) {
+#ifdef INRC2_INC_PERTURB_STRENGTH_DELTA
             perturbStrengthDelta += PERTURB_STRENGTH_DELTA;
+#endif
             perturbStrength += perturbStrengthDelta;
         }
         const Output &output( (rand() % PERTURB_ORIGIN_SELECT)
