@@ -28,16 +28,16 @@ NurseRostering::NurseRostering()
 
 void NurseRostering::adjustRangeOfTotalAssignByWorkload()
 {
-    if (scenario.totalWeekNum > 1) {  // it must be count if there is only one week
-        for (auto iter = scenario.contracts.begin(); iter != scenario.contracts.end(); ++iter) {
-            int weekToStartCountMin = scenario.totalWeekNum * iter->minShiftNum;
-            bool ignoreMinShift_lastWeek = ((history.pastWeekCount * iter->maxShiftNum) < weekToStartCountMin);
-            bool ignoreMinShift = ((history.currentWeek * iter->maxShiftNum) < weekToStartCountMin);
-            iter->minShiftNum_lastWeek = (ignoreMinShift_lastWeek) ? 0 : (iter->minShiftNum_lastWeek * history.pastWeekCount);
-            iter->minShiftNum = (ignoreMinShift) ? 0 : (iter->minShiftNum * history.currentWeek);
-            iter->maxShiftNum_lastWeek *= history.pastWeekCount;
-            iter->maxShiftNum *= history.currentWeek;
-        }
+    for (int i = 0; i < scenario.nurseNum; ++i) {
+        const Scenario::Contract &c( scenario.contracts[scenario.nurses[i].contract] );
+#ifdef INRC2_IGNORE_MIN_SHIFT_IN_EARLY_WEEKS
+        int weekToStartCountMin = scenario.totalWeekNum * c.minShiftNum;
+        bool ignoreMinShift = ((history.currentWeek * c.maxShiftNum) < weekToStartCountMin);
+        scenario.nurses[i].restMinShiftNum = (ignoreMinShift) ? 0 : (c.minShiftNum - history.totalAssignNums[i]);
+#else
+        scenario.nurses[i].restMinShiftNum = c.minShiftNum - history.totalAssignNums[i];
+#endif            
+        scenario.nurses[i].restMaxShiftNum = c.maxShiftNum - history.totalAssignNums[i];
     }
 }
 

@@ -38,8 +38,8 @@ class NurseRostering::Output
 public:
     // assume initial solution will never be the global optima
     Output() : objValue( DefaultPenalty::FORBIDDEN_MOVE ), secondaryObjValue( DefaultPenalty::FORBIDDEN_MOVE ) {}
-    Output( ObjValue objVal, const AssignTable &assignment, ObjValue secondaryObjVal = DefaultPenalty::FORBIDDEN_MOVE )
-        : objValue( objVal ), secondaryObjValue( secondaryObjVal ), assign( assignment ), findTime( clock() )
+    Output( ObjValue objVal, const AssignTable &assignment, double secondaryObjVal = DefaultPenalty::FORBIDDEN_MOVE, clock_t findAssignTime = clock() )
+        : objValue( objVal ), secondaryObjValue( secondaryObjVal ), assign( assignment ), findTime( findAssignTime )
     {
     }
 
@@ -153,7 +153,7 @@ public:
         if (objValue <= optima.getObjValue()) {
             secondaryObjValue = 0;
             for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
-                secondaryObjValue += static_cast<double>(totalAssignNums[nurse]) / problem.scenario.contracts[problem.scenario.nurses[nurse].contract].maxShiftNum;
+                secondaryObjValue += static_cast<double>(totalAssignNums[nurse]) / problem.scenario.nurses[nurse].restMaxShiftNum;
             }
         }
 #endif
@@ -182,7 +182,7 @@ public:
     void rebuild(); // must be called after direct access to AssignTable (objValue will be recalculated)
     // evaluate objective by assist data structure
     // must be called after Penalty change or direct access to AssignTable
-    void evaluateObjValue();
+    void evaluateObjValue( bool considerSpanningConstraint = true );
     // get history for next week, only used for custom file
     History genHistory() const;
     // get current iteration count (may not be the actual iter count)

@@ -29,7 +29,7 @@ public:
         MAX_OBJ_VALUE = (1 << 24),
         FORBIDDEN_MOVE = (MAX_OBJ_VALUE * 2),
         // amplifier for improving accuracy
-        AMP = 2 * 2 * 2 * 3 * 5,
+        AMP = 2 * 2 * 2 * 3 * 7,
         // hard constraints
         SingleAssign = FORBIDDEN_MOVE,
         UnderStaff = FORBIDDEN_MOVE,
@@ -101,10 +101,8 @@ public:
         class Contract
         {
         public:
-            int minShiftNum;    // total assignments until current week
-            int minShiftNum_lastWeek;   // generate according to history
-            int maxShiftNum;    // total assignments until current week
-            int maxShiftNum_lastWeek;   // generate according to history
+            int minShiftNum;    // total assignments in the planning horizon
+            int maxShiftNum;    // total assignments in the planning horizon
             int minConsecutiveDayNum;
             int maxConsecutiveDayNum;
             int minConsecutiveDayoffNum;
@@ -118,8 +116,10 @@ public:
         {
         public:
             static const NurseID ID_NONE;
-
             ContractID contract;
+            int restMinShiftNum;    // total assignments in the planning horizon
+            int restMaxShiftNum;    // total assignments in the planning horizon
+
             int skillNum;
             // (skills[skill] == true) means the nurse have that skill
             std::vector<bool> skills;
@@ -145,6 +145,7 @@ public:
         ObjValue accObjValue;   // accumulated objective value
         int pastWeekCount;      // count from 0 (the number in history file)
         int currentWeek;        // count from 1
+        int restWeekCount;      // include current week
 
         std::vector<int> totalAssignNums;
         std::vector<int> totalWorkingWeekendNums;

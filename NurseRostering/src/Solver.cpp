@@ -166,16 +166,20 @@ NurseRostering::ObjValue NurseRostering::Solver::checkObjValue( const AssignTabl
     // check S6: Total assignments (20)
     // check S7: Total working weekends (30)
     for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
-        int min = problem.scenario.contracts[problem.scenario.nurses[nurse].contract].minShiftNum;
-        int lastWeekMin = problem.scenario.contracts[problem.scenario.nurses[nurse].contract].minShiftNum_lastWeek;
-        int max = problem.scenario.contracts[problem.scenario.nurses[nurse].contract].maxShiftNum;
-        int lastWeekMax = problem.scenario.contracts[problem.scenario.nurses[nurse].contract].maxShiftNum_lastWeek;
-        int assignNum = problem.history.totalAssignNums[nurse];
+        int min = problem.scenario.nurses[nurse].restMinShiftNum;
+        int max = problem.scenario.nurses[nurse].restMaxShiftNum;
+        int assignNum = 0;
         for (int weekday = Weekday::Mon; weekday <= Weekday::Sun; ++weekday) {
             assignNum += assign.isWorking( nurse, weekday );
         }
-        objValue += DefaultPenalty::TotalAssign * distanceToRange(
-            assignNum * problem.scenario.totalWeekNum, min, max ) / problem.scenario.totalWeekNum;
+#ifdef INRC2_LOG
+        if (problem.history.currentWeek < problem.scenario.totalWeekNum) {
+#endif
+            objValue += DefaultPenalty::TotalAssign * distanceToRange(
+                assignNum * problem.history.restWeekCount, min, max ) / problem.history.restWeekCount;
+#ifdef INRC2_LOG
+        }
+#endif
 
         int maxWeekend = problem.scenario.contracts[problem.scenario.nurses[nurse].contract].maxWorkingWeekendNum;
         int historyWeekend = problem.history.totalWorkingWeekendNums[nurse] * problem.scenario.totalWeekNum;
@@ -184,13 +188,9 @@ NurseRostering::ObjValue NurseRostering::Solver::checkObjValue( const AssignTabl
         if (exceedingWeekend > 0) {
             objValue += DefaultPenalty::TotalWorkingWeekend * exceedingWeekend / problem.scenario.totalWeekNum;
         }
-#ifdef INRC2_DEBUG
+#ifdef INRC2_LOG
         // remove penalty in the history except the first week
         if (problem.history.pastWeekCount > 0) {
-            objValue -= DefaultPenalty::TotalAssign * distanceToRange(
-                problem.history.totalAssignNums[nurse] * problem.scenario.totalWeekNum,
-                lastWeekMin, lastWeekMax ) / problem.scenario.totalWeekNum;
-
             historyWeekend -= maxWeekend * problem.history.pastWeekCount;
             if (historyWeekend > 0) {
                 objValue -= DefaultPenalty::TotalWorkingWeekend * historyWeekend / problem.scenario.totalWeekNum;
@@ -444,6 +444,14 @@ void NurseRostering::TabuSolver::solve()
             tabuSearch( config.modeSeq, &Solution::tabuSearch_Rand );
             break;
     }
+#ifdef INRC2_LOG
+    if (problem.history.currentWeek < problem.scenario.totalWeekNum) {
+        sln.rebuild( optima );
+        sln.evaluateObjValue( false );
+        optima = Output( sln.getObjValue(), sln.getAssignTable(),
+            optima.getSecondaryObjValue(), optima.getFindTime() );
+    }
+#endif
 }
 
 bool NurseRostering::TabuSolver::updateOptima( const Output &localOptima )

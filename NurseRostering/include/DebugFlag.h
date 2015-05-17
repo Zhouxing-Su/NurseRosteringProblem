@@ -33,6 +33,11 @@
 
 
 // algorithm switch
+// comment to start to consider min shift at the first week
+#ifndef INRC2_IGNORE_MIN_SHIFT_IN_EARLY_WEEKS
+#define INRC2_IGNORE_MIN_SHIFT_IN_EARLY_WEEKS
+#endif
+
 // comment to use random pick
 #ifndef INRC2_SECONDARY_OBJ_VALUE
 #define INRC2_SECONDARY_OBJ_VALUE

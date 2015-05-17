@@ -342,7 +342,7 @@ void NurseRostering::Solution::resetAssistData()
 {
     // assist data structure
     missingNurseNums = problem.weekData.optNurseNums;
-    totalAssignNums = problem.history.totalAssignNums;
+    totalAssignNums = vector<int>( problem.scenario.nurseNum, 0 );
     consecutives = vector<Consecutive>( problem.scenario.nurseNum );
     for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
         consecutives[nurse] = Consecutive( problem.history, nurse );
@@ -362,7 +362,7 @@ void NurseRostering::Solution::resetAssistData()
     isBlockSwapSelected = false;
 }
 
-void NurseRostering::Solution::evaluateObjValue()
+void NurseRostering::Solution::evaluateObjValue( bool considerSpanningConstraint )
 {
     objInsufficientStaff = 0;
     objConsecutiveShift = 0;
@@ -379,7 +379,9 @@ void NurseRostering::Solution::evaluateObjValue()
     evaluateConsecutiveDayOff();
     evaluatePreference();
     evaluateCompleteWeekend();
-    evaluateTotalAssign();
+    if (considerSpanningConstraint) {
+        evaluateTotalAssign();
+    }
     evaluateTotalWorkingWeekend();
 
     objValue = objInsufficientStaff + objConsecutiveShift + objConsecutiveDay + objConsecutiveDayOff
@@ -398,10 +400,11 @@ NurseRostering::History NurseRostering::Solution::genHistory() const
     newHistory.accObjValue = history.accObjValue + objValue;
     newHistory.pastWeekCount = history.currentWeek;
     newHistory.currentWeek = history.currentWeek + 1;
-    newHistory.totalAssignNums = totalAssignNums;
+    newHistory.totalAssignNums = history.totalAssignNums;
     newHistory.totalWorkingWeekendNums = history.totalWorkingWeekendNums;
 
     for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
+        newHistory.totalAssignNums[nurse] += totalAssignNums[nurse];
         newHistory.totalWorkingWeekendNums[nurse] +=
             (assign.isWorking( nurse, Weekday::Sat ) || assign.isWorking( nurse, Weekday::Sun ));
         newHistory.lastShifts[nurse] = assign[nurse][Weekday::Sun].shift;
@@ -1790,7 +1793,6 @@ NurseRostering::ObjValue NurseRostering::Solution::tryAddAssign( int weekday, Nu
     int nextDay = weekday + 1;
     ContractID contractID = problem.scenario.nurses[nurse].contract;
     const Scenario::Contract &contract( problem.scenario.contracts[contractID] );
-    int totalWeekNum = problem.scenario.totalWeekNum;
     int currentWeek = problem.history.currentWeek;
     const Consecutive &c( consecutives[nurse] );
 
@@ -1962,20 +1964,22 @@ NurseRostering::ObjValue NurseRostering::Solution::tryAddAssign( int weekday, Nu
         if (!assign.isWorking( nurse, theOtherDay )) {
             const History &history( problem.history );
             delta -= penalty.TotalWorkingWeekend() * exceedCount(
-                history.totalWorkingWeekendNums[nurse] * totalWeekNum,
-                contract.maxWorkingWeekendNum * currentWeek ) / totalWeekNum;
+                history.totalWorkingWeekendNums[nurse] * problem.scenario.totalWeekNum,
+                contract.maxWorkingWeekendNum * currentWeek ) / problem.scenario.totalWeekNum;
             delta += penalty.TotalWorkingWeekend() * exceedCount(
-                (history.totalWorkingWeekendNums[nurse] + 1) * totalWeekNum,
-                contract.maxWorkingWeekendNum * currentWeek ) / totalWeekNum;
+                (history.totalWorkingWeekendNums[nurse] + 1) * problem.scenario.totalWeekNum,
+                contract.maxWorkingWeekendNum * currentWeek ) / problem.scenario.totalWeekNum;
         }
     }
 
-    // total assign
-    int totalAssign = totalAssignNums[nurse] * totalWeekNum;
+    // total assign (expand problem.history.restWeekCount times)
+    int restMinShift = problem.scenario.nurses[nurse].restMinShiftNum;
+    int restMaxShift = problem.scenario.nurses[nurse].restMaxShiftNum;
+    int totalAssign = totalAssignNums[nurse] * problem.history.restWeekCount;
     delta -= penalty.TotalAssign() * distanceToRange( totalAssign,
-        contract.minShiftNum, contract.maxShiftNum ) / totalWeekNum;
-    delta += penalty.TotalAssign() * distanceToRange( totalAssign + totalWeekNum,
-        contract.minShiftNum, contract.maxShiftNum ) / totalWeekNum;
+        restMinShift, restMaxShift ) / problem.history.restWeekCount;
+    delta += penalty.TotalAssign() * distanceToRange( totalAssign + problem.history.restWeekCount,
+        restMinShift, restMaxShift ) / problem.history.restWeekCount;
 
     return delta;
 }
@@ -2177,7 +2181,6 @@ NurseRostering::ObjValue NurseRostering::Solution::tryRemoveAssign( int weekday,
     int nextDay = weekday + 1;
     ContractID contractID = problem.scenario.nurses[nurse].contract;
     const Scenario::Contract &contract( problem.scenario.contracts[contractID] );
-    int totalWeekNum = problem.scenario.totalWeekNum;
     int currentWeek = problem.history.currentWeek;
     const Consecutive &c( consecutives[nurse] );
 
@@ -2322,20 +2325,22 @@ NurseRostering::ObjValue NurseRostering::Solution::tryRemoveAssign( int weekday,
         if (!assign.isWorking( nurse, theOtherDay )) {
             const History &history( problem.history );
             delta -= penalty.TotalWorkingWeekend() * exceedCount(
-                (history.totalWorkingWeekendNums[nurse] + 1) * totalWeekNum,
-                contract.maxWorkingWeekendNum * currentWeek ) / totalWeekNum;
+                (history.totalWorkingWeekendNums[nurse] + 1) * problem.scenario.totalWeekNum,
+                contract.maxWorkingWeekendNum * currentWeek ) / problem.scenario.totalWeekNum;
             delta += penalty.TotalWorkingWeekend() * exceedCount(
-                history.totalWorkingWeekendNums[nurse] * totalWeekNum,
-                contract.maxWorkingWeekendNum * currentWeek ) / totalWeekNum;
+                history.totalWorkingWeekendNums[nurse] * problem.scenario.totalWeekNum,
+                contract.maxWorkingWeekendNum * currentWeek ) / problem.scenario.totalWeekNum;
         }
     }
 
     // total assign
-    int totalAssign = totalAssignNums[nurse] * totalWeekNum;
+    int restMinShift = problem.scenario.nurses[nurse].restMinShiftNum;
+    int restMaxShift = problem.scenario.nurses[nurse].restMaxShiftNum;
+    int totalAssign = totalAssignNums[nurse] * problem.history.restWeekCount;
     delta -= penalty.TotalAssign() * distanceToRange( totalAssign,
-        contract.minShiftNum, contract.maxShiftNum ) / totalWeekNum;
-    delta += penalty.TotalAssign() * distanceToRange( totalAssign - totalWeekNum,
-        contract.minShiftNum, contract.maxShiftNum ) / totalWeekNum;
+        restMinShift, restMaxShift ) / problem.history.restWeekCount;
+    delta += penalty.TotalAssign() * distanceToRange( totalAssign - problem.history.restWeekCount,
+        restMinShift, restMaxShift ) / problem.history.restWeekCount;
 
     return delta;
 }
@@ -3225,21 +3230,11 @@ void NurseRostering::Solution::evaluateTotalAssign()
     const Scenario &scenario( problem.scenario );
 
     for (NurseID nurse = 0; nurse < scenario.nurseNum; ++nurse) {
-        int min = scenario.contracts[scenario.nurses[nurse].contract].minShiftNum;
-        int lastWeekMin = scenario.contracts[scenario.nurses[nurse].contract].minShiftNum_lastWeek;
-        int max = scenario.contracts[scenario.nurses[nurse].contract].maxShiftNum;
-        int lastWeekMax = scenario.contracts[scenario.nurses[nurse].contract].maxShiftNum_lastWeek;
+        int min = scenario.nurses[nurse].restMinShiftNum;
+        int max = scenario.nurses[nurse].restMaxShiftNum;
         objTotalAssign += penalty.TotalAssign() * distanceToRange(
-            totalAssignNums[nurse] * problem.scenario.totalWeekNum,
-            min, max ) / problem.scenario.totalWeekNum;
-#ifdef INRC2_DEBUG
-        // remove penalty in the history except the first week
-        if (problem.history.pastWeekCount > 0) {
-            objTotalAssign -= penalty.TotalAssign() * distanceToRange(
-                problem.history.totalAssignNums[nurse] * problem.scenario.totalWeekNum,
-                lastWeekMin, lastWeekMax ) / problem.scenario.totalWeekNum;
-        }
-#endif
+            totalAssignNums[nurse] * problem.history.restWeekCount,
+            min, max ) / problem.history.restWeekCount;
     }
 }
 
@@ -3256,7 +3251,7 @@ void NurseRostering::Solution::evaluateTotalWorkingWeekend()
             objTotalWorkingWeekend += penalty.TotalWorkingWeekend() *
                 exceedingWeekend / totalWeekNum;
         }
-#ifdef INRC2_DEBUG
+#ifdef INRC2_LOG
         // remove penalty in the history except the first week
         if (problem.history.pastWeekCount > 0) {
             historyWeekend -= maxWeekend * problem.history.pastWeekCount;

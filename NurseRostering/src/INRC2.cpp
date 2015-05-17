@@ -238,8 +238,6 @@ namespace INRC2
                 >> contract.maxConsecutiveDayoffNum >> c     // )
                 >> contract.maxWorkingWeekendNum
                 >> contract.completeWeekend;
-            contract.minShiftNum_lastWeek = contract.minShiftNum;
-            contract.maxShiftNum_lastWeek = contract.maxShiftNum;
             input.names.contractMap[input.names.contractNames[i]] = i;
         }
         ifs.getline( buf, MAX_BUF_LEN );        // clear line
@@ -282,6 +280,7 @@ namespace INRC2
         ifs.getline( buf, MAX_BUF_LEN );    // HISTORY
         ifs >> history.pastWeekCount;         // X
         history.currentWeek = history.pastWeekCount + 1;
+        history.restWeekCount = input.scenario.totalWeekNum - history.pastWeekCount;
         ifs.getline( buf, MAX_BUF_LEN );    //  nXXXwX
         ifs.getline( buf, MAX_BUF_LEN );    // empty line
         ifs.getline( buf, MAX_BUF_LEN );    // NURSE_HISTORY
