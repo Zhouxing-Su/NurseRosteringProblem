@@ -389,7 +389,10 @@ namespace INRC2
 
         ifs.read( reinterpret_cast<char *>(&history.accObjValue), sizeof( history.accObjValue ) );
         ifs.read( reinterpret_cast<char *>(&history.pastWeekCount), sizeof( history.pastWeekCount ) );
-        ifs.read( reinterpret_cast<char *>(&history.currentWeek), sizeof( history.currentWeek ) );
+        history.currentWeek = history.pastWeekCount + 1;
+        history.restWeekCount = input.scenario.totalWeekNum - history.pastWeekCount;
+        //ifs.read( reinterpret_cast<char *>(&history.currentWeek), sizeof( history.currentWeek ) );
+        //ifs.read( reinterpret_cast<char *>(&history.restWeekCount), sizeof( history.restWeekCount ) );
         ifs.read( reinterpret_cast<char *>(totalAssignNums), nurseNum * sizeof( int ) );
         ifs.read( reinterpret_cast<char *>(totalWorkingWeekendNums), nurseNum * sizeof( int ) );
         ifs.read( reinterpret_cast<char *>(lastShifts), nurseNum * sizeof( NurseRostering::ShiftID ) );
@@ -463,7 +466,8 @@ namespace INRC2
 
         ofs.write( reinterpret_cast<const char *>(&history.accObjValue), sizeof( history.accObjValue ) );
         ofs.write( reinterpret_cast<const char *>(&history.pastWeekCount), sizeof( history.pastWeekCount ) );
-        ofs.write( reinterpret_cast<const char *>(&history.currentWeek), sizeof( history.currentWeek ) );
+        //ofs.write( reinterpret_cast<const char *>(&history.currentWeek), sizeof( history.currentWeek ) );
+        //ofs.write( reinterpret_cast<const char *>(&history.restWeekCount), sizeof( history.restWeekCount ) );
         ofs.write( reinterpret_cast<const char *>(history.totalAssignNums.data()), history.totalAssignNums.size() * sizeof( int ) );
         ofs.write( reinterpret_cast<const char *>(history.totalWorkingWeekendNums.data()), history.totalWorkingWeekendNums.size() * sizeof( int ) );
         ofs.write( reinterpret_cast<const char *>(history.lastShifts.data()), history.lastShifts.size() * sizeof( NurseRostering::ShiftID ) );

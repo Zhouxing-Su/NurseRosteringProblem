@@ -173,7 +173,7 @@ NurseRostering::ObjValue NurseRostering::Solver::checkObjValue( const AssignTabl
             assignNum += assign.isWorking( nurse, weekday );
         }
 #ifdef INRC2_LOG
-        if (problem.history.currentWeek < problem.scenario.totalWeekNum) {
+        if (problem.history.currentWeek == problem.scenario.totalWeekNum) {
 #endif
             objValue += DefaultPenalty::TotalAssign * distanceToRange(
                 assignNum * problem.history.restWeekCount, min, max ) / problem.history.restWeekCount;

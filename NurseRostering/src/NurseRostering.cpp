@@ -28,16 +28,16 @@ NurseRostering::NurseRostering()
 
 void NurseRostering::adjustRangeOfTotalAssignByWorkload()
 {
-    for (int i = 0; i < scenario.nurseNum; ++i) {
-        const Scenario::Contract &c( scenario.contracts[scenario.nurses[i].contract] );
+    for (NurseID nurse = 0; nurse < scenario.nurseNum; ++nurse) {
+        const Scenario::Contract &c( scenario.contracts[scenario.nurses[nurse].contract] );
 #ifdef INRC2_IGNORE_MIN_SHIFT_IN_EARLY_WEEKS
         int weekToStartCountMin = scenario.totalWeekNum * c.minShiftNum;
         bool ignoreMinShift = ((history.currentWeek * c.maxShiftNum) < weekToStartCountMin);
-        scenario.nurses[i].restMinShiftNum = (ignoreMinShift) ? 0 : (c.minShiftNum - history.totalAssignNums[i]);
+        scenario.nurses[nurse].restMinShiftNum = (ignoreMinShift) ? 0 : (c.minShiftNum - history.totalAssignNums[nurse]);
 #else
-        scenario.nurses[i].restMinShiftNum = c.minShiftNum - history.totalAssignNums[i];
-#endif            
-        scenario.nurses[i].restMaxShiftNum = c.maxShiftNum - history.totalAssignNums[i];
+        scenario.nurses[nurse].restMinShiftNum = c.minShiftNum - history.totalAssignNums[nurse];
+#endif
+        scenario.nurses[nurse].restMaxShiftNum = c.maxShiftNum - history.totalAssignNums[nurse];
     }
 }
 

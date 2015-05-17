@@ -400,6 +400,7 @@ NurseRostering::History NurseRostering::Solution::genHistory() const
     newHistory.accObjValue = history.accObjValue + objValue;
     newHistory.pastWeekCount = history.currentWeek;
     newHistory.currentWeek = history.currentWeek + 1;
+    newHistory.restWeekCount = history.restWeekCount - 1;
     newHistory.totalAssignNums = history.totalAssignNums;
     newHistory.totalWorkingWeekendNums = history.totalWorkingWeekendNums;
 
@@ -800,7 +801,9 @@ void NurseRostering::Solution::tabuSearch_Rand( const Timer &timer, const FindBe
             objValue += bestMove.delta;
 
             if (updateOptima()) {   // improve optima
+#ifdef INRC2_LS_AFTER_TSR_UPDATE_OPT
                 localSearch( timer, findBestMoveTable );
+#endif
                 noImprove = solver.MaxNoImproveForAllNeighborhood();
                 weightDelta = (incError + weight_ImproveOpt - weights[modeSelect]) / deltaIncRatio;
             } else {
@@ -2333,7 +2336,7 @@ NurseRostering::ObjValue NurseRostering::Solution::tryRemoveAssign( int weekday,
         }
     }
 
-    // total assign
+    // total assign (expand problem.history.restWeekCount times)
     int restMinShift = problem.scenario.nurses[nurse].restMinShiftNum;
     int restMaxShift = problem.scenario.nurses[nurse].restMaxShiftNum;
     int totalAssign = totalAssignNums[nurse] * problem.history.restWeekCount;

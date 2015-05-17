@@ -53,6 +53,11 @@
 #define INRC2_PERTRUB_IN_REBUILD
 #endif
 
+// uncomment to search all neighborhood after update optima
+#ifndef INRC2_LS_AFTER_TSR_UPDATE_OPT
+#define INRC2_LS_AFTER_TSR_UPDATE_OPT
+#endif
+
 // comment to use best improvement
 #ifndef INRC2_BLOCK_SWAP_FIRST_IMPROVE
 //#define INRC2_BLOCK_SWAP_FIRST_IMPROVE
