@@ -797,6 +797,7 @@ void NurseRostering::Solution::tabuSearch_Rand( const Timer &timer, const FindBe
             objValue += bestMove.delta;
 
             if (updateOptima()) {   // improve optima
+                localSearch( timer, findBestMoveTable );
                 noImprove = solver.MaxNoImproveForAllNeighborhood();
                 weightDelta = (incError + weight_ImproveOpt - weights[modeSelect]) / deltaIncRatio;
             } else {

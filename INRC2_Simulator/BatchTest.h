@@ -76,7 +76,7 @@ static const int WEEKDATA_NUM = 10;
 static const int MAX_WEEK_NUM = 8;
 static const int WEEKDATA_SEQ_SIZE = (MAX_WEEK_NUM + 1);
 
-extern char *fullArgv[ArgcVal::full];
+extern char fullArgv[ArgcVal::full][MAX_ARGV_LEN];
 
 extern const std::string outputDirPrefix;
 extern const std::string instanceDir;

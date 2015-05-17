@@ -1,5 +1,7 @@
 #!/bin/bash
 
+cp simulator $1
+
 cd $1
 
 rm log.csv

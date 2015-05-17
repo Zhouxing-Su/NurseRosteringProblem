@@ -593,6 +593,8 @@ void NurseRostering::TabuSolver::swapChainSearch( Solution::ModeSeq modeSeq )
         fbmt[i] = Solution::findBestMove[modeSeqPat[i]];
     }
 
+    double perturbStrength = INIT_PERTURB_STRENGTH;
+    double perturbStrengthDelta = PERTURB_STRENGTH_DELTA;
     while (!timer.isTimeOut()) {
         iterationCount -= sln.getIterCount();
 
@@ -602,12 +604,28 @@ void NurseRostering::TabuSolver::swapChainSearch( Solution::ModeSeq modeSeq )
 #else
         sln.swapChainSearch( timer, MaxNoImproveSwapChainLength() );
 #endif
-        updateOptima( sln.getOptima() );
-
         iterationCount += sln.getIterCount();
         ++generationCount;
 
-        sln.perturb( INIT_PERTURB_STRENGTH );
+        if (updateOptima( sln.getOptima() )) {
+#ifdef INRC2_INC_PERTURB_STRENGTH_DELTA
+            perturbStrengthDelta = PERTURB_STRENGTH_DELTA;
+#endif
+            perturbStrength = INIT_PERTURB_STRENGTH;
+        } else if (perturbStrength < MAX_PERTURB_STRENGTH) {
+#ifdef INRC2_INC_PERTURB_STRENGTH_DELTA
+            perturbStrengthDelta += PERTURB_STRENGTH_DELTA;
+#endif
+            perturbStrength += perturbStrengthDelta;
+        }
+        const Output &output( (rand() % PERTURB_ORIGIN_SELECT)
+            ? optima : sln.getOptima() );
+#ifdef INRC2_PERTRUB_IN_REBUILD
+        sln.rebuild( output, perturbStrength );
+#else
+        sln.rebuild( output );
+        sln.perturb( perturbStrength );
+#endif
     }
 }
 

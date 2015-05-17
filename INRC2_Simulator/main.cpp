@@ -115,9 +115,9 @@ int main()
 
     thread( waitTerminateCode, "szx" ).detach();
 
-    debugRun();
+    //debugRun();
     //realRun();
-    //benchmarkRun();
+    benchmarkRun();
     //sprintRun();
     //parallelRun();
 

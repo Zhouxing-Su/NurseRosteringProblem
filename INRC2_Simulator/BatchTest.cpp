@@ -14,7 +14,7 @@ using namespace std;
 using namespace INRC2;
 
 
-char *fullArgv[ArgcVal::full] = {
+char fullArgv[ArgcVal::full][MAX_ARGV_LEN] = {
     "NurseRostering.exe",
     "--id", "",
     "--config", "",

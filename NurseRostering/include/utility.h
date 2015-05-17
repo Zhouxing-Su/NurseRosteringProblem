@@ -17,7 +17,6 @@
 #include <chrono>
 #include <thread>
 #include <cstdio>
-#include <atomic>
 
 #include "DebugFlag.h"
 
@@ -158,7 +157,7 @@ public:
 
 
     // specify your own lock id to make the chance of signature collision smaller
-    FileLock( const std::string &filename, unsigned id = std::random_device()() );
+    FileLock( const std::string &filename, unsigned id = rand() );
 
     // return true if the file is really locked by the caller, else return false
     bool checkLock() const;
