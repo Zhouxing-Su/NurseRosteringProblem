@@ -347,13 +347,20 @@ void NurseRostering::Solution::resetAssistData()
     for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
         consecutives[nurse] = Consecutive( problem.history, nurse );
     }
+    // penalty weight
+    nurseWeights = vector<ObjValue>( problem.scenario.nurseNum, 1 );
     // tabu table
-    shiftTabu = ShiftTabu( problem.scenario.nurseNum,
-        vector< vector< vector<IterCount> > >( Weekday::SIZE,
-        vector< vector<IterCount> >( problem.scenario.shiftSize,
-        vector<IterCount>( problem.scenario.skillSize, 0 ) ) ) );
-    dayTabu = DayTabu( problem.scenario.nurseNum,
-        vector<IterCount>( Weekday::SIZE, 0 ) );
+    if (shiftTabu.empty() || dayTabu.empty()) {
+        shiftTabu = ShiftTabu( problem.scenario.nurseNum,
+            vector< vector< vector<IterCount> > >( Weekday::SIZE,
+            vector< vector<IterCount> >( problem.scenario.shiftSize,
+            vector<IterCount>( problem.scenario.skillSize, 0 ) ) ) );
+        dayTabu = DayTabu( problem.scenario.nurseNum,
+            vector<IterCount>( Weekday::SIZE, 0 ) );
+    } else {
+        iterCount += solver.ShiftTabuTenureBase() + solver.ShiftTabuTenureAmp()
+            + solver.DayTabuTenureBase() + solver.DayTabuTenureAmp();
+    }
     // flags
     findBestARLoop_flag = true;
     findBestARLoopOnBlockBorder_flag = true;
@@ -495,6 +502,15 @@ bool NurseRostering::Solution::repair( const Timer &timer )
         << ((feasible) ? "(success)" : "(fail)") << endl;
 #endif
     return feasible;
+}
+
+void NurseRostering::Solution::adjustWeightsToFocusOnNursesWithGreaterPenalty()
+{
+    // change weights
+
+    // change max no improve count ?
+    // it should not take too much time as a guided perturb.
+    // ts add parameter max no improve count
 }
 
 
@@ -1168,6 +1184,9 @@ bool NurseRostering::Solution::findBestSwap( Move &bestMove ) const
     move.mode = Move::Mode::Swap;
     for (move.nurse = 0; move.nurse < problem.scenario.nurseNum; ++move.nurse) {
         for (move.nurse2 = move.nurse + 1; move.nurse2 < problem.scenario.nurseNum; ++move.nurse2) {
+            if ((nurseWeights[move.nurse] == 0) && (nurseWeights[move.nurse2] == 0)) {
+                continue;
+            }
             for (move.weekday = Weekday::Mon; move.weekday <= Weekday::Sun; ++move.weekday) {
                 move.delta = trySwapNurse( move.weekday, move.nurse, move.nurse2 );
                 if (noSwapTabu( move )) {
@@ -1208,6 +1227,9 @@ bool NurseRostering::Solution::findBestBlockSwap( Move &bestMove ) const
         move.nurse2 = move.nurse;
         for (NurseID count2 = count - 1; count2 > 0; --count2) {
             (move.nurse2 < maxNurseID) ? (++move.nurse2) : (move.nurse2 = 0);
+            if ((nurseWeights[move.nurse] == 0) && (nurseWeights[move.nurse2] == 0)) {
+                continue;
+            }
             if (solver.haveSameSkill( move.nurse, move.nurse2 )) {
                 for (move.weekday = Weekday::Mon; move.weekday <= Weekday::Sun; ++move.weekday) {
                     move.delta = trySwapBlock( move.weekday, move.weekday2, move.nurse, move.nurse2 );
@@ -1248,6 +1270,9 @@ bool NurseRostering::Solution::findBestBlockSwap_fast( Move &bestMove ) const
         move.nurse2 = move.nurse;
         for (NurseID count2 = count - 1; count2 > 0; --count2) {
             (move.nurse2 < maxNurseID) ? (++move.nurse2) : (move.nurse2 = 0);
+            if ((nurseWeights[move.nurse] == 0) && (nurseWeights[move.nurse2] == 0)) {
+                continue;
+            }
             if (solver.haveSameSkill( move.nurse, move.nurse2 )) {
                 move.delta = trySwapBlock_fast( move.weekday, move.weekday2, move.nurse, move.nurse2 );
                 if (rs.isMinimal( move.delta, bestMove.delta )) {
@@ -1289,6 +1314,9 @@ bool NurseRostering::Solution::findBestBlockSwap_part( Move &bestMove ) const
         move.nurse2 = move.nurse;
         for (NurseID count2 = count - 1; count2 > 0; --count2) {
             (move.nurse2 < maxNurseID) ? (++move.nurse2) : (move.nurse2 = 0);
+            if ((nurseWeights[move.nurse] == 0) && (nurseWeights[move.nurse2] == 0)) {
+                continue;
+}
             if (solver.haveSameSkill( move.nurse, move.nurse2 )) {
                 move.delta = trySwapBlock_fast( move.weekday, move.weekday2, move.nurse, move.nurse2 );
                 if (rs.isMinimal( move.delta, bestMove.delta )) {
@@ -1329,6 +1357,9 @@ bool NurseRostering::Solution::findBestBlockSwap_rand( Move &bestMove ) const
         move.nurse2 = move.nurse;
         for (NurseID count2 = count - 1; count2 > 0; --count2) {
             (move.nurse2 < maxNurseID) ? (++move.nurse2) : (move.nurse2 = 0);
+            if ((nurseWeights[move.nurse] == 0) && (nurseWeights[move.nurse2] == 0)) {
+                continue;
+            }
             if (solver.haveSameSkill( move.nurse, move.nurse2 )) {
                 move.delta = trySwapBlock_fast( move.weekday, move.weekday2, move.nurse, move.nurse2 );
                 if (rs.isMinimal( move.delta, bestMove.delta )) {
@@ -1636,6 +1667,9 @@ bool NurseRostering::Solution::findBestSwapOnBlockBorder( Move &bestMove ) const
         const Consecutive &c( consecutives[move.nurse] );
         for (move.weekday = Weekday::Mon; move.weekday <= Weekday::Sun;) {
             for (move.nurse2 = 0; move.nurse2 < problem.scenario.nurseNum; ++move.nurse2) {
+                if ((nurseWeights[move.nurse] == 0) && (nurseWeights[move.nurse2] == 0)) {
+                    continue;
+                }
                 move.delta = trySwapNurse( move.weekday, move.nurse, move.nurse2 );
                 if (noSwapTabu( move )) {
                     if (rs.isMinimal( move.delta, bestMove.delta )) {
@@ -1802,6 +1836,10 @@ NurseRostering::ObjValue NurseRostering::Solution::tryAddAssign( int weekday, Nu
     // insufficient staff
     delta -= penalty.InsufficientStaff() *
         (missingNurseNums[weekday][a.shift][a.skill] > 0);
+
+    if (nurseWeights[nurse] == 0) {
+        return delta;   // TODO : weight ?
+    }
 
     // consecutive shift
     const vector<Scenario::Shift> &shifts( problem.scenario.shifts );
@@ -1984,7 +2022,7 @@ NurseRostering::ObjValue NurseRostering::Solution::tryAddAssign( int weekday, Nu
     delta += penalty.TotalAssign() * distanceToRange( totalAssign + problem.history.restWeekCount,
         restMinShift, restMaxShift ) / problem.history.restWeekCount;
 
-    return delta;
+    return delta;   // TODO : weight ?
 }
 
 NurseRostering::ObjValue NurseRostering::Solution::tryAddAssign( const Move &move ) const
@@ -2014,7 +2052,7 @@ NurseRostering::ObjValue NurseRostering::Solution::tryChangeAssign( int weekday,
         (weekData.optNurseNums[weekday][oldShiftID][oldSkillID] - missingNurseNums[weekday][oldShiftID][oldSkillID]));
 
     if (delta >= DefaultPenalty::MAX_OBJ_VALUE) {
-        return delta;
+        return delta;   // TODO : weight ?
     }
 
     delta -= penalty.Succession() * (!isValidSuccession( nurse, oldShiftID, weekday ));
@@ -2032,6 +2070,10 @@ NurseRostering::ObjValue NurseRostering::Solution::tryChangeAssign( int weekday,
         (missingNurseNums[weekday][oldShiftID][oldSkillID] >= 0);
     delta -= penalty.InsufficientStaff() *
         (missingNurseNums[weekday][a.shift][a.skill] > 0);
+
+    if (nurseWeights[nurse] == 0) {
+        return delta;
+    }
 
     if (a.shift != oldShiftID) {
         // consecutive shift
@@ -2150,7 +2192,7 @@ NurseRostering::ObjValue NurseRostering::Solution::tryChangeAssign( int weekday,
             weekData.shiftOffs[weekday][oldShiftID][nurse];
     }
 
-    return delta;
+    return delta;   // TODO : weight ?
 }
 
 NurseRostering::ObjValue NurseRostering::Solution::tryChangeAssign( const Move &move ) const
@@ -2190,6 +2232,10 @@ NurseRostering::ObjValue NurseRostering::Solution::tryRemoveAssign( int weekday,
     // insufficient staff
     delta += penalty.InsufficientStaff() *
         (missingNurseNums[weekday][oldShiftID][oldSkillID] >= 0);
+
+    if (delta >= DefaultPenalty::MAX_OBJ_VALUE) {
+        return delta;   // TODO : weight ?
+    }
 
     // consecutive shift
     const vector<Scenario::Shift> &shifts( problem.scenario.shifts );
@@ -2345,7 +2391,7 @@ NurseRostering::ObjValue NurseRostering::Solution::tryRemoveAssign( int weekday,
     delta += penalty.TotalAssign() * distanceToRange( totalAssign - problem.history.restWeekCount,
         restMinShift, restMaxShift ) / problem.history.restWeekCount;
 
-    return delta;
+    return delta;   // TODO : weight ?
 }
 
 NurseRostering::ObjValue NurseRostering::Solution::tryRemoveAssign( const Move &move ) const
@@ -2362,19 +2408,19 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapNurse( int weekday, Nu
 
     if (assign.isWorking( nurse, weekday )) {
         if (assign.isWorking( nurse2, weekday )) {
-            nurseDelta = tryChangeAssign( weekday, nurse, assign[nurse2][weekday] );
-            nurse2Delta = ((nurseDelta < DefaultPenalty::MAX_OBJ_VALUE)
-                ? tryChangeAssign( weekday, nurse2, assign[nurse][weekday] ) : 0);
+            nurseDelta = ((nurseWeights[nurse] == 0) ? 0 : tryChangeAssign( weekday, nurse, assign[nurse2][weekday] ));
+            nurse2Delta = (((nurseWeights[nurse] == 0) || (nurseDelta >= DefaultPenalty::MAX_OBJ_VALUE))
+                ? 0 : tryChangeAssign( weekday, nurse2, assign[nurse][weekday] ));
         } else {
-            nurseDelta = tryRemoveAssign( weekday, nurse );
-            nurse2Delta = ((nurseDelta < DefaultPenalty::MAX_OBJ_VALUE)
-                ? tryAddAssign( weekday, nurse2, assign[nurse][weekday] ) : 0);
+            nurseDelta = ((nurseWeights[nurse] == 0) ? 0 : tryRemoveAssign( weekday, nurse ));
+            nurse2Delta = (((nurseWeights[nurse] == 0) || (nurseDelta >= DefaultPenalty::MAX_OBJ_VALUE))
+                ? 0 : tryAddAssign( weekday, nurse2, assign[nurse][weekday] ));
         }
     } else {
         if (assign.isWorking( nurse2, weekday )) {
-            nurseDelta = tryAddAssign( weekday, nurse, assign[nurse2][weekday] );
-            nurse2Delta = ((nurseDelta < DefaultPenalty::MAX_OBJ_VALUE)
-                ? tryRemoveAssign( weekday, nurse2 ) : 0);
+            nurseDelta = ((nurseWeights[nurse] == 0) ? 0 : tryAddAssign( weekday, nurse, assign[nurse2][weekday] ));
+            nurse2Delta = (((nurseWeights[nurse] == 0) || (nurseDelta >= DefaultPenalty::MAX_OBJ_VALUE))
+                ? 0 : tryRemoveAssign( weekday, nurse2 ));
         } else {    // no change
             nurseDelta = 0;
             nurse2Delta = 0;

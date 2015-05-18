@@ -436,6 +436,9 @@ void NurseRostering::TabuSolver::solve()
         case SolveAlgorithm::TabuSearch_Possibility:
             tabuSearch( config.modeSeq, &Solution::tabuSearch_Possibility );
             break;
+        case SolveAlgorithm::BiasTabuSearch:
+            biasTabuSearch( config.modeSeq );
+            break;
         case Solver::SolveAlgorithm::SwapChainSearch:
             swapChainSearch( config.modeSeq );
             break;
@@ -526,10 +529,9 @@ void NurseRostering::TabuSolver::iterativeLocalSearch( Solution::ModeSeq modeSeq
     double perturbStrength = INIT_PERTURB_STRENGTH;
     while (!timer.isTimeOut()) {
         ObjValue lastObj = optima.getObjValue();
+
         iterationCount -= sln.getIterCount();
-
         sln.localSearch( timer, ((rand() % 2) ? fbmt : fbmtobb) );
-
         iterationCount += sln.getIterCount();
         ++generationCount;
 
@@ -559,9 +561,7 @@ void NurseRostering::TabuSolver::tabuSearch( Solution::ModeSeq modeSeq, Solution
     double perturbStrengthDelta = PERTURB_STRENGTH_DELTA;
     while (!timer.isTimeOut()) {
         iterationCount -= sln.getIterCount();
-
         (sln.*search)(timer, fbmt);
-
         iterationCount += sln.getIterCount();
         ++generationCount;
 
@@ -584,6 +584,40 @@ void NurseRostering::TabuSolver::tabuSearch( Solution::ModeSeq modeSeq, Solution
         sln.rebuild( output );
         sln.perturb( perturbStrength );
 #endif
+    }
+}
+
+void NurseRostering::TabuSolver::biasTabuSearch( Solution::ModeSeq modeSeq )
+{
+    algorithmName += solveAlgorithmName[config.solveAlgorithm];
+    algorithmName += Solution::modeSeqNames[modeSeq];
+
+    const vector<int> &modeSeqPat( Solution::modeSeqPatterns[modeSeq] );
+    int modeSeqLen = modeSeqPat.size();
+
+    Solution::FindBestMoveTable fbmt( modeSeqLen );
+
+    for (int i = 0; i < modeSeqLen; ++i) {
+        fbmt[i] = Solution::findBestMove[modeSeqPat[i]];
+    }
+
+    while (!timer.isTimeOut()) {
+        iterationCount -= sln.getIterCount();
+        sln.tabuSearch_Rand( timer, fbmt );
+        iterationCount += sln.getIterCount();
+
+        updateOptima( sln.getOptima() );
+        const Output &output( (rand() % PERTURB_ORIGIN_SELECT)
+            ? optima : sln.getOptima() );
+        sln.rebuild( output );
+
+        iterationCount -= sln.getIterCount();
+        sln.adjustWeightsToFocusOnNursesWithGreaterPenalty();
+        sln.tabuSearch_Rand( timer, fbmt );
+        sln.evaluateObjValue();
+        iterationCount += sln.getIterCount();
+        ++generationCount;
+        sln.rebuild( sln.getOptima() );
     }
 }
 

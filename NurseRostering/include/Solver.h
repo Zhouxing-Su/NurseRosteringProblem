@@ -66,7 +66,7 @@ public:
     {
         RandomWalk, IterativeLocalSearch,
         TabuSearch_Possibility, TabuSearch_Loop, TabuSearch_Rand,
-        SwapChainSearch
+        BiasTabuSearch, SwapChainSearch
     };
 
     enum TabuTenureCoefficientIndex
@@ -223,6 +223,8 @@ private:
 
     // search with tabu search and swap chain search by turn
     void swapChainSearch( Solution::ModeSeq modeSeq );
+    // turn the objective to optimize a subset of nurses when no improvement
+    void biasTabuSearch( Solution::ModeSeq modeSeq );
     // search with tabu table
     void tabuSearch( Solution::ModeSeq modeSeq, Solution::Search search );
     // iteratively run local search and perturb

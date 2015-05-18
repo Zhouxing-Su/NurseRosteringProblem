@@ -152,8 +152,10 @@ public:
 #ifdef INRC2_SECONDARY_OBJ_VALUE
         if (objValue <= optima.getObjValue()) {
             secondaryObjValue = 0;
-            for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
-                secondaryObjValue += static_cast<double>(totalAssignNums[nurse]) / problem.scenario.nurses[nurse].restMaxShiftNum;
+            for (NurseID n = 0; n < problem.scenario.nurseNum; ++n) {
+                const NurseRostering::Scenario::Nurse &nurse( problem.scenario.nurses[n] );
+                secondaryObjValue += (static_cast<double>(totalAssignNums[n]) / (1 + abs(
+                    nurse.restMaxShiftNum + problem.scenario.contracts[nurse.contract].maxShiftNum)));
             }
         }
 #endif
@@ -192,6 +194,10 @@ public:
     bool genInitAssign_Greedy();
     bool genInitAssign_BranchAndCut();
     bool repair( const Timer &timer );  // make infeasible solution feasible
+
+    // set weights of nurses with less penalty to 0
+    // attention that rebuild() with clear the effect of this method
+    void adjustWeightsToFocusOnNursesWithGreaterPenalty();
 
 
     // try to start with a best block swap or a best block swap for single nurse
@@ -650,6 +656,7 @@ private:
     mutable bool findBestARLoopOnBlockBorder_flag;   // findBestARLoopOnBlockBorder() will modify it
     // for controlling start point of the search of best block swap
     mutable NurseID findBestBlockSwap_startNurse;    // findBestBlockSwap() will modify it
+    // TODO : remove following two variables if TSP is not used
     // for controlling swap and block swap will not be selected both in possibility select
     bool isPossibilitySelect;
     mutable bool isBlockSwapSelected;    // tabuSearch_Possibility() and findBestBlockSwap() wil modify it
@@ -667,6 +674,9 @@ private:
     NurseNumsOnSingleAssign missingNurseNums;
     // consecutive[nurse] is the consecutive assignments record for nurse
     std::vector<Consecutive> consecutives;
+
+    // control penalty calculation on each nurse
+    std::vector<ObjValue> nurseWeights;
 
     ObjValue objInsufficientStaff;
     ObjValue objConsecutiveShift;
