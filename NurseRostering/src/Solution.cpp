@@ -348,12 +348,17 @@ void NurseRostering::Solution::resetAssistData()
         consecutives[nurse] = Consecutive( problem.history, nurse );
     }
     // tabu table
-    shiftTabu = ShiftTabu( problem.scenario.nurseNum,
-        vector< vector< vector<IterCount> > >( Weekday::SIZE,
-        vector< vector<IterCount> >( problem.scenario.shiftSize,
-        vector<IterCount>( problem.scenario.skillSize, 0 ) ) ) );
-    dayTabu = DayTabu( problem.scenario.nurseNum,
-        vector<IterCount>( Weekday::SIZE, 0 ) );
+    if (shiftTabu.empty() || dayTabu.empty()) {
+        shiftTabu = ShiftTabu( problem.scenario.nurseNum,
+            vector< vector< vector<IterCount> > >( Weekday::SIZE,
+            vector< vector<IterCount> >( problem.scenario.shiftSize,
+            vector<IterCount>( problem.scenario.skillSize, 0 ) ) ) );
+        dayTabu = DayTabu( problem.scenario.nurseNum,
+            vector<IterCount>( Weekday::SIZE, 0 ) );
+    } else {
+        iterCount += solver.ShiftTabuTenureBase() + solver.ShiftTabuTenureAmp()
+            + solver.DayTabuTenureBase() + solver.DayTabuTenureAmp();
+    }
     // flags
     findBestARLoop_flag = true;
     findBestARLoopOnBlockBorder_flag = true;

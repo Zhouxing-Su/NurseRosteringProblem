@@ -152,8 +152,10 @@ public:
 #ifdef INRC2_SECONDARY_OBJ_VALUE
         if (objValue <= optima.getObjValue()) {
             secondaryObjValue = 0;
-            for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
-                secondaryObjValue += static_cast<double>(totalAssignNums[nurse]) / problem.scenario.nurses[nurse].restMaxShiftNum;
+            for (NurseID n = 0; n < problem.scenario.nurseNum; ++n) {
+                const NurseRostering::Scenario::Nurse &nurse( problem.scenario.nurses[n] );
+                secondaryObjValue += (static_cast<double>(totalAssignNums[n]) / (1 + abs(
+                    nurse.restMaxShiftNum + problem.scenario.contracts[nurse.contract].maxShiftNum )));
             }
         }
 #endif

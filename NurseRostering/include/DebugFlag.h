@@ -1,5 +1,7 @@
 /**
-*   usage : 1. make the program print and record debug information.
+*   usage : 1.  make the program print and record debug information.
+*           2.  [fix] indicate that the switch state is proved to 
+*               be better and should not be modified.
 *
 *   note :  1.
 */
@@ -38,24 +40,24 @@
 #define INRC2_IGNORE_MIN_SHIFT_IN_EARLY_WEEKS
 #endif
 
-// comment to use random pick
+// [fix] comment to use random pick
 #ifndef INRC2_SECONDARY_OBJ_VALUE
 #define INRC2_SECONDARY_OBJ_VALUE
 #endif
 
-// comment to use a fixed delta of perturb strength 
+// [fix] comment to use a fixed delta of perturb strength 
 #ifndef INRC2_INC_PERTURB_STRENGTH_DELTA
 #define INRC2_INC_PERTURB_STRENGTH_DELTA
 #endif
 
-// comment to use perturb
+// [fix] comment to use perturb
 #ifndef INRC2_PERTRUB_IN_REBUILD
 #define INRC2_PERTRUB_IN_REBUILD
 #endif
 
-// uncomment to search all neighborhood after update optima
+// [fix] uncomment to search all neighborhood after update optima
 #ifndef INRC2_LS_AFTER_TSR_UPDATE_OPT
-#define INRC2_LS_AFTER_TSR_UPDATE_OPT
+//#define INRC2_LS_AFTER_TSR_UPDATE_OPT
 #endif
 
 // comment to use best improvement
