@@ -431,10 +431,10 @@ void NurseRostering::TabuSolver::solve()
             iterativeLocalSearch( config.modeSeq );
             break;
         case SolveAlgorithm::TabuSearch_Loop:
-            tabuSearch( config.modeSeq, &Solution::tabuSearch_Loop );
+            tabuSearch( config.modeSeq, &Solution::tabuSearch_Loop, MaxNoImproveForSingleNeighborhood() );
             break;
         case SolveAlgorithm::TabuSearch_Possibility:
-            tabuSearch( config.modeSeq, &Solution::tabuSearch_Possibility );
+            tabuSearch( config.modeSeq, &Solution::tabuSearch_Possibility, MaxNoImproveForAllNeighborhood() );
             break;
         case SolveAlgorithm::BiasTabuSearch:
             biasTabuSearch( config.modeSeq );
@@ -444,7 +444,7 @@ void NurseRostering::TabuSolver::solve()
             break;
         case SolveAlgorithm::TabuSearch_Rand:
         default:
-            tabuSearch( config.modeSeq, &Solution::tabuSearch_Rand );
+            tabuSearch( config.modeSeq, &Solution::tabuSearch_Rand, MaxNoImproveForAllNeighborhood() );
             break;
     }
 #ifdef INRC2_LOG
@@ -543,7 +543,7 @@ void NurseRostering::TabuSolver::iterativeLocalSearch( Solution::ModeSeq modeSeq
     }
 }
 
-void NurseRostering::TabuSolver::tabuSearch( Solution::ModeSeq modeSeq, Solution::Search search )
+void NurseRostering::TabuSolver::tabuSearch( Solution::ModeSeq modeSeq, Solution::TabuSearch search, IterCount maxNoImproveCount )
 {
     algorithmName += solveAlgorithmName[config.solveAlgorithm];
     algorithmName += Solution::modeSeqNames[modeSeq];
@@ -561,7 +561,7 @@ void NurseRostering::TabuSolver::tabuSearch( Solution::ModeSeq modeSeq, Solution
     double perturbStrengthDelta = PERTURB_STRENGTH_DELTA;
     while (!timer.isTimeOut()) {
         iterationCount -= sln.getIterCount();
-        (sln.*search)(timer, fbmt);
+        (sln.*search)(timer, fbmt, maxNoImproveCount);
         iterationCount += sln.getIterCount();
         ++generationCount;
 
@@ -603,7 +603,7 @@ void NurseRostering::TabuSolver::biasTabuSearch( Solution::ModeSeq modeSeq )
 
     while (!timer.isTimeOut()) {
         iterationCount -= sln.getIterCount();
-        sln.tabuSearch_Rand( timer, fbmt );
+        sln.tabuSearch_Rand( timer, fbmt, MaxNoImproveForAllNeighborhood() );
         iterationCount += sln.getIterCount();
 
         updateOptima( sln.getOptima() );
@@ -613,7 +613,7 @@ void NurseRostering::TabuSolver::biasTabuSearch( Solution::ModeSeq modeSeq )
 
         iterationCount -= sln.getIterCount();
         sln.adjustWeightsToFocusOnNursesWithGreaterPenalty();
-        sln.tabuSearch_Rand( timer, fbmt );
+        sln.tabuSearch_Rand( timer, fbmt, MaxNoImproveForBiasTabuSearch() );
         sln.evaluateObjValue();
         iterationCount += sln.getIterCount();
         ++generationCount;
@@ -640,7 +640,7 @@ void NurseRostering::TabuSolver::swapChainSearch( Solution::ModeSeq modeSeq )
     while (!timer.isTimeOut()) {
         iterationCount -= sln.getIterCount();
 
-        sln.tabuSearch_Rand( timer, fbmt );
+        sln.tabuSearch_Rand( timer, fbmt, MaxNoImproveForAllNeighborhood() );
 #ifdef INRC2_SWAP_CHAIN_DOUBLE_HEAD
         sln.swapChainSearch_DoubleHead( timer, MaxNoImproveSwapChainLength() );
 #else

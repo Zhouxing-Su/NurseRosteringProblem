@@ -111,7 +111,7 @@ public:
     typedef std::vector<ApplyMove> ApplyMoveTable;
     typedef std::vector<UpdateTabu> UpdateTabuTable;
 
-    typedef void (Solution::*Search)(const Timer &timer, const FindBestMoveTable &findBestMoveTable);
+    typedef void (Solution::*TabuSearch)(const Timer &timer, const FindBestMoveTable &findBestMoveTable, IterCount maxNoImproveCount);
 
 
     enum ModeSeq
@@ -155,7 +155,7 @@ public:
             for (NurseID n = 0; n < problem.scenario.nurseNum; ++n) {
                 const NurseRostering::Scenario::Nurse &nurse( problem.scenario.nurses[n] );
                 secondaryObjValue += (static_cast<double>(totalAssignNums[n]) / (1 + abs(
-                    nurse.restMaxShiftNum + problem.scenario.contracts[nurse.contract].maxShiftNum)));
+                    nurse.restMaxShiftNum + problem.scenario.contracts[nurse.contract].maxShiftNum )));
             }
         }
 #endif
@@ -185,6 +185,14 @@ public:
     // evaluate objective by assist data structure
     // must be called after Penalty change or direct access to AssignTable
     void evaluateObjValue( bool considerSpanningConstraint = true );
+    ObjValue evaluateInsufficientStaff();
+    ObjValue evaluateConsecutiveShift( NurseID nurse );
+    ObjValue evaluateConsecutiveDay( NurseID nurse );
+    ObjValue evaluateConsecutiveDayOff( NurseID nurse );
+    ObjValue evaluatePreference( NurseID nurse );
+    ObjValue evaluateCompleteWeekend( NurseID nurse );
+    ObjValue evaluateTotalAssign( NurseID nurse );
+    ObjValue evaluateTotalWorkingWeekend( NurseID nurse );
     // get history for next week, only used for custom file
     History genHistory() const;
     // get current iteration count (may not be the actual iter count)
@@ -217,12 +225,12 @@ public:
     // the random select process is a discrete distribution
     // the possibility to be selected will increase if the neighborhood
     // improve the solution, else decrease it. the sum of possibilities is 1.0
-    void tabuSearch_Rand( const Timer &timer, const FindBestMoveTable &findBestMoveTable );
+    void tabuSearch_Rand( const Timer &timer, const FindBestMoveTable &findBestMoveTable, IterCount maxNoImproveCount );
     // loop to select neighborhood to search until timeout or there is no
     // improvement on (NeighborhoodNum + 2) neighborhood consecutively.
     // switch neighborhood when maxNoImproveForSingleNeighborhood has
     // been reach, then restart from optima in current trajectory.
-    void tabuSearch_Loop( const Timer &timer, const FindBestMoveTable &findBestMoveTable );
+    void tabuSearch_Loop( const Timer &timer, const FindBestMoveTable &findBestMoveTable, IterCount maxNoImproveCount );
     // randomly select neighborhood to search until timeout or
     // no improve move count reaches maxNoImproveForAllNeighborhood.
     // for each neighborhood i, the possibility to select is P[i].
@@ -237,7 +245,7 @@ public:
     // if no neighborhood has been selected, prepare a loop queue.
     // select the one by one in the queue until a valid move is found.
     // move the head to the tail of the queue if it makes no improvement.
-    void tabuSearch_Possibility( const Timer &timer, const FindBestMoveTable &findBestMoveTable );
+    void tabuSearch_Possibility( const Timer &timer, const FindBestMoveTable &findBestMoveTable, IterCount maxNoImproveCount );
     // try add shift until there is no improvement , then try change shift,
     // then try remove shift, then try add shift again. if all of them
     // can't improve or time is out, return.
@@ -637,15 +645,6 @@ private:
             updateSwapTabu( move );
         }
     }
-
-    void evaluateInsufficientStaff();
-    void evaluateConsecutiveShift();
-    void evaluateConsecutiveDay();
-    void evaluateConsecutiveDayOff();
-    void evaluatePreference();
-    void evaluateCompleteWeekend();
-    void evaluateTotalAssign();
-    void evaluateTotalWorkingWeekend();
 
 
     mutable Penalty penalty;    // trySwapNurse() will modify it

@@ -195,6 +195,8 @@ public:
     static const int MIN_TABU_BASE = 6;
     // ratio of tabuTenureBase to tabuTenureAmp
     static const int TABU_BASE_TO_AMP = 4;
+    // ratio of biased nurse number in total nurse number
+    static const int INVERSE_BIAS_RATIO = 4;
 
 
     TabuSolver( const NurseRostering &input, clock_t startTime = clock() );
@@ -214,6 +216,7 @@ public:
 
     IterCount MaxNoImproveForSingleNeighborhood() const { return maxNoImproveForSingleNeighborhood; }
     IterCount MaxNoImproveForAllNeighborhood() const { return maxNoImproveForAllNeighborhood; }
+    IterCount MaxNoImproveForBiasTabuSearch() const { return maxNoImproveForBiasTabuSearch; }
     IterCount MaxNoImproveSwapChainLength() const { return maxNoImproveSwapChainLength; }
     IterCount MaxSwapChainRestartCount() const { return maxSwapChainRestartCount; }
 
@@ -226,7 +229,7 @@ private:
     // turn the objective to optimize a subset of nurses when no improvement
     void biasTabuSearch( Solution::ModeSeq modeSeq );
     // search with tabu table
-    void tabuSearch( Solution::ModeSeq modeSeq, Solution::Search search );
+    void tabuSearch( Solution::ModeSeq modeSeq, Solution::TabuSearch search, IterCount maxNoImproveCount );
     // iteratively run local search and perturb
     void iterativeLocalSearch( Solution::ModeSeq modeSeq );
     // random walk until timeout
@@ -258,6 +261,7 @@ private:
         maxNoImproveForAllNeighborhood = static_cast<IterCount>(
             coefficient * problem.scenario.nurseNum * Weekday::NUM *
             sqrt( problem.scenario.shiftTypeNum * problem.scenario.skillTypeNum ));
+        maxNoImproveForBiasTabuSearch = maxNoImproveForAllNeighborhood / INVERSE_BIAS_RATIO;
         maxNoImproveSwapChainLength = maxNoImproveForSingleNeighborhood;
         maxSwapChainRestartCount = static_cast<IterCount>(sqrt( problem.scenario.nurseNum ));
     }
@@ -269,6 +273,7 @@ private:
 
     IterCount maxNoImproveForSingleNeighborhood;
     IterCount maxNoImproveForAllNeighborhood;
+    IterCount maxNoImproveForBiasTabuSearch;
     IterCount maxNoImproveSwapChainLength;
     IterCount maxSwapChainRestartCount;
 
