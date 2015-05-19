@@ -87,21 +87,17 @@ void testAllInstancesParallel( int threadNum, int round )
         double timeout;
     };
 
-    class TimeCmp
+    class CmpTime
     {
     public:
-        TimeCmp( const vector<Inst> &instances ) : inst( instances ) {}
-        // sort to (greater ... less)
+        // sort to (least ... greatest)
         bool operator()( const Inst &l, const Inst &r )
         {
             return (l.timeout > r.timeout);
         }
 
-    private:
-        const vector<Inst> &inst;
-
     private:    // forbidden operators
-        TimeCmp& operator=(const TimeCmp &) { return *this; }
+        CmpTime& operator=(const CmpTime &) { return *this; }
     };
 
     vector<Inst> inst( testCases.size() );
@@ -110,7 +106,7 @@ void testAllInstancesParallel( int threadNum, int round )
         inst[i].index = i;
         inst[i].timeout = instTimeout[getNurseNum( instIndex )] * getWeekNum( instIndex );
     }
-    sort( inst.begin(), inst.end(), TimeCmp( inst ) );
+    sort( inst.begin(), inst.end(), CmpTime() );
 
     vector<double> timespend( threadNum, 0 );
     vector<thread> vt( threadNum );

@@ -612,7 +612,7 @@ void NurseRostering::TabuSolver::biasTabuSearch( Solution::ModeSeq modeSeq )
         sln.rebuild( output );
 
         iterationCount -= sln.getIterCount();
-        sln.adjustWeightsToFocusOnNursesWithGreaterPenalty();
+        sln.adjustWeightToBiasNurseWithGreaterPenalty( INVERSE_TOTAL_BIAS_RATIO, INVERSE_PENALTY_BIAS_RATIO );
         sln.tabuSearch_Rand( timer, fbmt, MaxNoImproveForBiasTabuSearch() );
         sln.evaluateObjValue();
         iterationCount += sln.getIterCount();

@@ -505,10 +505,67 @@ bool NurseRostering::Solution::repair( const Timer &timer )
     return feasible;
 }
 
-void NurseRostering::Solution::adjustWeightsToFocusOnNursesWithGreaterPenalty()
+void NurseRostering::Solution::adjustWeightToBiasNurseWithGreaterPenalty( int inverseTotalBiasRatio, int inversePenaltyBiasRatio )
 {
-    // change weights
+    int biasedNurseNum = 0;
+    fill( nurseWeights.begin(), nurseWeights.end(), 0 );
 
+    // select worse nurses to meet the PenaltyBiasRatio
+    vector<ObjValue> nurseObj( problem.scenario.nurseNum, 0 );
+    for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
+        nurseObj[nurse] += evaluateConsecutiveShift( nurse );
+        nurseObj[nurse] += evaluateConsecutiveDay( nurse );
+        nurseObj[nurse] += evaluateConsecutiveDayOff( nurse );
+        nurseObj[nurse] += evaluatePreference( nurse );
+        nurseObj[nurse] += evaluateCompleteWeekend( nurse );
+        nurseObj[nurse] += evaluateTotalAssign( nurse );
+        nurseObj[nurse] += evaluateTotalWorkingWeekend( nurse );
+    }
+
+    class CmpNurseObj
+    {
+    public:
+        CmpNurseObj( const vector<ObjValue> &nurseObjective ) : nurseObj( nurseObjective ) {}
+        // sort to (greatest ... least)
+        bool operator()( const NurseID &l, const NurseID &r )
+        {
+            return (nurseObj[l] > nurseObj[r]);
+        }
+
+    private:
+        const vector<ObjValue> &nurseObj;
+
+    private:    // forbidden operators
+        CmpNurseObj& operator=(const CmpNurseObj &) { return *this; }
+    };
+
+    CmpNurseObj cmpNurseObj( nurseObj );
+    for (auto iter = problem.scenario.contracts.begin();
+        iter != problem.scenario.contracts.end(); ++iter) {
+        vector<NurseID> &nurses( const_cast<vector<NurseID>&>(iter->nurses) );
+        sort( nurses.begin(), nurses.end(), cmpNurseObj );
+
+        int num = nurses.size() / inversePenaltyBiasRatio;
+        int remainder = nurses.size() % inversePenaltyBiasRatio;
+        biasedNurseNum += num;
+        for (int i = 0; i < num; ++i) {
+            nurseWeights[nurses[i]] = 1;
+        }
+        if (rand() % inversePenaltyBiasRatio < remainder) {
+            nurseWeights[nurses[num]] = 1;
+            ++biasedNurseNum;
+        }
+    }
+
+    // pick nurse randomly to meet the TotalBiasRatio
+    int num = problem.scenario.nurseNum / inverseTotalBiasRatio;
+    while (biasedNurseNum < num) {
+        NurseID nurse = rand() % problem.scenario.nurseNum;
+        if (nurseWeights[nurse] == 0) {
+            nurseWeights[nurse] = 1;
+            ++biasedNurseNum;
+        }
+    }
 }
 
 

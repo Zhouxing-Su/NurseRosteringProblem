@@ -205,7 +205,7 @@ public:
 
     // set weights of nurses with less penalty to 0
     // attention that rebuild() with clear the effect of this method
-    void adjustWeightsToFocusOnNursesWithGreaterPenalty();
+    void adjustWeightToBiasNurseWithGreaterPenalty( int inverseTotalBiasRatio, int inversePenaltyBiasRatio );
 
 
     // try to start with a best block swap or a best block swap for single nurse

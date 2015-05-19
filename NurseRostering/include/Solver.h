@@ -196,7 +196,9 @@ public:
     // ratio of tabuTenureBase to tabuTenureAmp
     static const int TABU_BASE_TO_AMP = 4;
     // ratio of biased nurse number in total nurse number
-    static const int INVERSE_BIAS_RATIO = 4;
+    static const int INVERSE_TOTAL_BIAS_RATIO = 4;
+    // ratio of biased nurse selected by penalty of each nurse
+    static const int INVERSE_PENALTY_BIAS_RATIO = 5;
 
 
     TabuSolver( const NurseRostering &input, clock_t startTime = clock() );
@@ -261,7 +263,7 @@ private:
         maxNoImproveForAllNeighborhood = static_cast<IterCount>(
             coefficient * problem.scenario.nurseNum * Weekday::NUM *
             sqrt( problem.scenario.shiftTypeNum * problem.scenario.skillTypeNum ));
-        maxNoImproveForBiasTabuSearch = maxNoImproveForAllNeighborhood / INVERSE_BIAS_RATIO;
+        maxNoImproveForBiasTabuSearch = maxNoImproveForAllNeighborhood / INVERSE_TOTAL_BIAS_RATIO;
         maxNoImproveSwapChainLength = maxNoImproveForSingleNeighborhood;
         maxSwapChainRestartCount = static_cast<IterCount>(sqrt( problem.scenario.nurseNum ));
     }

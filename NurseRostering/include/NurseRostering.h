@@ -109,6 +109,8 @@ public:
             int maxConsecutiveDayoffNum;
             int maxWorkingWeekendNum;   // total assignments in the planning horizon
             bool completeWeekend;
+
+            std::vector<NurseID> nurses;    // nurses with this contract
         };
         std::vector<Contract> contracts;
 
