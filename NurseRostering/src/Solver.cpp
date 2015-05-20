@@ -10,7 +10,7 @@ const double NurseRostering::Solver::PERTURB_STRENGTH_DELTA = 0.01;
 const double NurseRostering::Solver::MAX_PERTURB_STRENGTH = 0.6;
 
 const vector<string> NurseRostering::Solver::solveAlgorithmName = {
-    "[RW]", "[ILS]", "[TSP]", "[TSL]", "[TSR]", "[SCS]"
+    "[RW]", "[ILS]", "[TSP]", "[TSL]", "[TSR]", "[BTS]", "[SCS]"
 };
 
 
@@ -607,17 +607,17 @@ void NurseRostering::TabuSolver::biasTabuSearch( Solution::ModeSeq modeSeq )
         iterationCount += sln.getIterCount();
 
         updateOptima( sln.getOptima() );
-        const Output &output( (rand() % PERTURB_ORIGIN_SELECT)
+        const Output &output( (rand() % BIAS_TS_ORIGIN_SELECT)
             ? optima : sln.getOptima() );
         sln.rebuild( output );
 
         iterationCount -= sln.getIterCount();
         sln.adjustWeightToBiasNurseWithGreaterPenalty( INVERSE_TOTAL_BIAS_RATIO, INVERSE_PENALTY_BIAS_RATIO );
         sln.tabuSearch_Rand( timer, fbmt, MaxNoImproveForBiasTabuSearch() );
-        sln.evaluateObjValue();
         iterationCount += sln.getIterCount();
         ++generationCount;
         sln.rebuild( sln.getOptima() );
+        sln.evaluateObjValue();
     }
 }
 

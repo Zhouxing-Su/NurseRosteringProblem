@@ -35,7 +35,7 @@
 
 
 // algorithm switch
-// comment to start to consider min shift at the first week
+// [fix] comment to start to consider min shift at the first week
 #ifndef INRC2_IGNORE_MIN_SHIFT_IN_EARLY_WEEKS
 #define INRC2_IGNORE_MIN_SHIFT_IN_EARLY_WEEKS
 #endif
@@ -82,7 +82,6 @@
 #endif
 
 // comment to use double head version of swap chain 
-// (incompatible with quick restart)
 #ifndef INRC2_SWAP_CHAIN_DOUBLE_HEAD
 //#define INRC2_SWAP_CHAIN_DOUBLE_HEAD
 #endif

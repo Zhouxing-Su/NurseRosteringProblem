@@ -95,9 +95,6 @@ void testAllInstancesParallel( int threadNum, int round )
         {
             return (l.timeout > r.timeout);
         }
-
-    private:    // forbidden operators
-        CmpTime& operator=(const CmpTime &) { return *this; }
     };
 
     vector<Inst> inst( testCases.size() );

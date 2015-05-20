@@ -361,6 +361,14 @@ void NurseRostering::Solution::resetAssistData()
         iterCount += solver.ShiftTabuTenureBase() + solver.ShiftTabuTenureAmp()
             + solver.DayTabuTenureBase() + solver.DayTabuTenureAmp();
     }
+    // delta cache
+    if (blockSwapDeltaCache.empty()) {
+        blockSwapDeltaCache = BlockSwapDeltaCache( problem.scenario.nurseNum,
+            vector< vector< vector<ObjValue> > >( problem.scenario.nurseNum,
+            vector< vector<ObjValue> >( Weekday::SIZE,
+            vector<ObjValue>( Weekday::SIZE, 0 ) ) ) );
+    }
+    cacheValidFlag = vector<bool>( problem.scenario.nurseNum, false );
     // flags
     findBestARLoop_flag = true;
     findBestARLoopOnBlockBorder_flag = true;
@@ -2107,7 +2115,7 @@ NurseRostering::ObjValue NurseRostering::Solution::tryChangeAssign( int weekday,
         (weekData.optNurseNums[weekday][oldShiftID][oldSkillID] - missingNurseNums[weekday][oldShiftID][oldSkillID]));
 
     if (delta >= DefaultPenalty::MAX_OBJ_VALUE) {
-        return delta;   // TODO : weight ?
+        return delta;
     }
 
     delta -= penalty.Succession() * (!isValidSuccession( nurse, oldShiftID, weekday ));
@@ -2127,7 +2135,7 @@ NurseRostering::ObjValue NurseRostering::Solution::tryChangeAssign( int weekday,
         (missingNurseNums[weekday][a.shift][a.skill] > 0);
 
     if (nurseWeights[nurse] == 0) {
-        return delta;
+        return delta;   // TODO : weight ?
     }
 
     if (a.shift != oldShiftID) {
@@ -2288,7 +2296,7 @@ NurseRostering::ObjValue NurseRostering::Solution::tryRemoveAssign( int weekday,
     delta += penalty.InsufficientStaff() *
         (missingNurseNums[weekday][oldShiftID][oldSkillID] >= 0);
 
-    if (delta >= DefaultPenalty::MAX_OBJ_VALUE) {
+    if (nurseWeights[nurse] == 0) {
         return delta;   // TODO : weight ?
     }
 
@@ -2463,18 +2471,18 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapNurse( int weekday, Nu
 
     if (assign.isWorking( nurse, weekday )) {
         if (assign.isWorking( nurse2, weekday )) {
-            nurseDelta = ((nurseWeights[nurse] == 0) ? 0 : tryChangeAssign( weekday, nurse, assign[nurse2][weekday] ));
-            nurse2Delta = (((nurseWeights[nurse] == 0) || (nurseDelta >= DefaultPenalty::MAX_OBJ_VALUE))
+            nurseDelta = tryChangeAssign( weekday, nurse, assign[nurse2][weekday] );
+            nurse2Delta = ((nurseDelta >= DefaultPenalty::MAX_OBJ_VALUE)
                 ? 0 : tryChangeAssign( weekday, nurse2, assign[nurse][weekday] ));
         } else {
-            nurseDelta = ((nurseWeights[nurse] == 0) ? 0 : tryRemoveAssign( weekday, nurse ));
-            nurse2Delta = (((nurseWeights[nurse] == 0) || (nurseDelta >= DefaultPenalty::MAX_OBJ_VALUE))
+            nurseDelta = tryRemoveAssign( weekday, nurse );
+            nurse2Delta = ((nurseDelta >= DefaultPenalty::MAX_OBJ_VALUE)
                 ? 0 : tryAddAssign( weekday, nurse2, assign[nurse][weekday] ));
         }
     } else {
         if (assign.isWorking( nurse2, weekday )) {
-            nurseDelta = ((nurseWeights[nurse] == 0) ? 0 : tryAddAssign( weekday, nurse, assign[nurse2][weekday] ));
-            nurse2Delta = (((nurseWeights[nurse] == 0) || (nurseDelta >= DefaultPenalty::MAX_OBJ_VALUE))
+            nurseDelta = tryAddAssign( weekday, nurse, assign[nurse2][weekday] );
+            nurse2Delta = ((nurseDelta >= DefaultPenalty::MAX_OBJ_VALUE)
                 ? 0 : tryRemoveAssign( weekday, nurse2 ));
         } else {    // no change
             nurseDelta = 0;

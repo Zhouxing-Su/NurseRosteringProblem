@@ -51,8 +51,10 @@ public:
     static const clock_t SAVE_SOLUTION_TIME;    // 0.5 seconds
 
     static const int MAX_ITER_COUNT = (1 << 30);
-    // inverse possibility of perturb from optima in last search
+    // inverse possibility of starting perturb from optima in last search
     static const int PERTURB_ORIGIN_SELECT = 4;
+    // inverse possibility of starting bias tabu search from optima in last search
+    static const int BIAS_TS_ORIGIN_SELECT = 2;
     static const double INIT_PERTURB_STRENGTH;
     static const double PERTURB_STRENGTH_DELTA;
     static const double MAX_PERTURB_STRENGTH;
@@ -83,13 +85,13 @@ public:
             maxNoImproveCoefficient( 1 )
         {
             dayTabuCoefficient[TabuTenureCoefficientIndex::TableSize] = 0;
-            dayTabuCoefficient[TabuTenureCoefficientIndex::NurseNum] = 0.5;
-            dayTabuCoefficient[TabuTenureCoefficientIndex::DayNum] = 0;
+            dayTabuCoefficient[TabuTenureCoefficientIndex::NurseNum] = 0;
+            dayTabuCoefficient[TabuTenureCoefficientIndex::DayNum] = 1;
             dayTabuCoefficient[TabuTenureCoefficientIndex::ShiftNum] = 0;
 
             shiftTabuCoefficient[TabuTenureCoefficientIndex::TableSize] = 0;
-            shiftTabuCoefficient[TabuTenureCoefficientIndex::NurseNum] = 0.5;
-            shiftTabuCoefficient[TabuTenureCoefficientIndex::DayNum] = 0;
+            shiftTabuCoefficient[TabuTenureCoefficientIndex::NurseNum] = 0;
+            shiftTabuCoefficient[TabuTenureCoefficientIndex::DayNum] = 1;
             shiftTabuCoefficient[TabuTenureCoefficientIndex::ShiftNum] = 0;
         }
 

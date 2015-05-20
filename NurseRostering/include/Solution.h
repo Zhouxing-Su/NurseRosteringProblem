@@ -405,6 +405,11 @@ private:
     // coarse-grained tabu list for add or remove on each day
     // (iterCount <= DayTabu[nurse][weekday]) means forbid to be removed
     typedef std::vector< std::vector<IterCount> > DayTabu;
+    // BlockSwapDeltaCache[nurse][nurse2][weekday][weekday2] stores
+    // delta of nurse and nurse2 swapping days between weekday and weekday2.
+    // especially, BlockSwapDeltaCache[nurse][nurse2][weekday][weekday] is
+    // the delta of swapping nurse and nurse2 in weekday
+    typedef std::vector< std::vector< std::vector<std::vector<ObjValue> > > > BlockSwapDeltaCache;
 
 
     // find day number to be punished for a single block
@@ -676,6 +681,13 @@ private:
 
     // control penalty calculation on each nurse
     std::vector<ObjValue> nurseWeights;
+
+    // blockSwapDeltaCache[nurse][nurse2][weekday][weekday2] stores
+    // nurse and nurse2 swap days between weekday and weekday2
+    BlockSwapDeltaCache blockSwapDeltaCache;
+    // (blockSwapDeltaCacheValidFlag[nurse] == false) means the delta related
+    // to nurse can not be reused. rebuild() will invalidate all items
+    std::vector<bool> cacheValidFlag;
 
     ObjValue objInsufficientStaff;
     ObjValue objConsecutiveShift;
