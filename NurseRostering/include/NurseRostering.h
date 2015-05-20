@@ -121,6 +121,7 @@ public:
             ContractID contract;
             int restMinShiftNum;    // total assignments in the planning horizon
             int restMaxShiftNum;    // total assignments in the planning horizon
+            int restMaxWorkingWeekendNum;   // total assignments in the planning horizon
 
             int skillNum;
             // (skills[skill] == true) means the nurse have that skill

@@ -177,24 +177,12 @@ NurseRostering::ObjValue NurseRostering::Solver::checkObjValue( const AssignTabl
 #endif
             objValue += DefaultPenalty::TotalAssign * distanceToRange(
                 assignNum * problem.history.restWeekCount, min, max ) / problem.history.restWeekCount;
-#ifdef INRC2_LOG
-        }
-#endif
 
-        int maxWeekend = problem.scenario.contracts[problem.scenario.nurses[nurse].contract].maxWorkingWeekendNum;
-        int historyWeekend = problem.history.totalWorkingWeekendNums[nurse] * problem.scenario.totalWeekNum;
-        int exceedingWeekend = historyWeekend - (maxWeekend * problem.history.currentWeek) +
-            ((assign.isWorking( nurse, Weekday::Sat ) || assign.isWorking( nurse, Weekday::Sun )) * problem.scenario.totalWeekNum);
-        if (exceedingWeekend > 0) {
-            objValue += DefaultPenalty::TotalWorkingWeekend * exceedingWeekend / problem.scenario.totalWeekNum;
-        }
+            int workingWeekendNum = (assign.isWorking( nurse, Weekday::Sat ) || assign.isWorking( nurse, Weekday::Sun ));
+            objValue += DefaultPenalty::TotalWorkingWeekend * exceedCount(
+                workingWeekendNum * problem.history.restWeekCount,
+                problem.scenario.nurses[nurse].restMaxWorkingWeekendNum ) / problem.history.restWeekCount;
 #ifdef INRC2_LOG
-        // remove penalty in the history except the first week
-        if (problem.history.pastWeekCount > 0) {
-            historyWeekend -= maxWeekend * problem.history.pastWeekCount;
-            if (historyWeekend > 0) {
-                objValue -= DefaultPenalty::TotalWorkingWeekend * historyWeekend / problem.scenario.totalWeekNum;
-            }
         }
 #endif
     }

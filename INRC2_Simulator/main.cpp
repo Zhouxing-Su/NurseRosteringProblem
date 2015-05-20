@@ -26,7 +26,8 @@ void debugRun()
     char weekdata[WEEKDATA_SEQ_SIZE] = "3378";
     int randSeed = 8787;
     //int randSeed = static_cast<int>(time( NULL ));
-    double runningTime = instTimeout[getNurseNum( instIndex )];
+    double runningTime = 10;
+    //double runningTime = instTimeout[getNurseNum( instIndex )];
     test_customIO_r( id.str(), outputDirPrefix + id.str(), instIndex, initHis, weekdata, runningTime, randSeed );
 }
 
