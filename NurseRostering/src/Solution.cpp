@@ -12,11 +12,7 @@ NurseRostering::Solution::tryMove = {
     &NurseRostering::Solution::tryChangeAssign,
     &NurseRostering::Solution::trySwapNurse,
     &NurseRostering::Solution::tryExchangeDay,
-#ifdef INRC2_BLOCK_SWAP_FAST
-    &NurseRostering::Solution::trySwapBlock_fast
-#else
     &NurseRostering::Solution::trySwapBlock,
-#endif
 };
 const NurseRostering::Solution::FindBestMoveTable
 NurseRostering::Solution::findBestMove = {
@@ -27,6 +23,8 @@ NurseRostering::Solution::findBestMove = {
     &NurseRostering::Solution::findBestExchange,
 #if INRC2_BLOCK_SWAP_FIND_BEST == INRC2_BLOCK_SWAP_ORGN
     &NurseRostering::Solution::findBestBlockSwap,
+#elif INRC2_BLOCK_SWAP_FIND_BEST == INRC2_BLOCK_SWAP_CACHED
+    &NurseRostering::Solution::findBestBlockSwap_cached,
 #elif INRC2_BLOCK_SWAP_FIND_BEST == INRC2_BLOCK_SWAP_FAST
     &NurseRostering::Solution::findBestBlockSwap_fast,
 #elif INRC2_BLOCK_SWAP_FIND_BEST == INRC2_BLOCK_SWAP_PART
@@ -48,6 +46,8 @@ NurseRostering::Solution::findBestMoveOnBlockBorder = {
     &NurseRostering::Solution::findBestExchangeOnBlockBorder,
 #if INRC2_BLOCK_SWAP_FIND_BEST == INRC2_BLOCK_SWAP_ORGN
     &NurseRostering::Solution::findBestBlockSwap,
+#elif INRC2_BLOCK_SWAP_FIND_BEST == INRC2_BLOCK_SWAP_CACHED
+    &NurseRostering::Solution::findBestBlockSwap_cached,
 #elif INRC2_BLOCK_SWAP_FIND_BEST == INRC2_BLOCK_SWAP_FAST
     &NurseRostering::Solution::findBestBlockSwap_fast,
 #elif INRC2_BLOCK_SWAP_FIND_BEST == INRC2_BLOCK_SWAP_PART
@@ -362,13 +362,11 @@ void NurseRostering::Solution::resetAssistData()
             + solver.DayTabuTenureBase() + solver.DayTabuTenureAmp();
     }
     // delta cache
-    if (blockSwapDeltaCache.empty()) {
-        blockSwapDeltaCache = BlockSwapDeltaCache( problem.scenario.nurseNum,
-            vector< vector< vector<ObjValue> > >( problem.scenario.nurseNum,
-            vector< vector<ObjValue> >( Weekday::SIZE,
-            vector<ObjValue>( Weekday::SIZE, 0 ) ) ) );
+    if (blockSwapCache.empty()) {
+        blockSwapCache = BlockSwapCache( problem.scenario.nurseNum,
+            vector<BlockSwapCacheItem>( problem.scenario.nurseNum ) );
     }
-    cacheValidFlag = vector<bool>( problem.scenario.nurseNum, false );
+    isBlockSwapCacheValid = vector<bool>( problem.scenario.nurseNum, false );
     // flags
     findBestARLoop_flag = true;
     findBestARLoopOnBlockBorder_flag = true;
@@ -1312,6 +1310,48 @@ bool NurseRostering::Solution::findBestBlockSwap( Move &bestMove ) const
     }
 
     findBestBlockSwap_startNurse = move.nurse;
+    penalty.setDefaultMode();
+    return (bestMove.delta < 0);
+}
+
+bool NurseRostering::Solution::findBestBlockSwap_cached( Move &bestMove ) const
+{
+    isBlockSwapSelected = true;
+    penalty.setBlockSwapMode();
+
+    RandSelect<ObjValue> rs;
+
+    Move move;
+    for (move.nurse = 0; move.nurse < problem.scenario.nurseNum; ++move.nurse) {
+        for (move.nurse2 = move.nurse + 1; move.nurse2 < problem.scenario.nurseNum; ++move.nurse2) {
+            if (((nurseWeights[move.nurse] == 0) && (nurseWeights[move.nurse2] == 0))
+                || !solver.haveSameSkill( move.nurse, move.nurse2 )) {
+                continue;
+            }
+            BlockSwapCacheItem &cache( blockSwapCache[move.nurse][move.nurse2] );
+            if (!(isBlockSwapCacheValid[move.nurse] && isBlockSwapCacheValid[move.nurse2])) {
+                RandSelect<ObjValue> rs_currentPair;
+                for (move.weekday = Weekday::Mon; move.weekday <= Weekday::Sun; ++move.weekday) {
+                    move.delta = trySwapBlock( move.weekday, move.weekday2, move.nurse, move.nurse2 );
+                    if (rs_currentPair.isMinimal( move.delta, cache.delta )) {
+                        cache.delta = move.delta;
+                        cache.weekday = move.weekday;
+                        cache.weekday2 = move.weekday2;
+                    }
+                }
+            }
+            if (rs.isMinimal( cache.delta, bestMove.delta )) {
+                bestMove.mode = Move::Mode::BlockSwap;
+                bestMove.delta = cache.delta;
+                bestMove.nurse = move.nurse;
+                bestMove.nurse2 = move.nurse2;
+                bestMove.weekday = cache.weekday;
+                bestMove.weekday2 = cache.weekday2;
+            }
+        }
+        isBlockSwapCacheValid[move.nurse] = true;
+    }
+
     penalty.setDefaultMode();
     return (bestMove.delta < 0);
 }
@@ -2858,6 +2898,8 @@ NurseRostering::ObjValue NurseRostering::Solution::tryExchangeDay( const Move &m
 
 void NurseRostering::Solution::addAssign( int weekday, NurseID nurse, const Assign &a )
 {
+    invalidateCacheFlag( nurse );
+
     updateConsecutive( weekday, nurse, a.shift );
 
     --missingNurseNums[weekday][a.shift][a.skill];
@@ -2874,6 +2916,8 @@ void NurseRostering::Solution::addAssign( const Move &move )
 
 void NurseRostering::Solution::changeAssign( int weekday, NurseID nurse, const Assign &a )
 {
+    invalidateCacheFlag( nurse );
+
     if (a.shift != assign[nurse][weekday].shift) {  // for just change skill
         updateConsecutive( weekday, nurse, a.shift );
     }
@@ -2891,6 +2935,8 @@ void NurseRostering::Solution::changeAssign( const Move &move )
 
 void NurseRostering::Solution::removeAssign( int weekday, NurseID nurse )
 {
+    invalidateCacheFlag( nurse );
+
     updateConsecutive( weekday, nurse, NurseRostering::Scenario::Shift::ID_NONE );
 
     ++missingNurseNums[weekday][assign[nurse][weekday].shift][assign[nurse][weekday].skill];

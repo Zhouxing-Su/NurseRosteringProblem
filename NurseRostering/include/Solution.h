@@ -399,17 +399,25 @@ private:
 
     private:    // forbidden operators
     };
+
     // fine-grained tabu list for add or remove on each shift
     // (iterCount <= ShiftTabu[nurse][weekday][shift][skill]) means forbid to be added
     typedef std::vector< std::vector< std::vector< std::vector<IterCount> > > > ShiftTabu;
     // coarse-grained tabu list for add or remove on each day
     // (iterCount <= DayTabu[nurse][weekday]) means forbid to be removed
     typedef std::vector< std::vector<IterCount> > DayTabu;
-    // BlockSwapDeltaCache[nurse][nurse2][weekday][weekday2] stores
-    // delta of nurse and nurse2 swapping days between weekday and weekday2.
-    // especially, BlockSwapDeltaCache[nurse][nurse2][weekday][weekday] is
-    // the delta of swapping nurse and nurse2 in weekday
-    typedef std::vector< std::vector< std::vector<std::vector<ObjValue> > > > BlockSwapDeltaCache;
+
+    // information for update delta and assignment
+    struct BlockSwapCacheItem
+    {
+    public:
+        ObjValue delta;
+        int weekday;
+        int weekday2;
+    };
+    // BlockSwapCache[nurse][nurse2] stores
+    // delta of best block swap with nurse and nurse2
+    typedef std::vector< std::vector< BlockSwapCacheItem > > BlockSwapCache;
 
 
     // find day number to be punished for a single block
@@ -429,6 +437,12 @@ private:
     void resetAssign();
     void resetAssistData();
 
+    // reset all cache valid flag to false
+    void invalidateCacheFlag( NurseID nurse )
+    {
+        isBlockSwapCacheValid[nurse] = false;
+    }
+
 
     // return true if the solution will be improved (delta < 0)
     // BlockBorder means the start or end day of a consecutive block
@@ -437,6 +451,7 @@ private:
     bool findBestRemove( Move &bestMove ) const;
     bool findBestSwap( Move &bestMove ) const;
     bool findBestBlockSwap( Move &bestMove ) const;         // try all nurses
+    bool findBestBlockSwap_cached( Move &bestMove ) const;         // try all nurses
     bool findBestBlockSwap_fast( Move &bestMove ) const;    // try all nurses
     bool findBestBlockSwap_part( Move &bestMove ) const;    // try some nurses following index
     bool findBestBlockSwap_rand( Move &bestMove ) const;    // try randomly picked nurses 
@@ -682,12 +697,11 @@ private:
     // control penalty calculation on each nurse
     std::vector<ObjValue> nurseWeights;
 
-    // blockSwapDeltaCache[nurse][nurse2][weekday][weekday2] stores
-    // nurse and nurse2 swap days between weekday and weekday2
-    BlockSwapDeltaCache blockSwapDeltaCache;
-    // (blockSwapDeltaCacheValidFlag[nurse] == false) means the delta related
-    // to nurse can not be reused. rebuild() will invalidate all items
-    std::vector<bool> cacheValidFlag;
+    // rebuild() and weight adjustment will invalidate all items
+    mutable BlockSwapCache blockSwapCache;
+    // (blockSwapDeltaCacheValidFlag[nurse] == false) means 
+    // the delta related to nurse can not be reused
+    mutable std::vector<bool> isBlockSwapCacheValid;
 
     ObjValue objInsufficientStaff;
     ObjValue objConsecutiveShift;

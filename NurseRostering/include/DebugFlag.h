@@ -1,6 +1,6 @@
 /**
 *   usage : 1.  make the program print and record debug information.
-*           2.  [fix] indicate that the switch state is proved to 
+*           2.  [fix] indicate that the switch state is proved to
 *               be better and should not be modified.
 *
 *   note :  1.
@@ -65,6 +65,7 @@
 //#define INRC2_BLOCK_SWAP_FIRST_IMPROVE
 #endif
 
+// tabu strength of block swap
 #define INRC2_BLOCK_SWAP_AVERAGE_TABU 0
 #define INRC2_BLOCK_SWAP_STRONG_TABU 1
 #define INRC2_BLOCK_SWAP_WEAK_TABU 2
@@ -73,12 +74,14 @@
 #define INRC2_BLOCK_SWAP_TABU_STRENGTH INRC2_BLOCK_SWAP_NO_TABU
 #endif
 
+// grain of block swap
 #define INRC2_BLOCK_SWAP_ORGN 0
 #define INRC2_BLOCK_SWAP_FAST 1
 #define INRC2_BLOCK_SWAP_PART 2
 #define INRC2_BLOCK_SWAP_RAND 3
+#define INRC2_BLOCK_SWAP_CACHED 4
 #ifndef INRC2_BLOCK_SWAP_FIND_BEST
-#define INRC2_BLOCK_SWAP_FIND_BEST INRC2_BLOCK_SWAP_ORGN
+#define INRC2_BLOCK_SWAP_FIND_BEST INRC2_BLOCK_SWAP_CACHED
 #endif
 
 // comment to use double head version of swap chain 

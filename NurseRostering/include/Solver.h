@@ -265,7 +265,7 @@ private:
         maxNoImproveForAllNeighborhood = static_cast<IterCount>(
             coefficient * problem.scenario.nurseNum * Weekday::NUM *
             sqrt( problem.scenario.shiftTypeNum * problem.scenario.skillTypeNum ));
-        maxNoImproveForBiasTabuSearch = maxNoImproveForAllNeighborhood / INVERSE_TOTAL_BIAS_RATIO;
+        maxNoImproveForBiasTabuSearch = maxNoImproveForSingleNeighborhood / INVERSE_TOTAL_BIAS_RATIO;
         maxNoImproveSwapChainLength = maxNoImproveForSingleNeighborhood;
         maxSwapChainRestartCount = static_cast<IterCount>(sqrt( problem.scenario.nurseNum ));
     }
