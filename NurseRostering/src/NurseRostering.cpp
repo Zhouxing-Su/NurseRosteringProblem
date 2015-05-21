@@ -4,7 +4,7 @@
 using namespace std;
 
 
-const clock_t NurseRostering::MAX_RUNNING_TIME = (1 << 30);
+const Timer::Duration NurseRostering::MIN_RUNNING_TIME = Timer::Duration( 0 );
 
 
 const NurseRostering::NurseID NurseRostering::Scenario::Nurse::ID_NONE = -1;

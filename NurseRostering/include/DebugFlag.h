@@ -79,7 +79,7 @@
 #define INRC2_BLOCK_SWAP_TABU_STRENGTH INRC2_BLOCK_SWAP_NO_TABU
 #endif
 
-// grain of block swap
+// [fix] grain of block swap
 #define INRC2_BLOCK_SWAP_ORGN 0
 #define INRC2_BLOCK_SWAP_FAST 1
 #define INRC2_BLOCK_SWAP_PART 2

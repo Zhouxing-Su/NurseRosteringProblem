@@ -11,7 +11,6 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <ctime>
 #include <cstdlib>
 #include <random>
 #include <chrono>
@@ -77,23 +76,28 @@ T absentCount( const T &target, const T &bound )
 class Timer
 {
 public:
-    Timer( clock_t duration, clock_t startTime = clock() )
-        :endTime( startTime + duration )
+    typedef std::chrono::steady_clock Clock;
+    typedef std::chrono::milliseconds Duration;
+    typedef std::chrono::steady_clock::time_point TimePoint;
+
+    Timer( Duration duration, TimePoint startTime = Clock::now() )
+        : endTime( startTime + duration )
     {
     }
 
     bool isTimeOut() const
     {
-        return (clock() >= endTime);
+        return (Clock::now() >= endTime);
     }
 
-    clock_t restTime() const
+    Duration restTime() const
     {
-        return (endTime - clock());
+        return std::chrono::duration_cast<Duration>(
+            endTime - Clock::now());
     }
 
 private:
-    clock_t endTime;
+    TimePoint endTime;
 };
 
 //
@@ -112,18 +116,18 @@ public:
     }
 
     // call this for each of the N elements (N times in total) to judge whether each of them is selected.
-    bool isSelected()
+    bool isSelected( std::mt19937 &randGen )
     {   // only the last returned "true" means that element is selected finally.
-        return ((rand() % (++count)) == 0);
+        return ((randGen() % (++count)) == 0);
     }
 
-    bool isMinimal( const T& target, const T& min )
+    bool isMinimal( const T& target, const T& min, std::mt19937 &randGen )
     {
         if (target < min) {
             reset();
             return true;
         } else if (target == min) {
-            return isSelected();
+            return isSelected( randGen );
         } else {
             return false;
         }

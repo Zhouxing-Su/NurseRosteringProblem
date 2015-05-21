@@ -4,7 +4,7 @@
 using namespace std;
 
 
-const clock_t NurseRostering::Solver::SAVE_SOLUTION_TIME = CLOCKS_PER_SEC / 2;
+const Timer::Duration NurseRostering::Solver::SAVE_SOLUTION_TIME = Timer::Duration( 500 );
 const double NurseRostering::Solver::INIT_PERTURB_STRENGTH = 0.2;
 const double NurseRostering::Solver::PERTURB_STRENGTH_DELTA = 0.01;
 const double NurseRostering::Solver::MAX_PERTURB_STRENGTH = 0.6;
@@ -14,12 +14,12 @@ const vector<string> NurseRostering::Solver::solveAlgorithmName = {
 };
 
 
-NurseRostering::Solver::Solver( const NurseRostering &input, clock_t st )
+NurseRostering::Solver::Solver( const NurseRostering &input, Timer::TimePoint st )
     : problem( input ), startTime( st ), timer( problem.timeout, startTime )
 {
 }
 
-NurseRostering::Solver::Solver( const NurseRostering &input, const Output &opt, clock_t st )
+NurseRostering::Solver::Solver( const NurseRostering &input, const Output &opt, Timer::TimePoint st )
     : problem( input ), startTime( st ), optima( opt ), timer( problem.timeout, startTime )
 {
 }
@@ -240,7 +240,7 @@ void NurseRostering::Solver::record( const std::string logFileName, const std::s
         << problem.randSeed << ","
         << generationCount << ","
         << iterationCount << ","
-        << (optima.getFindTime() - startTime) / static_cast<double>(CLOCKS_PER_SEC) << "s,"
+        << chrono::duration_cast<std::chrono::milliseconds>(optima.getFindTime() - startTime).count() / static_cast<double>(CLOCKS_PER_SEC) << "s,"
         << checkFeasibility() << ","
         << (checkObjValue() - optima.getObjValue()) / static_cast<double>(DefaultPenalty::AMP) << ","
         << optima.getObjValue() / static_cast<double>(DefaultPenalty::AMP) << ","
@@ -384,12 +384,12 @@ void NurseRostering::Solver::discoverNurseSkillRelation()
 
 
 
-NurseRostering::TabuSolver::TabuSolver( const NurseRostering &input, clock_t st )
+NurseRostering::TabuSolver::TabuSolver( const NurseRostering &input, Timer::TimePoint st )
     :Solver( input, st ), sln( *this ), dayTabuTenureBase( 1 ), shiftTabuTenureBase( 1 )
 {
 }
 
-NurseRostering::TabuSolver::TabuSolver( const NurseRostering &input, const Output &opt, clock_t st )
+NurseRostering::TabuSolver::TabuSolver( const NurseRostering &input, const Output &opt, Timer::TimePoint st )
     : Solver( input, opt, st ), sln( *this ), dayTabuTenureBase( 1 ), shiftTabuTenureBase( 1 )
 {
 }
@@ -401,7 +401,7 @@ void NurseRostering::TabuSolver::init( const Config &cfg, const std::string &id 
     algorithmName = "Tabu";
     iterationCount = 0;
     generationCount = 0;
-    srand( problem.randSeed );
+    randGen.seed( problem.randSeed );
 
     setTabuTenure();
     setMaxNoImprove( config.maxNoImproveCoefficient );
@@ -464,7 +464,7 @@ bool NurseRostering::TabuSolver::updateOptima( const Output &localOptima )
 #ifdef INRC2_SECONDARY_OBJ_VALUE
         bool  isSelected = (localOptima.getSecondaryObjValue() < optima.getSecondaryObjValue());
 #else
-        bool isSelected = ((rand() % 2) == 0);
+        bool isSelected = ((randGen() % 2) == 0);
 #endif
         if (isSelected) {
             optima = localOptima;
@@ -529,7 +529,7 @@ void NurseRostering::TabuSolver::iterativeLocalSearch( Solution::ModeSeq modeSeq
         ObjValue lastObj = optima.getObjValue();
 
         iterationCount -= sln.getIterCount();
-        sln.localSearch( timer, ((rand() % 2) ? fbmt : fbmtobb) );
+        sln.localSearch( timer, ((randGen() % 2) ? fbmt : fbmtobb) );
         iterationCount += sln.getIterCount();
         ++generationCount;
 
@@ -574,7 +574,7 @@ void NurseRostering::TabuSolver::tabuSearch( Solution::ModeSeq modeSeq, Solution
 #endif
             perturbStrength += perturbStrengthDelta;
         }
-        const Output &output( (rand() % PERTURB_ORIGIN_SELECT)
+        const Output &output( (randGen() % PERTURB_ORIGIN_SELECT)
             ? optima : sln.getOptima() );
 #ifdef INRC2_PERTRUB_IN_REBUILD
         sln.rebuild( output, perturbStrength );
@@ -605,7 +605,7 @@ void NurseRostering::TabuSolver::biasTabuSearch( Solution::ModeSeq modeSeq )
         iterationCount += sln.getIterCount();
 
         updateOptima( sln.getOptima() );
-        const Output &output( (rand() % BIAS_TS_ORIGIN_SELECT)
+        const Output &output( (randGen() % BIAS_TS_ORIGIN_SELECT)
             ? optima : sln.getOptima() );
         sln.rebuild( output );
 
@@ -658,7 +658,7 @@ void NurseRostering::TabuSolver::swapChainSearch( Solution::ModeSeq modeSeq )
 #endif
             perturbStrength += perturbStrengthDelta;
         }
-        const Output &output( (rand() % PERTURB_ORIGIN_SELECT)
+        const Output &output( (randGen() % PERTURB_ORIGIN_SELECT)
             ? optima : sln.getOptima() );
 #ifdef INRC2_PERTRUB_IN_REBUILD
         sln.rebuild( output, perturbStrength );

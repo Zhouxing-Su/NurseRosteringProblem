@@ -63,7 +63,4 @@
       <Filter>NurseRostering</Filter>
     </ClInclude>
   </ItemGroup>
-  <ItemGroup>
-    <None Include="log.csv" />
-  </ItemGroup>
 </Project>

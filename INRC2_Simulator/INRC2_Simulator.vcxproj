@@ -198,9 +198,6 @@
     <ClInclude Include="..\NurseRostering\include\utility.h" />
     <ClInclude Include="BatchTest.h" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="log.csv" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

@@ -24,7 +24,6 @@
 #include <algorithm>
 #include <vector>
 #include <queue>
-#include <ctime>
 #include <cmath>
 #include <cstring>
 
@@ -38,7 +37,8 @@ class NurseRostering::Output
 public:
     // assume initial solution will never be the global optima
     Output() : objValue( DefaultPenalty::FORBIDDEN_MOVE ), secondaryObjValue( DefaultPenalty::FORBIDDEN_MOVE ) {}
-    Output( ObjValue objVal, const AssignTable &assignment, double secondaryObjVal = DefaultPenalty::FORBIDDEN_MOVE, clock_t findAssignTime = clock() )
+    Output( ObjValue objVal, const AssignTable &assignment, double secondaryObjVal = DefaultPenalty::FORBIDDEN_MOVE, 
+        Timer::TimePoint findAssignTime = std::chrono::steady_clock::now() )
         : objValue( objVal ), secondaryObjValue( secondaryObjVal ), assign( assignment ), findTime( findAssignTime )
     {
     }
@@ -50,13 +50,13 @@ public:
     const AssignTable& getAssignTable() const { return assign; }
     ObjValue getObjValue() const { return objValue; }
     double getSecondaryObjValue() const { return secondaryObjValue; }
-    clock_t getFindTime() const { return findTime; }
+    Timer::TimePoint getFindTime() const { return findTime; }
 
 protected:
     AssignTable assign;
     ObjValue objValue;
     double secondaryObjValue;
-    clock_t findTime;
+    Timer::TimePoint findTime;
 };
 
 
@@ -89,7 +89,7 @@ public:
 
         friend bool operator<(const Move &l, const Move &r)
         {
-            return (l.delta == r.delta) ? (rand() % 2 == 0) : (l.delta > r.delta);
+            return (l.delta > r.delta);
         }
 
         ObjValue delta;
@@ -161,17 +161,17 @@ public:
         }
 #endif
         if (objValue < optima.getObjValue()) {
-            findTime = clock();
+            findTime = Timer::Clock::now();
             optima = *this;
             return true;
         } else if (objValue == optima.getObjValue()) {
 #ifdef INRC2_SECONDARY_OBJ_VALUE
             bool isSelected = (secondaryObjValue < optima.getSecondaryObjValue());
 #else
-            bool isSelected = ((rand() % 2) == 0);
+            bool isSelected = ((solver.randGen() % 2) == 0);
 #endif
             if (isSelected) {
-                findTime = clock();
+                findTime = Timer::Clock::now();
                 optima = *this;
                 return true;
             }

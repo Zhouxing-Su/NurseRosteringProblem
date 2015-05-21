@@ -67,7 +67,7 @@ namespace INRC2
 
     int run( int argc, char *argv[] )
     {
-        clock_t startTime = clock();
+        Timer::TimePoint startTime = Timer::Clock::now();
 
         // handle command line arguments
         map<string, string> argvMap;
@@ -113,18 +113,19 @@ namespace INRC2
             istringstream iss( argvMap[ARGV_RANDOM_SEED] );
             iss >> input.randSeed;
         } else {
-            input.randSeed = static_cast<int>(time( NULL ) + clock());
+            input.randSeed = random_device()();
         }
 
         // load timeout
         if (argvMap.find( ARGV_TIME ) != argvMap.end()) {
             istringstream iss( argvMap[ARGV_TIME] );
-            double timeout;
+            double timeout; // in seconds
             iss >> timeout;
-            input.timeout = static_cast<clock_t>(timeout * CLOCKS_PER_SEC)
+            input.timeout = Timer::Duration( static_cast<int>(timeout *
+                chrono::duration_cast<Timer::Duration>(chrono::seconds( 1 )).count()) )
                 - NurseRostering::Solver::SAVE_SOLUTION_TIME;  // convert second to clock count
         } else {
-            input.timeout = NurseRostering::MAX_RUNNING_TIME;
+            input.timeout = NurseRostering::MIN_RUNNING_TIME;
         }
 
         // start computation

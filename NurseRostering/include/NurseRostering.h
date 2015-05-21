@@ -13,9 +13,9 @@
 #include <vector>
 #include <string>
 #include <sstream>
-#include <ctime>
 
 #include "DebugFlag.h"
+#include "utility.h"
 
 
 class NurseRostering
@@ -299,7 +299,8 @@ public:
     typedef std::vector< std::vector<bool> > NursesHasSameSkill;
 
 
-    static const clock_t MAX_RUNNING_TIME;  // in clock count
+    // timeout for generating a feasible solution (if there is)
+    static const Timer::Duration MIN_RUNNING_TIME;
 
 
     // must set all data members by direct accessing!
@@ -323,7 +324,7 @@ public:
 
     // data to identify a nurse rostering problem
     int randSeed;
-    clock_t timeout;    // time in clock count. 0 for just generate initial solution
+    Timer::Duration timeout;    // time in clock count. 0 for just generate initial solution
     WeekData weekData;
     Scenario scenario;
     History history;

@@ -34,7 +34,7 @@
 #include <string>
 #include <thread>
 #include <chrono>
-#include <ctime>
+#include <random>
 #include <cstdio>
 #include <cmath>
 
@@ -47,10 +47,10 @@
 class NurseRostering::Solver
 {
 public:
-    static const int CHECK_TIME_INTERVAL_MASK_IN_ITER = ((1 << 10) - 1);
-    static const clock_t SAVE_SOLUTION_TIME;    // 0.5 seconds
+    static const IterCount CHECK_TIME_INTERVAL_MASK_IN_ITER = ((1 << 10) - 1);
+    static const Timer::Duration SAVE_SOLUTION_TIME;    // 0.5 seconds
 
-    static const int MAX_ITER_COUNT = (1 << 30);
+    static const IterCount MAX_ITER_COUNT = (1 << 30);
     // inverse possibility of starting perturb from optima in last search
     static const int PERTURB_ORIGIN_SELECT = 4;
     // inverse possibility of starting bias tabu search from optima in last search
@@ -81,7 +81,7 @@ public:
     public:
         Config() : initAlgorithm( InitAlgorithm::Greedy ),
             solveAlgorithm( SolveAlgorithm::TabuSearch_Rand ),
-            modeSeq( Solution::ModeSeq::ACEBR ),
+            modeSeq( Solution::ModeSeq::ACBR ),
             maxNoImproveCoefficient( 1 )
         {
             dayTabuCoefficient[TabuTenureCoefficientIndex::TableSize] = 0;
@@ -107,12 +107,12 @@ public:
     static const std::vector<std::string> solveAlgorithmName;
 
     const NurseRostering &problem;
-    const clock_t startTime;
+    const Timer::TimePoint startTime;
     const Timer timer;
 
 
-    Solver( const NurseRostering &input, clock_t startTime );
-    Solver( const NurseRostering &input, const Output &optima, clock_t startTime );
+    Solver( const NurseRostering &input, Timer::TimePoint startTime );
+    Solver( const NurseRostering &input, const Output &optima, Timer::TimePoint startTime );
     virtual ~Solver() {}
 
     // set algorithm name, set parameters, generate initial solution
@@ -148,6 +148,9 @@ public:
     {
         return nursesHasSameSkill[nurse][nurse2];
     }
+
+
+    mutable std::mt19937 randGen;
 
 protected:
     // create header of the table ( require ios::app flag or "a" mode )
@@ -203,8 +206,8 @@ public:
     static const int INVERSE_PENALTY_BIAS_RATIO = 5;
 
 
-    TabuSolver( const NurseRostering &input, clock_t startTime = clock() );
-    TabuSolver( const NurseRostering &input, const Output &optima, clock_t startTime = clock() );
+    TabuSolver( const NurseRostering &input, Timer::TimePoint startTime = Timer::Clock::now() );
+    TabuSolver( const NurseRostering &input, const Output &optima, Timer::TimePoint startTime = Timer::Clock::now() );
     virtual ~TabuSolver() {}
 
     virtual void init( const Config &cfg = Config(), const std::string &runID = std::string() );
