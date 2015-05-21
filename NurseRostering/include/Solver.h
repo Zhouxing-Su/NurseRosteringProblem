@@ -47,10 +47,9 @@
 class NurseRostering::Solver
 {
 public:
-    static const IterCount CHECK_TIME_INTERVAL_MASK_IN_ITER = ((1 << 10) - 1);
+    static const int CHECK_TIME_INTERVAL_MASK_IN_ITER = ((1 << 10) - 1);
     static const Timer::Duration SAVE_SOLUTION_TIME;    // 0.5 seconds
 
-    static const IterCount MAX_ITER_COUNT = (1 << 30);
     // inverse possibility of starting perturb from optima in last search
     static const int PERTURB_ORIGIN_SELECT = 4;
     // inverse possibility of starting bias tabu search from optima in last search

@@ -17,6 +17,7 @@ namespace INRC2
     const std::string ARGV_CUSTOM_OUTPUT( "cusOut" );
     const std::string ARGV_RANDOM_SEED( "rand" );
     const std::string ARGV_TIME( "timeout" );  // in seconds
+    const std::string ARGV_ITER( "iter" );
     const std::string ARGV_CONFIG( "config" );
     const std::string ARGV_HELP( "help" );
 
@@ -38,30 +39,36 @@ namespace INRC2
     {
         cout <<
             "command line arguments ([XXX] means XXX is optional) :\n"
-            " [id]      - identifier of the run which will be recorded in log file.\n"
-            " sce       - scenario file path.\n"
-            " his       - history file path.\n"
-            " week      - weekdata file path.\n"
-            " sol       - solution file path.\n"
-            " [cusIn]   - custom input file path.\n"
-            " [cusOut]   - custom output file path.\n"
-            " [rand]    - rand seed for the solver.\n"
-            " [timeout] - max running time of the solver.\n"
-            " [config]  - specifies algorithm select and argument settings.\n"
-            "             format: cci;d;d,d,d,d;d,d,d,d\n"
-            "               c for char, d for real number, comma is used to separate numbers.\n"
-            "               the first char can be 'g'(for greedy init) or 'e'(for exact init).\n"
-            "               the second char can be 'w'(Random Walk), 'i'(Iterative Local Search),\n"
-            "               'p'(Tabu Search Possibility), 'l'(TS Loop), 'r'(TS Rand),\n"
-            "               's'(Swap Chain), 'b'(Bias TS).\n"
-            "               i for a non-negative integer corresponding to Solution::ModeSeq.\n"
-            "               first real number for coefficient of max no improve count.\n"
-            "               following 4 real numbers are coefficients for TableSize, NurseNum,\n"
-            "               next real number is the coefficient of no improve count.\n"
-            "               WeekdayNum and ShiftNum used in day tabu tenure setting,\n"
-            "               non-positive number means there is no relation with that feature. while\n"
-            "               next 4 numbers are used in shift tabu tenure setting with same meaning.\n"
-            "             example: gt2;1.5;0,0.5,0,0;0,0.8,0,0 or gt3;0.8;0.1,0,0,0;0.1,0,0,0\n"
+            "  [id]      - identifier of the run which will be recorded in log file.\n"
+            "  sce       - scenario file path.\n"
+            "  his       - history file path.\n"
+            "  week      - weekdata file path.\n"
+            "  sol       - solution file path.\n"
+            "  [cusIn]   - custom input file path.\n"
+            "  [cusOut]  - custom output file path.\n"
+            "  [rand]    - rand seed for the solver.\n"
+            "  [timeout] - max running time of the solver.\n"
+            "  [iter]    - max iteration count of the solver.\n"
+            "              reaching either timeout or iter will end the program.\n"
+            "  [config]  - specifies algorithm select and argument settings.\n"
+            "              format: cci;d;d,d,d,d;d,d,d,d\n"
+            "                  c for char, d for real number,\n"
+            "                  comma is used to separate numbers.\n"
+            "                  the first char can be:\n"
+            "                      'g'(greedy init) or 'e'(exact init).\n"
+            "                  the second char can be:\n"
+            "                      'w'(Random Walk), 'i'(Iterative Local Search),\n"
+            "                      'p'(Tabu Search Possibility), 'l'(TS Loop),\n"
+            "                      'r'(TS Rand), 's'(Swap Chain) or 'b'(Bias TS).\n"
+            "                  i is a non-negative integer in enum Solution::ModeSeq.\n"
+            "                  next real number is the coefficient of no improve count.\n"
+            "                  following 4 real numbers are coefficients for TableSize,\n"
+            "                  NurseNum, WeekdayNum and ShiftNum used in day tabu\n"
+            "                  tenure setting, non-positive number means there is \n"
+            "                  no relation with that feature. while next 4 numbers are\n"
+            "                  used in shift tabu tenure setting with same meaning.\n"
+            "              example: gt2;1.5;0,0.5,0,0;0,0.8,0,0\n"
+            "                       gt3;0.8;0.1,0,0,0;0.1,0,0,0\n"
             << endl;
     }
 
@@ -71,13 +78,20 @@ namespace INRC2
 
         // handle command line arguments
         map<string, string> argvMap;
-        for (int i = 1; i < argc; i += 2) {
-            argvMap[argv[i] + 2] = argv[i + 1]; // (argv[i] + 2) to skip "--" before argument
+        int j;
+        for (int i = 1; i < argc; i = j) {
+            if (argv[i][0] == '-') {
+                argvMap[argv[i] + 2];
+            }
+            for (j = i + 1; (j < argc) && (argv[j][0] != '-'); ++j) {
+                argvMap[argv[i] + 2] += argv[j]; // (argv[i] + 2) to skip "--" before argument
+            }
         }
 
         // print help
         if (argvMap.find( ARGV_HELP ) != argvMap.end()) {
             help();
+            return 0;
         }
 
         // read input
@@ -126,6 +140,14 @@ namespace INRC2
                 - NurseRostering::Solver::SAVE_SOLUTION_TIME;  // convert second to clock count
         } else {
             input.timeout = NurseRostering::MIN_RUNNING_TIME;
+        }
+
+        // load iter
+        if (argvMap.find( ARGV_ITER ) != argvMap.end()) {
+            istringstream iss( argvMap[ARGV_ITER] );
+            iss >> input.maxIterCount;
+        } else {
+            input.maxIterCount = NurseRostering::MAX_ITER_COUNT;
         }
 
         // start computation

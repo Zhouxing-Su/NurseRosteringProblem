@@ -473,7 +473,8 @@ bool NurseRostering::Solution::repair( const Timer &timer )
             vector<int> weights( modeNum, initWeight );
             int totalWeight = initWeight * modeNum;
 
-            for (; !timer.isTimeOut() && (objValue > 0); ++iterCount) {
+            for (; !timer.isTimeOut() && (objValue > 0)
+                && (iterCount != problem.maxIterCount); ++iterCount) {
                 int modeSelect = 0;
                 for (int w = solver.randGen() % totalWeight; (w -= weights[modeSelect]) >= 0; ++modeSelect) {}
 
@@ -695,7 +696,8 @@ bool NurseRostering::Solution::genSwapChain( const Timer &timer, const Move &hea
 
     // try to improve a chain of worsened nurse
     IterCount len = noImproveLen;
-    for (; !timer.isTimeOut() && (len > 0); ++iterCount) {
+    for (; !timer.isTimeOut() && (len > 0)
+        && (iterCount != problem.maxIterCount); ++iterCount) {
         swapBlock( bestMove );
         objValue += bestMove.delta;
         if (updateOptima()) { return true; }
@@ -863,7 +865,8 @@ void NurseRostering::Solution::tabuSearch_Rand( const Timer &timer, const FindBe
     int totalWeight = initWeight * modeNum;
 
     IterCount noImprove = maxNoImproveCount;
-    for (; !timer.isTimeOut() && (noImprove > 0); ++iterCount) {
+    for (; !timer.isTimeOut() && (noImprove > 0)
+        && (iterCount != problem.maxIterCount); ++iterCount) {
         int modeSelect = 0;
         for (int w = solver.randGen() % totalWeight; (w -= weights[modeSelect]) >= 0; ++modeSelect) {}
 
@@ -926,7 +929,8 @@ void NurseRostering::Solution::tabuSearch_Loop( const Timer &timer, const FindBe
         rebuild( optima );
 
         IterCount noImprove_Single = maxNoImproveCount;
-        for (; !timer.isTimeOut() && (noImprove_Single > 0); ++iterCount) {
+        for (; !timer.isTimeOut() && (noImprove_Single > 0)
+            && (iterCount != problem.maxIterCount); ++iterCount) {
             Move bestMove;
             (this->*findBestMoveTable[modeSelect])(bestMove);
 
@@ -987,7 +991,8 @@ void NurseRostering::Solution::tabuSearch_Possibility( const Timer &timer, const
     vector<unsigned> P_local( modeNum, 0 );
 
     IterCount noImprove = maxNoImproveCount;
-    for (; !timer.isTimeOut() && (noImprove > 0); ++iterCount) {
+    for (; !timer.isTimeOut() && (noImprove > 0)
+        && (iterCount != problem.maxIterCount); ++iterCount) {
         int modeSelect = startMode;
         Move::Mode moveMode = Move::Mode::SIZE;
         Move bestMove;
@@ -1048,7 +1053,8 @@ void NurseRostering::Solution::localSearch( const Timer &timer, const FindBestMo
 
     int failCount = modeNum;
     int modeSelect = 0;
-    while (!timer.isTimeOut() && (failCount > 0)) {
+    while (!timer.isTimeOut() && (failCount > 0)
+        && (iterCount != problem.maxIterCount)) {
         Move bestMove;
         if ((this->*findBestMoveTable[modeSelect])(bestMove)) {
             applyBasicMove( bestMove );
@@ -1076,7 +1082,9 @@ void NurseRostering::Solution::randomWalk( const Timer &timer, IterCount stepNum
 #endif
     optima = *this;
 
-    while ((stepNum > 0) && !timer.isTimeOut()) {
+    stepNum += iterCount;
+    while ((iterCount < stepNum) && !timer.isTimeOut()
+        && (iterCount != problem.maxIterCount)) {
         Move move;
         move.mode = static_cast<Move::Mode>(solver.randGen() % Move::Mode::BASIC_MOVE_SIZE);
         move.weekday = (solver.randGen() % Weekday::NUM) + Weekday::Mon;
@@ -1092,7 +1100,7 @@ void NurseRostering::Solution::randomWalk( const Timer &timer, IterCount stepNum
         move.delta = (this->*tryMove[move.mode])(move);
         if (move.delta < DefaultPenalty::MAX_OBJ_VALUE) {
             applyBasicMove( move );
-            --stepNum;
+            ++iterCount;
         }
     }
 #ifdef INRC2_PERFORMANCE_TEST

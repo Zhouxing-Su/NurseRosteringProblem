@@ -39,6 +39,7 @@ namespace INRC2
     extern const std::string ARGV_CUSTOM_OUTPUT;
     extern const std::string ARGV_RANDOM_SEED;
     extern const std::string ARGV_TIME;  // in seconds
+    extern const std::string ARGV_ITER;
     extern const std::string ARGV_CONFIG;
     extern const std::string ARGV_HELP;
 

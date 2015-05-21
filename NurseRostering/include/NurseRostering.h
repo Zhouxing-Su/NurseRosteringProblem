@@ -301,6 +301,8 @@ public:
 
     // timeout for generating a feasible solution (if there is)
     static const Timer::Duration MIN_RUNNING_TIME;
+    // 
+    static const IterCount MAX_ITER_COUNT;
 
 
     // must set all data members by direct accessing!
@@ -325,6 +327,7 @@ public:
     // data to identify a nurse rostering problem
     int randSeed;
     Timer::Duration timeout;    // time in clock count. 0 for just generate initial solution
+    IterCount maxIterCount;
     WeekData weekData;
     Scenario scenario;
     History history;

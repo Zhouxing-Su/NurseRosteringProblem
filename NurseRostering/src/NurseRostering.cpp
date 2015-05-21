@@ -5,6 +5,7 @@ using namespace std;
 
 
 const Timer::Duration NurseRostering::MIN_RUNNING_TIME = Timer::Duration( 0 );
+const NurseRostering::IterCount NurseRostering::MAX_ITER_COUNT = (1 << 30);
 
 
 const NurseRostering::NurseID NurseRostering::Scenario::Nurse::ID_NONE = -1;

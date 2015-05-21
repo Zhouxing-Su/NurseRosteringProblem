@@ -42,7 +42,8 @@ enum ArgvIndex
 {
     program = 0, __id, id, __config, config,
     __sce, sce, __his, his, __week, week, __sol, sol,
-    __timout, timeout, __randSeed, randSeed, __cusIn, cusIn, __cusOut, cusOut
+    __timout, timeout, __randSeed, randSeed, 
+    __cusIn, cusIn, __cusOut, cusOut
 };
 
 enum InstIndex
