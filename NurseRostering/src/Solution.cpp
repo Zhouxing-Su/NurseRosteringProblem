@@ -137,7 +137,7 @@ NurseRostering::Solution::Solution( const TabuSolver &s, const Output &output )
 void NurseRostering::Solution::rebuild( const Output &output, double diff )
 {
     if (diff < 1) { // greater than 1 means totally change
-        unsigned selectBound = static_cast<unsigned>(diff * solver.randGen.max() - diff * solver.randGen.min());
+        unsigned selectBound = static_cast<unsigned>(diff * (solver.randGen.max() - solver.randGen.min()));
 
         const AssignTable &assignTable( (&output.getAssignTable() != &assign)
             ? output.getAssignTable() : AssignTable( output.getAssignTable() ) );
@@ -981,13 +981,13 @@ void NurseRostering::Solution::tabuSearch_Possibility( const Timer &timer, const
     int modeNum = findBestMoveTable.size();
     int startMode = 0;
 
-    const unsigned maxP_local = RAND_MAX / modeNum;
-    const unsigned maxP_global = RAND_MAX * (modeNum - 1) / modeNum;
+    const unsigned maxP_local = (solver.randGen.max() - solver.randGen.min()) / modeNum;
+    const unsigned maxP_global = (solver.randGen.max() - solver.randGen.min()) * (modeNum - 1) / modeNum;
     const double amp_local = 1.0 / (2 * modeNum);
     const double amp_global = 1.0 / (4 * modeNum * modeNum);
     const double dec_local = (2.0 * modeNum - 1) / (2 * modeNum);
     const double dec_global = (2.0 * modeNum * modeNum - 1) / (2 * modeNum * modeNum);
-    unsigned P_global = RAND_MAX / modeNum;
+    unsigned P_global = (solver.randGen.max() - solver.randGen.min()) / modeNum;
     vector<unsigned> P_local( modeNum, 0 );
 
     IterCount noImprove = maxNoImproveCount;
