@@ -40,6 +40,11 @@
 #define INRC2_IGNORE_MIN_SHIFT_IN_EARLY_WEEKS
 #endif
 
+// comment to use rest max working weekend
+#ifndef INRC2_AVERAGE_MAX_WORKING_WEEKEND
+#define INRC2_AVERAGE_MAX_WORKING_WEEKEND
+#endif
+
 // [fix] comment to use random pick
 #ifndef INRC2_SECONDARY_OBJ_VALUE
 #define INRC2_SECONDARY_OBJ_VALUE

@@ -178,10 +178,20 @@ NurseRostering::ObjValue NurseRostering::Solver::checkObjValue( const AssignTabl
             objValue += DefaultPenalty::TotalAssign * distanceToRange(
                 assignNum * problem.history.restWeekCount, min, max ) / problem.history.restWeekCount;
 
+#ifdef INRC2_AVERAGE_MAX_WORKING_WEEKEND
+            int maxWeekend = problem.scenario.contracts[problem.scenario.nurses[nurse].contract].maxWorkingWeekendNum;
+            int historyWeekend = problem.history.totalWorkingWeekendNums[nurse] * problem.scenario.totalWeekNum;
+            int exceedingWeekend = historyWeekend - (maxWeekend * problem.history.currentWeek) +
+                ((assign.isWorking( nurse, Weekday::Sat ) || assign.isWorking( nurse, Weekday::Sun )) * problem.scenario.totalWeekNum);
+            if (exceedingWeekend > 0) {
+                objValue += DefaultPenalty::TotalWorkingWeekend * exceedingWeekend / problem.scenario.totalWeekNum;
+            }
+#else
             int workingWeekendNum = (assign.isWorking( nurse, Weekday::Sat ) || assign.isWorking( nurse, Weekday::Sun ));
             objValue += DefaultPenalty::TotalWorkingWeekend * exceedCount(
                 workingWeekendNum * problem.history.restWeekCount,
                 problem.scenario.nurses[nurse].restMaxWorkingWeekendNum ) / problem.history.restWeekCount;
+#endif
 #ifdef INRC2_LOG
         }
 #endif

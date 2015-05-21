@@ -10,8 +10,8 @@ NurseRostering::Solution::tryMove = {
     &NurseRostering::Solution::tryAddAssign,
     &NurseRostering::Solution::tryRemoveAssign,
     &NurseRostering::Solution::tryChangeAssign,
-    &NurseRostering::Solution::trySwapNurse,
     &NurseRostering::Solution::tryExchangeDay,
+    &NurseRostering::Solution::trySwapNurse,
     &NurseRostering::Solution::trySwapBlock,
 };
 const NurseRostering::Solution::FindBestMoveTable
@@ -19,8 +19,8 @@ NurseRostering::Solution::findBestMove = {
     &NurseRostering::Solution::findBestAdd,
     &NurseRostering::Solution::findBestRemove,
     &NurseRostering::Solution::findBestChange,
-    &NurseRostering::Solution::findBestSwap,
     &NurseRostering::Solution::findBestExchange,
+    &NurseRostering::Solution::findBestSwap,
 #if INRC2_BLOCK_SWAP_FIND_BEST == INRC2_BLOCK_SWAP_ORGN
     &NurseRostering::Solution::findBestBlockSwap,
 #elif INRC2_BLOCK_SWAP_FIND_BEST == INRC2_BLOCK_SWAP_CACHED
@@ -42,8 +42,8 @@ NurseRostering::Solution::findBestMoveOnBlockBorder = {
     &NurseRostering::Solution::findBestAddOnBlockBorder,
     &NurseRostering::Solution::findBestRemoveOnBlockBorder,
     &NurseRostering::Solution::findBestChangeOnBlockBorder,
-    &NurseRostering::Solution::findBestSwapOnBlockBorder,
     &NurseRostering::Solution::findBestExchangeOnBlockBorder,
+    &NurseRostering::Solution::findBestSwapOnBlockBorder,
 #if INRC2_BLOCK_SWAP_FIND_BEST == INRC2_BLOCK_SWAP_ORGN
     &NurseRostering::Solution::findBestBlockSwap,
 #elif INRC2_BLOCK_SWAP_FIND_BEST == INRC2_BLOCK_SWAP_CACHED
@@ -65,8 +65,8 @@ NurseRostering::Solution::applyMove = {
     &NurseRostering::Solution::addAssign,
     &NurseRostering::Solution::removeAssign,
     &NurseRostering::Solution::changeAssign,
-    &NurseRostering::Solution::swapNurse,
     &NurseRostering::Solution::exchangeDay,
+    &NurseRostering::Solution::swapNurse,
     &NurseRostering::Solution::swapBlock
 };
 const NurseRostering::Solution::UpdateTabuTable
@@ -74,8 +74,8 @@ NurseRostering::Solution::updateTabuTable = {
     &NurseRostering::Solution::updateAddTabu,
     &NurseRostering::Solution::updateRemoveTabu,
     &NurseRostering::Solution::updateChangeTabu,
-    &NurseRostering::Solution::updateSwapTabu,
     &NurseRostering::Solution::updateExchangeTabu,
+    &NurseRostering::Solution::updateSwapTabu,
     &NurseRostering::Solution::updateBlockSwapTabu
 };
 
@@ -481,8 +481,7 @@ bool NurseRostering::Solution::repair( const Timer &timer )
                 int weightDelta;
                 // update tabu list first because it requires original assignment
                 (this->*updateTabuTable[bestMove.mode])(bestMove);
-                (this->*applyMove[bestMove.mode])(bestMove);
-                objValue += bestMove.delta;
+                applyBasicMove( bestMove );
 
                 if (bestMove.delta < 0) {    // improve current solution
                     weightDelta = (incError + weight_ImproveCur - weights[modeSelect]) / deltaIncRatio;
@@ -760,8 +759,7 @@ bool NurseRostering::Solution::genSwapChain( const Timer &timer, const Move &hea
 #else
         if (objValue + bestMove.delta < optima.getObjValue()) {
 #endif
-            (this->*applyMove[bestMove.mode])(bestMove);
-            objValue += bestMove.delta;
+            applyBasicMove( bestMove );
             if (updateOptima()) { return true; }
         }
 
@@ -874,8 +872,7 @@ void NurseRostering::Solution::tabuSearch_Rand( const Timer &timer, const FindBe
         if (bestMove.delta < DefaultPenalty::MAX_OBJ_VALUE) {
             // update tabu list first because it requires original assignment
             (this->*updateTabuTable[bestMove.mode])(bestMove);
-            (this->*applyMove[bestMove.mode])(bestMove);
-            objValue += bestMove.delta;
+            applyBasicMove( bestMove );
 
             if (updateOptima()) {   // improve optima
 #ifdef INRC2_LS_AFTER_TSR_UPDATE_OPT
@@ -937,8 +934,7 @@ void NurseRostering::Solution::tabuSearch_Loop( const Timer &timer, const FindBe
 
             // update tabu list first because it requires original assignment
             (this->*updateTabuTable[bestMove.mode])(bestMove);
-            (this->*applyMove[bestMove.mode])(bestMove);
-            objValue += bestMove.delta;
+            applyBasicMove( bestMove );
 
             if (updateOptima()) {   // improved
                 failCount = modeNum;
@@ -1015,8 +1011,7 @@ void NurseRostering::Solution::tabuSearch_Possibility( const Timer &timer, const
 
         // update tabu list first because it requires original assignment
         (this->*updateTabuTable[bestMove.mode])(bestMove);
-        (this->*applyMove[bestMove.mode])(bestMove);
-        objValue += bestMove.delta;
+        applyBasicMove( bestMove );
 
         if (updateOptima()) {   // improved
             noImprove = maxNoImproveCount;
@@ -1054,8 +1049,7 @@ void NurseRostering::Solution::localSearch( const Timer &timer, const FindBestMo
     while (!timer.isTimeOut() && (failCount > 0)) {
         Move bestMove;
         if ((this->*findBestMoveTable[modeSelect])(bestMove)) {
-            (this->*applyMove[bestMove.mode])(bestMove);
-            objValue += bestMove.delta;
+            applyBasicMove( bestMove );
             updateOptima();
             ++iterCount;
             failCount = modeNum;
@@ -1080,10 +1074,9 @@ void NurseRostering::Solution::randomWalk( const Timer &timer, IterCount stepNum
 #endif
     optima = *this;
 
-    ObjValue delta;
     while ((stepNum > 0) && !timer.isTimeOut()) {
-        int moveMode = rand() % Move::Mode::BASIC_MOVE_SIZE;
         Move move;
+        move.mode = static_cast<Move::Mode>( rand() % Move::Mode::BASIC_MOVE_SIZE );
         move.weekday = (rand() % Weekday::NUM) + Weekday::Mon;
         move.weekday2 = (rand() % Weekday::NUM) + Weekday::Mon;
         if (move.weekday > move.weekday2) { swap( move.weekday, move.weekday2 ); }
@@ -1094,10 +1087,9 @@ void NurseRostering::Solution::randomWalk( const Timer &timer, IterCount stepNum
         move.assign.skill = NurseRostering::Scenario::Skill::ID_BEGIN +
             (rand() % problem.scenario.skillTypeNum);
 
-        delta = (this->*tryMove[moveMode])(move);
-        if (delta < DefaultPenalty::MAX_OBJ_VALUE) {
-            (this->*applyMove[moveMode])(move);
-            objValue += delta;
+        move.delta = (this->*tryMove[move.mode])(move);
+        if (move.delta < DefaultPenalty::MAX_OBJ_VALUE) {
+            applyBasicMove( move );
             --stepNum;
         }
     }
@@ -2106,10 +2098,21 @@ NurseRostering::ObjValue NurseRostering::Solution::tryAddAssign( int weekday, Nu
 
         // total working weekend
         if (!assign.isWorking( nurse, theOtherDay )) {
+#ifdef INRC2_AVERAGE_MAX_WORKING_WEEKEND
+            const History &history( problem.history );
+            int currentWeek = history.currentWeek;
+            delta -= penalty.TotalWorkingWeekend() * exceedCount(
+                history.totalWorkingWeekendNums[nurse] * problem.scenario.totalWeekNum,
+                contract.maxWorkingWeekendNum * currentWeek ) / problem.scenario.totalWeekNum;
+            delta += penalty.TotalWorkingWeekend() * exceedCount(
+                (history.totalWorkingWeekendNums[nurse] + 1) * problem.scenario.totalWeekNum,
+                contract.maxWorkingWeekendNum * currentWeek ) / problem.scenario.totalWeekNum;
+#else
             delta -= penalty.TotalWorkingWeekend() * exceedCount( 0,
                 problem.scenario.nurses[nurse].restMaxWorkingWeekendNum ) / problem.history.restWeekCount;
             delta += penalty.TotalWorkingWeekend() * exceedCount( problem.history.restWeekCount,
                 problem.scenario.nurses[nurse].restMaxWorkingWeekendNum ) / problem.history.restWeekCount;
+#endif
         }
     }
 
@@ -2471,10 +2474,21 @@ NurseRostering::ObjValue NurseRostering::Solution::tryRemoveAssign( int weekday,
 
         // total working weekend
         if (!assign.isWorking( nurse, theOtherDay )) {
+#ifdef INRC2_AVERAGE_MAX_WORKING_WEEKEND
+            const History &history( problem.history );
+            int currentWeek = history.currentWeek;
+            delta -= penalty.TotalWorkingWeekend() * exceedCount(
+                (history.totalWorkingWeekendNums[nurse] + 1) * problem.scenario.totalWeekNum,
+                contract.maxWorkingWeekendNum * currentWeek ) / problem.scenario.totalWeekNum;
+            delta += penalty.TotalWorkingWeekend() * exceedCount(
+                history.totalWorkingWeekendNums[nurse] * problem.scenario.totalWeekNum,
+                contract.maxWorkingWeekendNum * currentWeek ) / problem.scenario.totalWeekNum;
+#else
             delta -= penalty.TotalWorkingWeekend() * exceedCount( problem.history.restWeekCount,
                 problem.scenario.nurses[nurse].restMaxWorkingWeekendNum ) / problem.history.restWeekCount;
             delta += penalty.TotalWorkingWeekend() * exceedCount( 0,
                 problem.scenario.nurses[nurse].restMaxWorkingWeekendNum ) / problem.history.restWeekCount;
+#endif
         }
     }
 
@@ -2891,8 +2905,6 @@ NurseRostering::ObjValue NurseRostering::Solution::tryExchangeDay( const Move &m
 
 void NurseRostering::Solution::addAssign( int weekday, NurseID nurse, const Assign &a )
 {
-    invalidateCacheFlag( nurse );
-
     updateConsecutive( weekday, nurse, a.shift );
 
     --missingNurseNums[weekday][a.shift][a.skill];
@@ -2909,8 +2921,6 @@ void NurseRostering::Solution::addAssign( const Move &move )
 
 void NurseRostering::Solution::changeAssign( int weekday, NurseID nurse, const Assign &a )
 {
-    invalidateCacheFlag( nurse );
-
     if (a.shift != assign[nurse][weekday].shift) {  // for just change skill
         updateConsecutive( weekday, nurse, a.shift );
     }
@@ -2928,8 +2938,6 @@ void NurseRostering::Solution::changeAssign( const Move &move )
 
 void NurseRostering::Solution::removeAssign( int weekday, NurseID nurse )
 {
-    invalidateCacheFlag( nurse );
-
     updateConsecutive( weekday, nurse, NurseRostering::Scenario::Shift::ID_NONE );
 
     ++missingNurseNums[weekday][assign[nurse][weekday].shift][assign[nurse][weekday].skill];
@@ -3407,10 +3415,21 @@ NurseRostering::ObjValue NurseRostering::Solution::evaluateTotalWorkingWeekend( 
 {
     ObjValue obj = 0;
 
+#ifdef INRC2_AVERAGE_MAX_WORKING_WEEKEND
+    int maxWeekend = problem.scenario.contracts[problem.scenario.nurses[nurse].contract].maxWorkingWeekendNum;
+    int historyWeekend = problem.history.totalWorkingWeekendNums[nurse] * problem.scenario.totalWeekNum;
+    int exceedingWeekend = historyWeekend - (maxWeekend * problem.history.currentWeek) +
+        ((assign.isWorking( nurse, Weekday::Sat ) || assign.isWorking( nurse, Weekday::Sun )) * problem.scenario.totalWeekNum);
+    if (exceedingWeekend > 0) {
+        obj += penalty.TotalWorkingWeekend() *
+            exceedingWeekend / problem.scenario.totalWeekNum;
+    }
+#else
     int workingWeekendNum = (assign.isWorking( nurse, Weekday::Sat ) || assign.isWorking( nurse, Weekday::Sun ));
     obj += penalty.TotalWorkingWeekend() * exceedCount(
         workingWeekendNum * problem.history.restWeekCount,
         problem.scenario.nurses[nurse].restMaxWorkingWeekendNum ) / problem.history.restWeekCount;
+#endif
 
     return obj;
 }

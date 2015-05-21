@@ -75,8 +75,9 @@ public:
             // atomic moves are not composed by other moves
             Add, Remove, Change, ATOMIC_MOVE_SIZE,
             // basic moves are used in randomWalk()
-            Swap = ATOMIC_MOVE_SIZE, Exchange, BlockSwap, BASIC_MOVE_SIZE,
-            // compound moves which can not be used by a single tryXXX()
+            Exchange = ATOMIC_MOVE_SIZE, Swap, BlockSwap, BASIC_MOVE_SIZE,
+            // compound moves which can not be used by a single tryXXX() and no apply()
+            // for them. apply them by calling apply() of corresponding basic move
             BlockShift = BASIC_MOVE_SIZE, ARLoop, ARRand, ARBoth, SIZE
         };
 
@@ -437,10 +438,23 @@ private:
     void resetAssign();
     void resetAssistData();
 
-    // reset all cache valid flag to false
-    void invalidateCacheFlag( NurseID nurse )
+    // reset all cache valid flag of corresponding nurses to false
+    void invalidateCacheFlag( const Move &move )
     {
-        isBlockSwapCacheValid[nurse] = false;
+        isBlockSwapCacheValid[move.nurse] = false;
+        if ((move.mode == Move::Mode::BlockSwap)
+            || (move.mode == Move::Mode::Swap)) {
+            isBlockSwapCacheValid[move.nurse2] = false;
+        }
+    }
+
+    // apply the moves defined in Move::Mode as BASIC_MOVE,
+    // update objective value and update cache valid flags
+    void applyBasicMove( const Move &move )
+    {
+        (this->*applyMove[move.mode])(move);
+        objValue += move.delta;
+        invalidateCacheFlag( move );
     }
 
 
