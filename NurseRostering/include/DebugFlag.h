@@ -35,6 +35,11 @@
 
 
 // algorithm switch
+// comment to abandon tabu
+#ifndef INRC2_USE_TABU
+#define INRC2_USE_TABU
+#endif
+
 // [fix] comment to start to consider min shift at the first week
 #ifndef INRC2_IGNORE_MIN_SHIFT_IN_EARLY_WEEKS
 #define INRC2_IGNORE_MIN_SHIFT_IN_EARLY_WEEKS
@@ -76,7 +81,12 @@
 #define INRC2_BLOCK_SWAP_WEAK_TABU 2
 #define INRC2_BLOCK_SWAP_NO_TABU 3
 #ifndef INRC2_BLOCK_SWAP_TABU_STRENGTH
+
+#ifdef INRC2_USE_TABU
 #define INRC2_BLOCK_SWAP_TABU_STRENGTH INRC2_BLOCK_SWAP_NO_TABU
+#else   // must be no tabu if global setting is no tabu
+#define INRC2_BLOCK_SWAP_TABU_STRENGTH INRC2_BLOCK_SWAP_NO_TABU
+#endif
 #endif
 
 // [fix] grain of block swap
@@ -85,6 +95,7 @@
 #define INRC2_BLOCK_SWAP_PART 2
 #define INRC2_BLOCK_SWAP_RAND 3
 #define INRC2_BLOCK_SWAP_CACHED 4
+
 #ifndef INRC2_BLOCK_SWAP_FIND_BEST
 #define INRC2_BLOCK_SWAP_FIND_BEST INRC2_BLOCK_SWAP_CACHED
 #endif

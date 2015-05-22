@@ -240,7 +240,7 @@ void NurseRostering::Solver::record( const std::string logFileName, const std::s
         << problem.randSeed << ","
         << generationCount << ","
         << iterationCount << ","
-        << chrono::duration_cast<std::chrono::milliseconds>(optima.getFindTime() - startTime).count() / static_cast<double>(CLOCKS_PER_SEC) << "s,"
+        << chrono::duration_cast<std::chrono::milliseconds>(optima.getFindTime() - startTime).count() / 1000.0 << "s,"
         << checkFeasibility() << ","
         << (checkObjValue() - optima.getObjValue()) / static_cast<double>(DefaultPenalty::AMP) << ","
         << optima.getObjValue() / static_cast<double>(DefaultPenalty::AMP) << ","

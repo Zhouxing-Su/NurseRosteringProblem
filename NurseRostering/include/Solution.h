@@ -105,12 +105,16 @@ public:
     typedef ObjValue( Solution::*TryMove )(const Move &move) const;
     typedef bool (Solution::*FindBestMove)(Move &move) const;
     typedef void (Solution::*ApplyMove)(const Move &move);
+#ifdef INRC2_USE_TABU
     typedef void (Solution::*UpdateTabu)(const Move &move);
+#endif
 
     typedef std::vector<TryMove> TryMoveTable;
     typedef std::vector<FindBestMove> FindBestMoveTable;
     typedef std::vector<ApplyMove> ApplyMoveTable;
+#ifdef INRC2_USE_TABU
     typedef std::vector<UpdateTabu> UpdateTabuTable;
+#endif
 
     typedef void (Solution::*TabuSearch)(const Timer &timer, const FindBestMoveTable &findBestMoveTable, IterCount maxNoImproveCount);
 
@@ -134,7 +138,9 @@ public:
     static const FindBestMoveTable findBestMove;
     static const FindBestMoveTable findBestMoveOnBlockBorder;
     static const ApplyMoveTable applyMove;
+#ifdef INRC2_USE_TABU
     static const UpdateTabuTable updateTabuTable;
+#endif
 
     static const double NO_DIFF;    // for building same assign in rebuild()
 
@@ -538,6 +544,7 @@ private:
     // the assignment is on a consecutive block with single slot
     void assignSingle( int weekday, int high[Weekday::SIZE], int low[Weekday::SIZE], bool affectRight, bool affectLeft );
 
+#ifdef INRC2_USE_TABU
     bool noAddTabu( const Move &move ) const
     {
         return (iterCount > shiftTabu[move.nurse][move.weekday][move.assign.shift][move.assign.skill]);
@@ -679,6 +686,7 @@ private:
             updateSwapTabu( move );
         }
     }
+#endif
 
 
     mutable Penalty penalty;    // trySwapNurse() will modify it
