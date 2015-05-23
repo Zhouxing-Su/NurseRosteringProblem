@@ -268,7 +268,6 @@ public:
     class Solution;
 
     class Solver;
-    class Solver;
 
 
     // nurseNumOfSkill[skill] is the number of nurses with that skill

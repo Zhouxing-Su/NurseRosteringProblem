@@ -5,19 +5,22 @@
 using namespace std;
 
 
-const NurseRostering::Solution::TryMoveTable
-NurseRostering::Solution::tryMove = {
-    &NurseRostering::Solution::tryAddAssign,
-    &NurseRostering::Solution::tryRemoveAssign,
-    &NurseRostering::Solution::tryChangeAssign,
-    &NurseRostering::Solution::trySwapBlock,
-};
 const NurseRostering::Solution::FindBestMoveTable
 NurseRostering::Solution::findBestMove = {
     &NurseRostering::Solution::findBestAdd,
     &NurseRostering::Solution::findBestRemove,
     &NurseRostering::Solution::findBestChange,
     &NurseRostering::Solution::findBestBlockSwap_cached
+};
+// must not use swap for swap mode is not compatible with repair mode
+// also, the repair procedure doesn't need the technique to jump through infeasible solutions
+const NurseRostering::Solution::FindBestMoveTable
+NurseRostering::Solution::findBestMove_repair = {
+    &NurseRostering::Solution::findBestARBoth,
+    &NurseRostering::Solution::findBestChange,
+    // more move for no tabu condition to get rid of local optima
+    &NurseRostering::Solution::findBestAddOnBlockBorder,
+    &NurseRostering::Solution::findBestChangeOnBlockBorder
 };
 const NurseRostering::Solution::ApplyMoveTable
 NurseRostering::Solution::applyMove = {
@@ -285,15 +288,6 @@ bool NurseRostering::Solution::repair( const Timer &timer )
     clock_t startTime = clock();
     IterCount startIterCount = iterCount;
 #endif
-    // must not use swap for swap mode is not compatible with repair mode
-    // also, the repair procedure doesn't need the technique to jump through infeasible solutions
-    Solution::FindBestMoveTable fbmt = {
-        &NurseRostering::Solution::findBestARBoth,
-        &NurseRostering::Solution::findBestChange,
-        // more move for no tabu condition to get rid of local optima
-        &NurseRostering::Solution::findBestAddOnBlockBorder,
-        &NurseRostering::Solution::findBestChangeOnBlockBorder
-    };
 
     penalty.setRepairMode();
     ObjValue violation = solver.checkFeasibility( assign );
@@ -303,7 +297,7 @@ bool NurseRostering::Solution::repair( const Timer &timer )
         objValue = violation;
         // reduced tabuSearch_Rand()
         {
-            int modeNum = fbmt.size();
+            int modeNum = findBestMove_repair.size();
 
             const int weight_NoImprove = 256;   // min weight
             const int weight_ImproveCur = 1024; // max weight (less than (RAND_MAX / modeNum))
@@ -321,7 +315,7 @@ bool NurseRostering::Solution::repair( const Timer &timer )
                 for (int w = solver.randGen() % totalWeight; (w -= weights[modeSelect]) >= 0; ++modeSelect) {}
 
                 Move bestMove;
-                (this->*fbmt[modeSelect])(bestMove);
+                (this->*findBestMove_repair[modeSelect])(bestMove);
 
                 int weightDelta;
 #ifdef INRC2_USE_TABU

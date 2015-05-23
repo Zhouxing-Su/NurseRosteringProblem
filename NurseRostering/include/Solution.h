@@ -110,8 +110,8 @@ public:
 
     // entrance in this table should have the same sequence
     // as move mode enum defined in Move::Mode
-    static const TryMoveTable tryMove;
     static const FindBestMoveTable findBestMove;
+    static const FindBestMoveTable findBestMove_repair;
     static const ApplyMoveTable applyMove;
     static const UpdateTabuTable updateTabuTable;
 
