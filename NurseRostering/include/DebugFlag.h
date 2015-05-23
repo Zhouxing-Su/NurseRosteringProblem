@@ -37,7 +37,7 @@
 // algorithm switch
 // comment to abandon tabu
 #ifndef INRC2_USE_TABU
-#define INRC2_USE_TABU
+#define INRC2_USE_TABU  // repair() has simple move only, will no tabu effect its execution?
 #endif
 
 // [fix] comment to start to consider min shift at the first week

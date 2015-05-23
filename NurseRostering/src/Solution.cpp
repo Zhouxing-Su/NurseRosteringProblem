@@ -354,6 +354,7 @@ void NurseRostering::Solution::resetAssistData()
     }
     // penalty weight
     nurseWeights = vector<ObjValue>( problem.scenario.nurseNum, 1 );
+#ifdef INRC2_USE_TABU
     // tabu table
     if (shiftTabu.empty() || dayTabu.empty()) {
         shiftTabu = ShiftTabu( problem.scenario.nurseNum,
@@ -366,6 +367,7 @@ void NurseRostering::Solution::resetAssistData()
         iterCount += solver.ShiftTabuTenureBase() + solver.ShiftTabuTenureAmp()
             + solver.DayTabuTenureBase() + solver.DayTabuTenureAmp();
     }
+#endif
     // delta cache
     if (blockSwapCache.empty()) {
         blockSwapCache = BlockSwapCache( problem.scenario.nurseNum,
@@ -452,8 +454,11 @@ bool NurseRostering::Solution::repair( const Timer &timer )
     // must not use swap for swap mode is not compatible with repair mode
     // also, the repair procedure doesn't need the technique to jump through infeasible solutions
     Solution::FindBestMoveTable fbmt = {
-        &NurseRostering::Solution::findBestARBoth,
-        &NurseRostering::Solution::findBestChange
+        &NurseRostering::Solution::findBestARBoth, 
+        &NurseRostering::Solution::findBestChange,
+        // more move for no tabu condition to get rid of local optima
+        &NurseRostering::Solution::findBestAddOnBlockBorder,
+        &NurseRostering::Solution::findBestChangeOnBlockBorder
     };
 
     penalty.setRepairMode();
@@ -471,7 +476,7 @@ bool NurseRostering::Solution::repair( const Timer &timer )
             const int initWeight = (weight_ImproveCur + weight_NoImprove) / 2;
             const int deltaIncRatio = 8;    // = weights[mode] / weightDelta
             const int incError = deltaIncRatio - 1;
-            const int deltaDecRatio = 16;   // = weights[mode] / weightDelta
+            const int deltaDecRatio = 8;    // = weights[mode] / weightDelta
             const int decError = -(deltaDecRatio - 1);
             vector<int> weights( modeNum, initWeight );
             int totalWeight = initWeight * modeNum;
@@ -862,9 +867,9 @@ void NurseRostering::Solution::tabuSearch_Rand( const Timer &timer, const FindBe
     const int weight_ImproveCur = 1024;
     const int weight_ImproveOpt = 4096; // max weight (less than (RAND_MAX / modeNum))
     const int initWeight = (weight_ImproveCur + weight_NoImprove) / 2;
-    const int deltaIncRatio = 32;   // = weights[mode] / weightDelta
+    const int deltaIncRatio = 8;    // = weights[mode] / weightDelta
     const int incError = deltaIncRatio - 1;
-    const int deltaDecRatio = 32;   // = weights[mode] / weightDelta
+    const int deltaDecRatio = 8;    // = weights[mode] / weightDelta
     const int decError = -(deltaDecRatio - 1);
     vector<int> weights( modeNum, initWeight );
     int totalWeight = initWeight * modeNum;

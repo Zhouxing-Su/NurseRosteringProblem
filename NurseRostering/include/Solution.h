@@ -105,16 +105,12 @@ public:
     typedef ObjValue( Solution::*TryMove )(const Move &move) const;
     typedef bool (Solution::*FindBestMove)(Move &move) const;
     typedef void (Solution::*ApplyMove)(const Move &move);
-#ifdef INRC2_USE_TABU
     typedef void (Solution::*UpdateTabu)(const Move &move);
-#endif
 
     typedef std::vector<TryMove> TryMoveTable;
     typedef std::vector<FindBestMove> FindBestMoveTable;
     typedef std::vector<ApplyMove> ApplyMoveTable;
-#ifdef INRC2_USE_TABU
     typedef std::vector<UpdateTabu> UpdateTabuTable;
-#endif
 
     typedef void (Solution::*TabuSearch)(const Timer &timer, const FindBestMoveTable &findBestMoveTable, IterCount maxNoImproveCount);
 
@@ -138,9 +134,7 @@ public:
     static const FindBestMoveTable findBestMove;
     static const FindBestMoveTable findBestMoveOnBlockBorder;
     static const ApplyMoveTable applyMove;
-#ifdef INRC2_USE_TABU
     static const UpdateTabuTable updateTabuTable;
-#endif
 
     static const double NO_DIFF;    // for building same assign in rebuild()
 
@@ -705,8 +699,10 @@ private:
     mutable ObjValue nurseDelta;    // trySwapNurse() and trySwapBlock() will modify it
     mutable ObjValue nurse2Delta;   // trySwapNurse() and trySwapBlock() will modify it
 
+#ifdef INRC2_USE_TABU
     ShiftTabu shiftTabu;
     DayTabu dayTabu;
+#endif
     IterCount iterCount;
 
     // total assignments for each nurse

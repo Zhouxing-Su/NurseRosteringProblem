@@ -104,7 +104,7 @@ void FileLock::lock()
     do {
         tryLock();  // result can be 1.success; 2.fail; 3.share lock
         // wait in case others write signature right after checkLock
-        this_thread::sleep_for( chrono::milliseconds( retryInterval + (rand() % TRY_LOCK_INTERVAL) ) );
+        this_thread::sleep_for( chrono::milliseconds( retryInterval + (random_device()() % TRY_LOCK_INTERVAL) ) );
     } while (!checkLock());
 }
 
