@@ -29,13 +29,10 @@
 
 #include <iostream>
 #include <fstream>
-#include <sstream>
 #include <vector>
 #include <string>
-#include <thread>
 #include <chrono>
 #include <random>
-#include <cstdio>
 #include <cmath>
 
 #include "DebugFlag.h"
@@ -47,7 +44,6 @@
 class NurseRostering::Solver
 {
 public:
-    static const int CHECK_TIME_INTERVAL_MASK_IN_ITER = ((1 << 10) - 1);
     static const Timer::Duration SAVE_SOLUTION_TIME;    // 0.5 seconds
 
     // inverse possibility of starting perturb from optima in last search
@@ -57,6 +53,15 @@ public:
     static const double INIT_PERTURB_STRENGTH;
     static const double PERTURB_STRENGTH_DELTA;
     static const double MAX_PERTURB_STRENGTH;
+
+    // minimal tabu tenure base
+    static const int MIN_TABU_BASE = 6;
+    // ratio of tabuTenureBase to tabuTenureAmp
+    static const int TABU_BASE_TO_AMP = 4;
+    // ratio of biased nurse number in total nurse number
+    static const int INVERSE_TOTAL_BIAS_RATIO = 4;
+    // ratio of biased nurse selected by penalty of each nurse
+    static const int INVERSE_PENALTY_BIAS_RATIO = 5;
 
     enum InitAlgorithm
     {
@@ -78,9 +83,7 @@ public:
     class Config
     {
     public:
-        Config() : initAlgorithm( InitAlgorithm::Greedy ),
-            solveAlgorithm( SolveAlgorithm::TabuSearch_Rand ),
-            modeSeq( Solution::ModeSeq::ACBR ),
+        Config() : solveAlgorithm( SolveAlgorithm::TabuSearch_Rand ),
             maxNoImproveCoefficient( 1 )
         {
             dayTabuCoefficient[TabuTenureCoefficientIndex::TableSize] = 0;
@@ -94,34 +97,29 @@ public:
             shiftTabuCoefficient[TabuTenureCoefficientIndex::ShiftNum] = 0;
         }
 
-        InitAlgorithm initAlgorithm;
         SolveAlgorithm solveAlgorithm;
-        Solution::ModeSeq modeSeq;
         double maxNoImproveCoefficient;
         double dayTabuCoefficient[TabuTenureCoefficientIndex::SIZE];
         double shiftTabuCoefficient[TabuTenureCoefficientIndex::SIZE];
     };
 
 
-    static const std::vector<std::string> solveAlgorithmName;
-
     const NurseRostering &problem;
     const Timer::TimePoint startTime;
     const Timer timer;
 
 
-    Solver( const NurseRostering &input, Timer::TimePoint startTime );
-    Solver( const NurseRostering &input, const Output &optima, Timer::TimePoint startTime );
-    virtual ~Solver() {}
+    Solver( const NurseRostering &input, Timer::TimePoint startTime = Timer::Clock::now() );
+    Solver( const NurseRostering &input, const Output &optima, Timer::TimePoint startTime = Timer::Clock::now() );
 
     // set algorithm name, set parameters, generate initial solution
-    virtual void init( const Config &cfg = Config(), const std::string &runID = std::string() ) = 0;
+    void init( const std::string &runID = std::string() );
     // search for optima
-    virtual void solve() = 0;
+    void solve();
     // return true if global optima or population is updated
-    virtual bool updateOptima( const Output &localOptima ) = 0;
+    bool updateOptima( const Output &localOptima );
     // generate history for next week
-    virtual History genHistory() const = 0;
+    History genHistory() const;
     // return const reference of the optima
     const Output& getOptima() const { return optima; }
     // print simple information of the solution to console
@@ -149,72 +147,6 @@ public:
     }
 
 
-    mutable std::mt19937 randGen;
-
-protected:
-    // create header of the table ( require ios::app flag or "a" mode )
-    static void initResultSheet( std::ofstream &csvFile );
-    // solver can check termination condition every certain number of iterations
-    // this determines if it is the right iteration to check time
-    static bool isIterForTimeCheck( int iterCount ) // currently no use
-    {
-        return (!(iterCount & CHECK_TIME_INTERVAL_MASK_IN_ITER));
-    }
-
-    NurseNumsOnSingleAssign countNurseNums( const AssignTable &assign ) const;
-    void checkConsecutiveViolation( int &objValue,
-        const AssignTable &assign, NurseID nurse, int weekday, ShiftID lastShiftID,
-        int &consecutiveShift, int &consecutiveDay, int &consecutiveDayOff,
-        bool &shiftBegin, bool &dayBegin, bool &dayoffBegin ) const;
-
-    // initialize assist data about nurse-skill relation
-    void discoverNurseSkillRelation();
-
-
-    // nurse-skill relation
-    NurseNumOfSkill nurseNumOfSkill;
-    NurseWithSkill nurseWithSkill;
-    NursesHasSameSkill nursesHasSameSkill;
-
-
-    Output optima;
-
-    Config config;
-
-    // information for log record
-    std::string runID;
-    std::string algorithmName;
-    IterCount iterationCount;
-    IterCount generationCount;
-
-private:    // forbidden operators
-    Solver& operator=(const Solver &) { return *this; }
-};
-
-
-class NurseRostering::TabuSolver : public NurseRostering::Solver
-{
-public:
-    // minimal tabu tenure base
-    static const int MIN_TABU_BASE = 6;
-    // ratio of tabuTenureBase to tabuTenureAmp
-    static const int TABU_BASE_TO_AMP = 4;
-    // ratio of biased nurse number in total nurse number
-    static const int INVERSE_TOTAL_BIAS_RATIO = 4;
-    // ratio of biased nurse selected by penalty of each nurse
-    static const int INVERSE_PENALTY_BIAS_RATIO = 5;
-
-
-    TabuSolver( const NurseRostering &input, Timer::TimePoint startTime = Timer::Clock::now() );
-    TabuSolver( const NurseRostering &input, const Output &optima, Timer::TimePoint startTime = Timer::Clock::now() );
-    virtual ~TabuSolver() {}
-
-    virtual void init( const Config &cfg = Config(), const std::string &runID = std::string() );
-    virtual void solve();
-
-    virtual bool updateOptima( const Output &localOptima );
-    virtual History genHistory() const;
-
     IterCount DayTabuTenureBase() const { return dayTabuTenureBase; }
     IterCount DayTabuTenureAmp() const { return dayTabuTenureAmp; }
     IterCount ShiftTabuTenureBase() const { return shiftTabuTenureBase; }
@@ -226,20 +158,26 @@ public:
     IterCount MaxNoImproveSwapChainLength() const { return maxNoImproveSwapChainLength; }
     IterCount MaxSwapChainRestartCount() const { return maxSwapChainRestartCount; }
 
-private:
-    void greedyInit();
-    void exactInit();
 
-    // search with tabu search and swap chain search by turn
-    void swapChainSearch( Solution::ModeSeq modeSeq );
+    mutable std::mt19937 randGen;
+
+protected:
+    // create header of the table ( require ios::app flag or "a" mode )
+    static void initResultSheet( std::ofstream &csvFile );
+
+    NurseNumsOnSingleAssign countNurseNums( const AssignTable &assign ) const;
+    void checkConsecutiveViolation( int &objValue,
+        const AssignTable &assign, NurseID nurse, int weekday, ShiftID lastShiftID,
+        int &consecutiveShift, int &consecutiveDay, int &consecutiveDayOff,
+        bool &shiftBegin, bool &dayBegin, bool &dayoffBegin ) const;
+
+    // initialize assist data about nurse-skill relation
+    void discoverNurseSkillRelation();
+
     // turn the objective to optimize a subset of nurses when no improvement
-    void biasTabuSearch( Solution::ModeSeq modeSeq );
+    void biasTabuSearch();
     // search with tabu table
-    void tabuSearch( Solution::ModeSeq modeSeq, Solution::TabuSearch search, IterCount maxNoImproveCount );
-    // iteratively run local search and perturb
-    void iterativeLocalSearch( Solution::ModeSeq modeSeq );
-    // random walk until timeout
-    void randomWalk();
+    void tabuSearch( IterCount maxNoImproveCount );
 
     // set tabu tenure according to certain feature
     void setTabuTenure();
@@ -257,11 +195,6 @@ private:
     // set the max no improve count
     void setMaxNoImprove( double coefficient )
     {
-        std::ostringstream oss;
-        oss << "[MNI=" << coefficient << "]";
-
-        algorithmName += oss.str();
-
         maxNoImproveForSingleNeighborhood = static_cast<IterCount>(
             coefficient * problem.scenario.nurseNum * Weekday::NUM);
         maxNoImproveForAllNeighborhood = static_cast<IterCount>(
@@ -271,6 +204,21 @@ private:
         maxNoImproveSwapChainLength = maxNoImproveForSingleNeighborhood;
         maxSwapChainRestartCount = static_cast<IterCount>(sqrt( problem.scenario.nurseNum ));
     }
+
+
+    // nurse-skill relation
+    NurseNumOfSkill nurseNumOfSkill;
+    NurseWithSkill nurseWithSkill;
+    NursesHasSameSkill nursesHasSameSkill;
+
+    Output optima;
+
+    Config config;
+
+    // information for log record
+    std::string runID;
+    IterCount iterationCount;
+    IterCount generationCount;
 
     IterCount dayTabuTenureBase;
     IterCount dayTabuTenureAmp;
@@ -286,7 +234,7 @@ private:
     Solution sln;
 
 private:    // forbidden operators
-    TabuSolver& operator=(const TabuSolver &) { return *this; }
+    Solver& operator=(const Solver &) { return *this; }
 };
 
 

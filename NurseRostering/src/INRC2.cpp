@@ -35,43 +35,6 @@ namespace INRC2
     };
 
 
-    void help()
-    {
-        cout <<
-            "command line arguments ([XXX] means XXX is optional) :\n"
-            "  [id]      - identifier of the run which will be recorded in log file.\n"
-            "  sce       - scenario file path.\n"
-            "  his       - history file path.\n"
-            "  week      - weekdata file path.\n"
-            "  sol       - solution file path.\n"
-            "  [cusIn]   - custom input file path.\n"
-            "  [cusOut]  - custom output file path.\n"
-            "  [rand]    - rand seed for the solver.\n"
-            "  [timeout] - max running time of the solver.\n"
-            "  [iter]    - max iteration count of the solver.\n"
-            "              reaching either timeout or iter will end the program.\n"
-            "  [config]  - specifies algorithm select and argument settings.\n"
-            "              format: cci;d;d,d,d,d;d,d,d,d\n"
-            "                  c for char, d for real number,\n"
-            "                  comma is used to separate numbers.\n"
-            "                  the first char can be:\n"
-            "                      'g'(greedy init) or 'e'(exact init).\n"
-            "                  the second char can be:\n"
-            "                      'w'(Random Walk), 'i'(Iterative Local Search),\n"
-            "                      'p'(Tabu Search Possibility), 'l'(TS Loop),\n"
-            "                      'r'(TS Rand), 's'(Swap Chain) or 'b'(Bias TS).\n"
-            "                  i is a non-negative integer in enum Solution::ModeSeq.\n"
-            "                  next real number is the coefficient of no improve count.\n"
-            "                  following 4 real numbers are coefficients for TableSize,\n"
-            "                  NurseNum, WeekdayNum and ShiftNum used in day tabu\n"
-            "                  tenure setting, non-positive number means there is \n"
-            "                  no relation with that feature. while next 4 numbers are\n"
-            "                  used in shift tabu tenure setting with same meaning.\n"
-            "              example: gt2;1.5;0,0.5,0,0;0,0.8,0,0\n"
-            "                       gt3;0.8;0.1,0,0,0;0.1,0,0,0\n"
-            << endl;
-    }
-
     int run( int argc, char *argv[] )
     {
         Timer::TimePoint startTime = Timer::Clock::now();
@@ -86,12 +49,6 @@ namespace INRC2
             for (j = i + 1; (j < argc) && (argv[j][0] != '-'); ++j) {
                 argvMap[argv[i] + 2] += argv[j]; // (argv[i] + 2) to skip "--" before argument
             }
-        }
-
-        // print help
-        if (argvMap.find( ARGV_HELP ) != argvMap.end()) {
-            help();
-            return 0;
         }
 
         // read input
@@ -152,8 +109,8 @@ namespace INRC2
 
         // start computation
         input.adjustRangeOfTotalAssignByWorkload();
-        NurseRostering::TabuSolver solver( input, startTime );
-        solver.init( parseConfig( argvMap[ARGV_CONFIG] ), argvMap[ARGV_ID] );
+        NurseRostering::Solver solver( input, startTime );
+        solver.init( argvMap[ARGV_ID] );
         solver.solve();
 
         // write output
@@ -162,12 +119,9 @@ namespace INRC2
             writeCustomOutput( argvMap[ARGV_CUSTOM_OUTPUT], solver );
         }
 
-#ifdef INRC2_DEBUG
-        solver.check();
-        solver.print();
-#endif
-
 #ifdef INRC2_LOG
+        solver.print();
+
         ostringstream oss;
         int historyFileNameIndex = argvMap[ARGV_HISTORY].find_last_of( "/\\" ) + 1;
         int weekdataFileNameIndex = argvMap[ARGV_WEEKDATA].find_last_of( "/\\" ) + 1;
@@ -503,60 +457,4 @@ namespace INRC2
         ofs.close();
         return true;
     }
-
-    NurseRostering::Solver::Config parseConfig( const std::string &configString )
-    {
-        NurseRostering::Solver::Config config;
-        istringstream iss( configString );
-        char c;
-        int modeSeq;
-
-        iss >> c;
-        if (c == 'g') {
-            config.initAlgorithm = NurseRostering::Solver::InitAlgorithm::Greedy;
-        } else if (c == 'e') {
-            config.initAlgorithm = NurseRostering::Solver::InitAlgorithm::Exact;
-        } else {
-            return config;
-        }
-
-        iss >> c;
-        if (c == 'w') {
-            config.solveAlgorithm = NurseRostering::Solver::SolveAlgorithm::RandomWalk;
-        } else if (c == 'i') {
-            config.solveAlgorithm = NurseRostering::Solver::SolveAlgorithm::IterativeLocalSearch;
-        } else if (c == 'p') {
-            config.solveAlgorithm = NurseRostering::Solver::SolveAlgorithm::TabuSearch_Possibility;
-        } else if (c == 'l') {
-            config.solveAlgorithm = NurseRostering::Solver::SolveAlgorithm::TabuSearch_Loop;
-        } else if (c == 'r') {
-            config.solveAlgorithm = NurseRostering::Solver::SolveAlgorithm::TabuSearch_Rand;
-        } else if (c == 'b') {
-            config.solveAlgorithm = NurseRostering::Solver::SolveAlgorithm::BiasTabuSearch;
-        } else if (c == 's') {
-            config.solveAlgorithm = NurseRostering::Solver::SolveAlgorithm::SwapChainSearch;
-        } else {
-            return config;
-        }
-
-        iss >> modeSeq;
-        if ((modeSeq >= 0) && (modeSeq < NurseRostering::Solution::ModeSeq::SIZE)) {
-            config.modeSeq = static_cast<NurseRostering::Solution::ModeSeq>(modeSeq);
-        }
-
-        iss >> c;
-        iss >> config.maxNoImproveCoefficient;
-
-        iss >> c >> config.dayTabuCoefficient[NurseRostering::Solver::TabuTenureCoefficientIndex::TableSize]
-            >> c >> config.dayTabuCoefficient[NurseRostering::Solver::TabuTenureCoefficientIndex::NurseNum]
-            >> c >> config.dayTabuCoefficient[NurseRostering::Solver::TabuTenureCoefficientIndex::DayNum]
-            >> c >> config.dayTabuCoefficient[NurseRostering::Solver::TabuTenureCoefficientIndex::ShiftNum]
-            >> c >> config.shiftTabuCoefficient[NurseRostering::Solver::TabuTenureCoefficientIndex::TableSize]
-            >> c >> config.shiftTabuCoefficient[NurseRostering::Solver::TabuTenureCoefficientIndex::NurseNum]
-            >> c >> config.shiftTabuCoefficient[NurseRostering::Solver::TabuTenureCoefficientIndex::DayNum]
-            >> c >> config.shiftTabuCoefficient[NurseRostering::Solver::TabuTenureCoefficientIndex::ShiftNum];
-
-        return config;
-    }
-
 }

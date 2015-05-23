@@ -12,7 +12,6 @@
 #include <map>
 #include <vector>
 #include <string>
-#include <sstream>
 
 #include "DebugFlag.h"
 #include "utility.h"
@@ -204,18 +203,7 @@ public:
         // to let it allocate an additional day for history
         AssignTable( int nurseNum, int weekdayNum = Weekday::SIZE, const Assign &singleAssign = Assign() )
             : std::vector< std::vector< Assign > >( nurseNum, std::vector< Assign >( weekdayNum, singleAssign ) ) {}
-        AssignTable( int nurseNum, int weekdayNum, const std::string &assignString )
-            : std::vector< std::vector< Assign > >( nurseNum, std::vector< Assign >( weekdayNum ) )
-        {
-            std::istringstream iss( assignString );
 
-            for (NurseID nurse = 0; nurse < nurseNum; ++nurse) {
-                for (int weekday = Weekday::Mon; weekday < weekdayNum; ++weekday) {
-                    iss >> at( nurse ).at( weekday ).shift
-                        >> at( nurse ).at( weekday ).skill;
-                }
-            }
-        }
 
         bool isWorking( NurseID nurse, int weekday ) const
         {
@@ -236,18 +224,11 @@ public:
         void setDefaultMode();
         // UnderStaff and InsufficientStaff is not considered
         // due to nurse number will not change on each shift
-        void setSwapMode();
-        // 
         void setBlockSwapMode();
-        // TotalAssign is not considered due to total assign will not change
-        // succession should be 
-        void setExchangeMode();
         // allow hard constraints UnderStaff and Succession being violated
         // but with much greater penalty than soft constraints
         // set softConstraintDecay to MAX_OBJ_VALUE to make them does not count
-        void setRepairMode( ObjValue WeightOnUnderStaff = DefaultPenalty::UnderStaff_Repair,
-            ObjValue WeightOnSuccesion = DefaultPenalty::Succession_Repair,
-            ObjValue softConstraintDecay = DefaultPenalty::MAX_OBJ_VALUE );
+        void setRepairMode();
 
         // hard constraint
         ObjValue UnderStaff() const { return underStaff; }
@@ -287,7 +268,7 @@ public:
     class Solution;
 
     class Solver;
-    class TabuSolver;
+    class Solver;
 
 
     // nurseNumOfSkill[skill] is the number of nurses with that skill

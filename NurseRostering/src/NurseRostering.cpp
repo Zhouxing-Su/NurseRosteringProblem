@@ -61,23 +61,6 @@ void NurseRostering::Penalty::setDefaultMode()
     totalWorkingWeekend = DefaultPenalty::TotalWorkingWeekend;
 }
 
-void NurseRostering::Penalty::setSwapMode()
-{
-    singleAssign = 0;   // due to no extra assignments
-    underStaff = 0;     // due to no extra assignments
-    succession = DefaultPenalty::FORBIDDEN_MOVE;
-    missSkill = DefaultPenalty::FORBIDDEN_MOVE;
-
-    insufficientStaff = 0;  // due to no extra assignments
-    consecutiveShift = DefaultPenalty::ConsecutiveShift;
-    consecutiveDay = DefaultPenalty::ConsecutiveDay;
-    consecutiveDayOff = DefaultPenalty::ConsecutiveDayOff;
-    preference = DefaultPenalty::Preference;
-    completeWeekend = DefaultPenalty::CompleteWeekend;
-    totalAssign = DefaultPenalty::TotalAssign;
-    totalWorkingWeekend = DefaultPenalty::TotalWorkingWeekend;
-}
-
 void NurseRostering::Penalty::setBlockSwapMode()
 {
     singleAssign = 0;   // due to no extra assignments
@@ -95,36 +78,19 @@ void NurseRostering::Penalty::setBlockSwapMode()
     totalWorkingWeekend = DefaultPenalty::TotalWorkingWeekend;
 }
 
-void NurseRostering::Penalty::setExchangeMode()
-{
-    singleAssign = 0;   // due to no extra assignments
-    underStaff = DefaultPenalty::FORBIDDEN_MOVE;
-    succession = 0;     // due to it is calculated outside the try
-    missSkill = 0;      // due to it is the same nurse
-
-    insufficientStaff = DefaultPenalty::InsufficientStaff;
-    consecutiveShift = DefaultPenalty::ConsecutiveShift;
-    consecutiveDay = DefaultPenalty::ConsecutiveDay;
-    consecutiveDayOff = DefaultPenalty::ConsecutiveDayOff;
-    preference = DefaultPenalty::Preference;
-    completeWeekend = DefaultPenalty::CompleteWeekend;
-    totalAssign = 0;
-    totalWorkingWeekend = DefaultPenalty::TotalWorkingWeekend;
-}
-
-void NurseRostering::Penalty::setRepairMode( ObjValue WeightOnUnderStaff, ObjValue WeightOnSuccesion, ObjValue softConstraintDecay )
+void NurseRostering::Penalty::setRepairMode()
 {
     singleAssign = DefaultPenalty::FORBIDDEN_MOVE;
-    underStaff = WeightOnUnderStaff;
-    succession = WeightOnSuccesion;
+    underStaff = DefaultPenalty::UnderStaff_Repair;
+    succession = DefaultPenalty::Succession_Repair;
     missSkill = DefaultPenalty::FORBIDDEN_MOVE;
 
-    insufficientStaff = DefaultPenalty::InsufficientStaff / softConstraintDecay;
-    consecutiveShift = DefaultPenalty::ConsecutiveShift / softConstraintDecay;
-    consecutiveDay = DefaultPenalty::ConsecutiveDay / softConstraintDecay;
-    consecutiveDayOff = DefaultPenalty::ConsecutiveDayOff / softConstraintDecay;
-    preference = DefaultPenalty::Preference / softConstraintDecay;
-    completeWeekend = DefaultPenalty::CompleteWeekend / softConstraintDecay;
-    totalAssign = DefaultPenalty::TotalAssign / softConstraintDecay;
-    totalWorkingWeekend = DefaultPenalty::TotalWorkingWeekend / softConstraintDecay;
+    insufficientStaff = 0;
+    consecutiveShift = 0;
+    consecutiveDay = 0;
+    consecutiveDayOff = 0;
+    preference = 0;
+    completeWeekend = 0;
+    totalAssign = 0;
+    totalWorkingWeekend = 0;
 }

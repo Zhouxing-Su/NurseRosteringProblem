@@ -57,7 +57,6 @@ namespace INRC2
     bool readCustomInput( const std::string &customInputFileName, NurseRostering &input );
     bool writeSolution( const std::string &solutionFileName, const NurseRostering::Solver &solver );
     bool writeCustomOutput( const std::string &customOutputFileName, const NurseRostering::Solver &solver );
-    NurseRostering::Solver::Config parseConfig( const std::string &configString );
 }
 
 

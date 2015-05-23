@@ -23,7 +23,6 @@
 
 #include <algorithm>
 #include <vector>
-#include <queue>
 #include <cmath>
 #include <cstring>
 
@@ -37,7 +36,7 @@ class NurseRostering::Output
 public:
     // assume initial solution will never be the global optima
     Output() : objValue( DefaultPenalty::FORBIDDEN_MOVE ), secondaryObjValue( DefaultPenalty::FORBIDDEN_MOVE ) {}
-    Output( ObjValue objVal, const AssignTable &assignment, double secondaryObjVal = DefaultPenalty::FORBIDDEN_MOVE, 
+    Output( ObjValue objVal, const AssignTable &assignment, double secondaryObjVal = DefaultPenalty::FORBIDDEN_MOVE,
         Timer::TimePoint findAssignTime = std::chrono::steady_clock::now() )
         : objValue( objVal ), secondaryObjValue( secondaryObjVal ), assign( assignment ), findTime( findAssignTime )
     {
@@ -72,13 +71,7 @@ public:
         // "Both" means search both, "Loop" means switch to another when no improvement
         enum Mode
         {
-            // atomic moves are not composed by other moves
-            Add, Remove, Change, ATOMIC_MOVE_SIZE,
-            // basic moves are used in randomWalk()
-            Exchange = ATOMIC_MOVE_SIZE, Swap, BlockSwap, BASIC_MOVE_SIZE,
-            // compound moves which can not be used by a single tryXXX() and no apply()
-            // for them. apply them by calling apply() of corresponding basic move
-            BlockShift = BASIC_MOVE_SIZE, ARLoop, ARRand, ARBoth, SIZE
+            Add, Remove, Change, BlockSwap, BASIC_MOVE_SIZE, SIZE = BASIC_MOVE_SIZE
         };
 
         Move() : delta( DefaultPenalty::FORBIDDEN_MOVE ) {}
@@ -115,35 +108,21 @@ public:
     typedef void (Solution::*TabuSearch)(const Timer &timer, const FindBestMoveTable &findBestMoveTable, IterCount maxNoImproveCount);
 
 
-    enum ModeSeq
-    {
-        ARlCS, ARrCS, ARbCS, ACSR,
-        ARlSCB, ARrSCB, ARbSCB, ASCBR,
-        ARlCSE, ARrCSE, ARbCSE, ACSER,
-        ARlCSEB, ARrCSEB, ARbCSEB, ACSEBR,
-        ARlCB, ARrCB, ARbCB, ACBR,
-        ARlCEB, ARrCEB, ARbCEB, ACEBR, SIZE
-    };
-
-    static const std::vector<std::string> modeSeqNames;
-    static const std::vector<std::vector<int> > modeSeqPatterns;
-
     // entrance in this table should have the same sequence
     // as move mode enum defined in Move::Mode
     static const TryMoveTable tryMove;
     static const FindBestMoveTable findBestMove;
-    static const FindBestMoveTable findBestMoveOnBlockBorder;
     static const ApplyMoveTable applyMove;
     static const UpdateTabuTable updateTabuTable;
 
     static const double NO_DIFF;    // for building same assign in rebuild()
 
-    const TabuSolver &solver;
+    const Solver &solver;
     const NurseRostering &problem;
 
 
-    Solution( const TabuSolver &solver );
-    Solution( const TabuSolver &solver, const Output &output );
+    Solution( const Solver &solver );
+    Solution( const Solver &solver, const Output &output );
 
     // get local optima in the search trajectory
     const Output& getOptima() const { return optima; }
@@ -199,9 +178,8 @@ public:
     // get current iteration count (may not be the actual iter count)
     IterCount getIterCount() const { return iterCount; }
 
-    bool genInitAssign( int greedyRetryCount );
+    void genInitAssign();
     bool genInitAssign_Greedy();
-    bool genInitAssign_BranchAndCut();
     bool repair( const Timer &timer );  // make infeasible solution feasible
 
     // set weights of nurses with less penalty to 0
@@ -209,53 +187,12 @@ public:
     void adjustWeightToBiasNurseWithGreaterPenalty( int inverseTotalBiasRatio, int inversePenaltyBiasRatio );
 
 
-    // try to start with a best block swap or a best block swap for single nurse
-    // until no improvement on the optima
-    void swapChainSearch_DoubleHead( const Timer &timer, IterCount maxNoImproveChainLength );
-    // iteratively call genSwapChain() with different start link
-    // until given count of no improvement.
-    void swapChainSearch( const Timer &timer, IterCount maxNoImproveChainLength );
-    // start with a given block swap (will improve at least one nurse), 
-    // the (more) improved nurse is the head of the link which
-    // the other one is the tail and the head of next link.
-    // each tail has two branches. the first one is make add, remove, change
-    // or block shift which will stop the chain if improved. the second one is to 
-    // find a block swap to improve this nurse which will continue the chain.
-    bool genSwapChain( const Timer &timer, const Move &head, IterCount noImproveLen );
     // select single neighborhood to search in each iteration randomly
     // the random select process is a discrete distribution
     // the possibility to be selected will increase if the neighborhood
     // improve the solution, else decrease it. the sum of possibilities is 1.0
     void tabuSearch_Rand( const Timer &timer, const FindBestMoveTable &findBestMoveTable, IterCount maxNoImproveCount );
-    // loop to select neighborhood to search until timeout or there is no
-    // improvement on (NeighborhoodNum + 2) neighborhood consecutively.
-    // switch neighborhood when maxNoImproveForSingleNeighborhood has
-    // been reach, then restart from optima in current trajectory.
-    void tabuSearch_Loop( const Timer &timer, const FindBestMoveTable &findBestMoveTable, IterCount maxNoImproveCount );
-    // randomly select neighborhood to search until timeout or
-    // no improve move count reaches maxNoImproveForAllNeighborhood.
-    // for each neighborhood i, the possibility to select is P[i].
-    // increase the possibility to select when no improvement.
-    // in detail, the P[i] contains two part, local and global.
-    // the local part will increase if the neighborhood i makes
-    // improvement, and decrease vice versa. the global part will
-    // increase if recent search (not only on neighborhood i)
-    // can not make improvement, otherwise, it will decrease.
-    // in case the iteration takes too much time, it can be changed
-    // from best improvement to first improvement.
-    // if no neighborhood has been selected, prepare a loop queue.
-    // select the one by one in the queue until a valid move is found.
-    // move the head to the tail of the queue if it makes no improvement.
-    void tabuSearch_Possibility( const Timer &timer, const FindBestMoveTable &findBestMoveTable, IterCount maxNoImproveCount );
-    // try add shift until there is no improvement , then try change shift,
-    // then try remove shift, then try add shift again. if all of them
-    // can't improve or time is out, return.
-    void localSearch( const Timer &timer, const FindBestMoveTable &findBestMoveTable );
-    // randomly select add, change or remove shift until timeout
-    void randomWalk( const Timer &timer, IterCount stepNum );
 
-    // change solution structure in certain complexity
-    void perturb( double strength );
 
     const AssignTable& getAssignTable() const { return assign; }
     // shift must not be none shift
@@ -267,9 +204,6 @@ public:
     {
         return problem.scenario.shifts[shift].legalNextShifts[assign[nurse][weekday + 1].shift];
     }
-
-    // check if the result of incremental update, evaluate and checkObjValue is the same
-    bool checkIncrementalUpdate();
 
 private:
     // available nurses for a single assignment
@@ -430,9 +364,6 @@ private:
             exceedCount( len, max );
     }
 
-    // depth first search to fill assign
-    bool fillAssign( int weekday, ShiftID shift, SkillID skill, NurseID nurse, int nurseNum );
-
     // allocate space for data structure and set default value
     // must be called before building up a solution
     void resetAssign();
@@ -442,8 +373,7 @@ private:
     void invalidateCacheFlag( const Move &move )
     {
         isBlockSwapCacheValid[move.nurse] = false;
-        if ((move.mode == Move::Mode::BlockSwap)
-            || (move.mode == Move::Mode::Swap)) {
+        if (move.mode == Move::Mode::BlockSwap) {
             isBlockSwapCacheValid[move.nurse2] = false;
         }
     }
@@ -463,24 +393,10 @@ private:
     bool findBestAdd( Move &bestMove ) const;
     bool findBestChange( Move &bestMove ) const;
     bool findBestRemove( Move &bestMove ) const;
-    bool findBestSwap( Move &bestMove ) const;
-    bool findBestBlockSwap( Move &bestMove ) const;         // try all nurses
-    bool findBestBlockSwap_cached( Move &bestMove ) const;         // try all nurses
-    bool findBestBlockSwap_fast( Move &bestMove ) const;    // try all nurses
-    bool findBestBlockSwap_part( Move &bestMove ) const;    // try some nurses following index
-    bool findBestBlockSwap_rand( Move &bestMove ) const;    // try randomly picked nurses 
-    bool findBestExchange( Move &bestMove ) const;
-    bool findBestBlockShift( Move &bestMove ) const;
-    bool findBestARLoop( Move &bestMove ) const;
-    bool findBestARRand( Move &bestMove ) const;
+    bool findBestBlockSwap_cached( Move &bestMove ) const;
     bool findBestARBoth( Move &bestMove ) const;
     bool findBestAddOnBlockBorder( Move &bestMove ) const;
     bool findBestChangeOnBlockBorder( Move &bestMove ) const;
-    bool findBestRemoveOnBlockBorder( Move &bestMove ) const;
-    bool findBestSwapOnBlockBorder( Move &bestMove ) const;
-    bool findBestExchangeOnBlockBorder( Move &bestMove ) const;
-    bool findBestARLoopOnBlockBorder( Move &bestMove ) const;
-    bool findBestARRandOnBlockBorder( Move &bestMove ) const;
     bool findBestARBothOnBlockBorder( Move &bestMove ) const;
 
     // evaluate cost of adding a Assign to nurse without Assign in weekday
@@ -494,20 +410,11 @@ private:
     ObjValue tryRemoveAssign( const Move &move ) const;
     // evaluate cost of swapping Assign of two nurses in the same day
     ObjValue trySwapNurse( int weekday, NurseID nurse, NurseID nurse2 ) const;
-    ObjValue trySwapNurse( const Move &move ) const;
     // evaluate cost of swapping Assign of two nurses in consecutive days start from weekday
     // and record the selected end of the block into weekday2
     // the recorded move will always be no tabu move or meet aspiration criteria
     ObjValue trySwapBlock( int weekday, int &weekday2, NurseID nurse, NurseID nurse2 ) const;
     ObjValue trySwapBlock( const Move &move ) const;
-    // evaluate cost of swapping Assign of two nurses in consecutive days in a week
-    // and record the block information into weekday and weekday2
-    // the recorded move will always be no tabu move or meet aspiration criteria
-    ObjValue trySwapBlock_fast( int &weekday, int &weekday2, NurseID nurse, NurseID nurse2 ) const;
-    ObjValue trySwapBlock_fast( const Move &move ) const;
-    // evaluate cost of exchanging Assign of a nurse on two days
-    ObjValue tryExchangeDay( int weekday, NurseID nurse, int weekday2 ) const;
-    ObjValue tryExchangeDay( const Move &move ) const;
 
     // apply assigning a Assign to nurse without Assign in weekday
     void addAssign( int weekday, NurseID nurse, const Assign &a );
@@ -524,9 +431,6 @@ private:
     // apply swapping Assign of two nurses in consecutive days within [weekday, weekday2]
     void swapBlock( int weekday, int weekday2, NurseID nurse, NurseID nurse2 );
     void swapBlock( const Move &move );
-    // apply exchanging Assign of a nurse on two days
-    void exchangeDay( int weekday, NurseID nurse, int weekday2 );
-    void exchangeDay( const Move &move );
 
     void updateConsecutive( int weekday, NurseID nurse, ShiftID shift );
     // the assignment is on the right side of a consecutive block
@@ -685,16 +589,6 @@ private:
 
     mutable Penalty penalty;    // trySwapNurse() will modify it
 
-    // for switching between add and remove
-    // 1 for no improvement which is opposite in localSearch
-    mutable bool findBestARLoop_flag;    // findBestARLoop() will modify it
-    mutable bool findBestARLoopOnBlockBorder_flag;   // findBestARLoopOnBlockBorder() will modify it
-    // for controlling start point of the search of best block swap
-    mutable NurseID findBestBlockSwap_startNurse;    // findBestBlockSwap() will modify it
-    // TODO : remove following two variables if TSP is not used
-    // for controlling swap and block swap will not be selected both in possibility select
-    bool isPossibilitySelect;
-    mutable bool isBlockSwapSelected;    // tabuSearch_Possibility() and findBestBlockSwap() wil modify it
     // trySwapNurse() and trySwapBlock() will guarantee they are always corresponding to the selected swap
     mutable ObjValue nurseDelta;    // trySwapNurse() and trySwapBlock() will modify it
     mutable ObjValue nurse2Delta;   // trySwapNurse() and trySwapBlock() will modify it
