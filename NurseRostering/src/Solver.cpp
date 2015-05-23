@@ -443,7 +443,7 @@ void NurseRostering::Solver::tabuSearch( IterCount maxNoImproveCount )
     double perturbStrength = INIT_PERTURB_STRENGTH;
     double perturbStrengthDelta = PERTURB_STRENGTH_DELTA;
     while (!timer.isTimeOut()) {
-        sln.tabuSearch_Rand( timer, Solution::findBestMove, maxNoImproveCount );
+        sln.tabuSearch_Rand( timer, maxNoImproveCount );
         ++generationCount;
 
         if (updateOptima( sln.getOptima() )) {
@@ -468,7 +468,7 @@ void NurseRostering::Solver::tabuSearch( IterCount maxNoImproveCount )
 void NurseRostering::Solver::biasTabuSearch()
 {
     while (!timer.isTimeOut()) {
-        sln.tabuSearch_Rand( timer, Solution::findBestMove, MaxNoImproveForAllNeighborhood() );
+        sln.tabuSearch_Rand( timer, MaxNoImproveForAllNeighborhood() );
 
         updateOptima( sln.getOptima() );
         const Output &output( (randGen() % BIAS_TS_ORIGIN_SELECT)
@@ -476,7 +476,7 @@ void NurseRostering::Solver::biasTabuSearch()
         sln.rebuild( output );
 
         sln.adjustWeightToBiasNurseWithGreaterPenalty( INVERSE_TOTAL_BIAS_RATIO, INVERSE_PENALTY_BIAS_RATIO );
-        sln.tabuSearch_Rand( timer, Solution::findBestMove, MaxNoImproveForBiasTabuSearch() );
+        sln.tabuSearch_Rand( timer, MaxNoImproveForBiasTabuSearch() );
         ++generationCount;
         sln.rebuild( sln.getOptima() );
         sln.evaluateObjValue();

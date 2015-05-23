@@ -65,50 +65,5 @@
 #define INRC2_PERTRUB_IN_REBUILD
 #endif
 
-// [fix] uncomment to search all neighborhood after update optima
-#ifndef INRC2_LS_AFTER_TSR_UPDATE_OPT
-//#define INRC2_LS_AFTER_TSR_UPDATE_OPT
-#endif
-
-// comment to use best improvement
-#ifndef INRC2_BLOCK_SWAP_FIRST_IMPROVE
-//#define INRC2_BLOCK_SWAP_FIRST_IMPROVE
-#endif
-
-// tabu strength of block swap
-#define INRC2_BLOCK_SWAP_AVERAGE_TABU 0
-#define INRC2_BLOCK_SWAP_STRONG_TABU 1
-#define INRC2_BLOCK_SWAP_WEAK_TABU 2
-#define INRC2_BLOCK_SWAP_NO_TABU 3
-#ifndef INRC2_BLOCK_SWAP_TABU_STRENGTH
-
-#ifdef INRC2_USE_TABU
-#define INRC2_BLOCK_SWAP_TABU_STRENGTH INRC2_BLOCK_SWAP_NO_TABU
-#else   // must be no tabu if global setting is no tabu
-#define INRC2_BLOCK_SWAP_TABU_STRENGTH INRC2_BLOCK_SWAP_NO_TABU
-#endif
-#endif
-
-// [fix] grain of block swap
-#define INRC2_BLOCK_SWAP_ORGN 0
-#define INRC2_BLOCK_SWAP_FAST 1
-#define INRC2_BLOCK_SWAP_PART 2
-#define INRC2_BLOCK_SWAP_RAND 3
-#define INRC2_BLOCK_SWAP_CACHED 4
-
-#ifndef INRC2_BLOCK_SWAP_FIND_BEST
-#define INRC2_BLOCK_SWAP_FIND_BEST INRC2_BLOCK_SWAP_CACHED
-#endif
-
-// comment to use double head version of swap chain 
-#ifndef INRC2_SWAP_CHAIN_DOUBLE_HEAD
-//#define INRC2_SWAP_CHAIN_DOUBLE_HEAD
-#endif
-
-// comment to keep searching after ACER improved the worsened nurse
-#ifndef INRC2_SWAP_CHAIN_MAKE_BAD_MOVE
-//#define INRC2_SWAP_CHAIN_MAKE_BAD_MOVE
-#endif
-
 
 #endif

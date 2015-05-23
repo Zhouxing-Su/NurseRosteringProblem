@@ -209,59 +209,6 @@ public:
         {
             return Assign::isWorking( at( nurse ).at( weekday ).shift );
         }
-
-    private:
-
-    };
-
-    class Penalty
-    {
-    public:
-        Penalty() { setDefaultMode(); }
-
-        // hard constraints must be satisfied 
-        // and soft constraints get their original penalty
-        void setDefaultMode();
-        // UnderStaff and InsufficientStaff is not considered
-        // due to nurse number will not change on each shift
-        void setBlockSwapMode();
-        // allow hard constraints UnderStaff and Succession being violated
-        // but with much greater penalty than soft constraints
-        // set softConstraintDecay to MAX_OBJ_VALUE to make them does not count
-        void setRepairMode();
-
-        // hard constraint
-        ObjValue UnderStaff() const { return underStaff; }
-        ObjValue SingleAssign() const { return singleAssign; }
-        ObjValue Succession() const { return succession; };
-        ObjValue MissSkill() const { return missSkill; }
-
-        // soft constraint
-        ObjValue InsufficientStaff() const { return insufficientStaff; }
-        ObjValue ConsecutiveShift() const { return consecutiveShift; }
-        ObjValue ConsecutiveDay() const { return consecutiveDay; }
-        ObjValue ConsecutiveDayOff() const { return consecutiveDayOff; }
-        ObjValue Preference() const { return preference; }
-        ObjValue CompleteWeekend() const { return completeWeekend; }
-        ObjValue TotalAssign() const { return totalAssign; }
-        ObjValue TotalWorkingWeekend() const { return totalWorkingWeekend; }
-
-    private:
-        // hard constraint
-        ObjValue singleAssign;
-        ObjValue underStaff;
-        ObjValue succession;
-        ObjValue missSkill;
-
-        // soft constraint
-        ObjValue insufficientStaff;
-        ObjValue consecutiveShift;
-        ObjValue consecutiveDay;
-        ObjValue consecutiveDayOff;
-        ObjValue preference;
-        ObjValue completeWeekend;
-        ObjValue totalAssign;
-        ObjValue totalWorkingWeekend;
     };
 
     class Output;
