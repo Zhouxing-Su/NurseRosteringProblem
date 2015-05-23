@@ -15,6 +15,7 @@
 #include <random>
 #include <chrono>
 #include <thread>
+#include <mutex>
 #include <cstdio>
 
 #include "DebugFlag.h"
@@ -144,44 +145,7 @@ std::string getLastNoneEmptyLine( const std::string &filename );
 std::string getTime();
 
 //
-class FileLock
-{
-public:
-    static const int TRY_LOCK_INTERVAL = 256;   // in milliseconds
-    static const int BIT_NUM_OF_INT = 32;
-
-    static const std::string LockName;
-    static const std::ios_base::openmode ReadMode;
-    static const std::ios_base::openmode WriteMode;
-
-
-    // used in initialization, in case unexpected termination 
-    // which leaves the lock file not removed.
-    static void unlock( const std::string &filename );
-
-
-    // specify your own lock id to make the chance of signature collision smaller
-    FileLock( const std::string &filename, unsigned id = rand() );
-
-    // return true if the file is really locked by the caller, else return false
-    bool checkLock() const;
-    // if the file is free, then lock it, else do nothing
-    // so you must call checkLock to get the lock state
-    void tryLock();
-    // spin lock which will block the thread until success
-    void lock();
-    // release the lock
-    void unlock();
-
-private:
-    const std::string lockFileName;
-    const long long signature;
-    const int retryInterval;
-
-private:    // forbidden operators
-    FileLock( const FileLock & ) : lockFileName(), signature(), retryInterval() {}
-    FileLock& operator=(const FileLock &) { return *this; }
-};
+extern std::mutex logFileMutex;
 
 // 
 void errorLog( const std::string &msg );

@@ -108,8 +108,6 @@ void parallelRun()
 
 int main()
 {
-    FileLock::unlock( LOG_FILE_NAME );
-
     loadConfig();
     loadInstTimeOut();
     loadInstSeq();
