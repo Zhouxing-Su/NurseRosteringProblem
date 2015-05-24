@@ -222,8 +222,7 @@ void NurseRostering::Solver::record( const std::string logFileName, const std::s
     csvFile.close();
 
     // wait if others are writing to log file
-    FileLock fl( logFileName );
-    fl.lock();
+    logFileMutex.lock();
 
     csvFile.open( logFileName, ios::app );
     csvFile.seekp( 0, ios::beg );
@@ -255,7 +254,7 @@ void NurseRostering::Solver::record( const std::string logFileName, const std::s
 
     csvFile << endl;
     csvFile.close();
-    fl.unlock();
+    logFileMutex.unlock();
 }
 
 void NurseRostering::Solver::errorLog( const std::string &msg ) const

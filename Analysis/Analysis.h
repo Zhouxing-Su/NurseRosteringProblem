@@ -25,7 +25,7 @@ enum MaxLen
 {
     // 120 nurses * 7 days a week * 2 numbers to record * 3 digits a number * other data
     LINE = 120 * 7 * 2 * 3 * 2,
-    INST_NAME = 10,
+    INST_NAME = 12,
     INIT_HIS_NAME = 100,
     WEEKDATA_NAME = 100,
     ALGORITHM_NAME = 100

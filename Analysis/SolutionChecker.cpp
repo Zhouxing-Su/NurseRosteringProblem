@@ -162,19 +162,24 @@ void validatorCheck( const std::string &logFileName, const std::string &outputFi
     ifstream csvFile( logFileName );
     ofstream output( outputFileName );
 
+    char buf[MaxLen::LINE];
     char timeBuf[MaxLen::LINE];
-    char idBuf[MaxLen::LINE];
+    char idBuf[MaxLen::INST_NAME];
     char instNameBuf[MaxLen::INST_NAME];
+
 
     // clear first line of header
     csvFile.getline( timeBuf, MaxLen::LINE );
     // create header
-    output << "Time,ID,Instance,Obj,Feasible,Validator-Obj" << endl;
+    output << "Time,ID,Instance,Seed,Obj,Feasible,Validator-Obj" << endl;
 
     while (true) {
         csvFile.getline( timeBuf, MaxLen::LINE, ',' );
-        csvFile.getline( idBuf, MaxLen::LINE, ',' );
+        csvFile.getline( idBuf, MaxLen::INST_NAME, ',' );
         csvFile.getline( instNameBuf, MaxLen::INST_NAME, '[' );
+        csvFile.getline( buf, MaxLen::LINE, ',' );    // instance
+        csvFile.getline( buf, MaxLen::LINE, ',' );    // algorithmName
+        csvFile.getline( buf, MaxLen::LINE, ',' );    // rand seed
         if (csvFile.eof()) { break; }
 
         ValidatorArgvPack vap;
@@ -184,11 +189,11 @@ void validatorCheck( const std::string &logFileName, const std::string &outputFi
 
             NurseRostering::ObjValue checkResult = getObjValueInValidatorResult();
             output << timeBuf << "," << idBuf << ","
-                << instNameBuf << "," << totalObj << ","
+                << instNameBuf << "," << buf << "," << totalObj << ","
                 << (checkResult >= 0) << "," << (checkResult - totalObj) << endl;
         }
 
-        csvFile.getline( idBuf, MaxLen::LINE );    // clear line
+        csvFile.getline( buf, MaxLen::LINE );    // clear line
     }
 
     csvFile.close();
@@ -286,6 +291,7 @@ void analyzeCheckResult( const std::string &checkFileName, const std::string &ou
         Info() : count( 0 ), objSum( 0 ), minObj( NurseRostering::MAX_OBJ_VALUE ) {}
 
         string instance;
+        int seed;
         int count;
         double objSum;
         double minObj;
@@ -302,10 +308,11 @@ void analyzeCheckResult( const std::string &checkFileName, const std::string &ou
     // clear first line of header
     csvFile.getline( buf, MaxLen::LINE );
     // create header
-    output << "Instance,AvgObj,MinObj" << endl;
+    output << "Instance,AvgObj,MinObj,Seed" << endl;
 
     while (true) {
         string instance;
+        int seed;
         NurseRostering::ObjValue feasible;
         double obj;
 
@@ -313,6 +320,8 @@ void analyzeCheckResult( const std::string &checkFileName, const std::string &ou
         csvFile.getline( buf, MaxLen::LINE, ',' );  // id
         csvFile.getline( buf, MaxLen::LINE, ',' );  // instance
         instance = buf;
+        csvFile >> seed;
+        csvFile.getline( buf, MaxLen::LINE, ',' );  // clear
         csvFile >> obj;
         csvFile.getline( buf, MaxLen::LINE, ',' );  // clear
         csvFile >> feasible;
@@ -326,7 +335,11 @@ void analyzeCheckResult( const std::string &checkFileName, const std::string &ou
             for (; iter != instInfo.end(); ++iter) {
                 if (iter->instance == instance) {
                     iter->objSum += obj;
-                    iter->minObj = (obj < iter->minObj) ? obj : iter->minObj;
+                    if (obj < iter->minObj) {
+                        iter->minObj = obj;
+                        iter->seed = seed;
+
+                    }
                     ++(iter->count);
                     break;
                 }
@@ -335,6 +348,7 @@ void analyzeCheckResult( const std::string &checkFileName, const std::string &ou
             if (iter == instInfo.end()) {
                 instInfo.push_back( Info() );
                 instInfo.back().instance = instance;
+                instInfo.back().seed = seed;
                 instInfo.back().count = 1;
                 instInfo.back().objSum = obj;
                 instInfo.back().minObj = obj;
@@ -343,9 +357,8 @@ void analyzeCheckResult( const std::string &checkFileName, const std::string &ou
     }
 
     for (auto iter = instInfo.begin(); iter != instInfo.end(); ++iter) {
-        output << iter->instance << ',' 
-            << iter->objSum / iter->count << ','
-            << iter->minObj << endl;
+        output << iter->instance << ',' << iter->objSum / iter->count << ','
+            << iter->minObj << ',' << iter->seed << endl;
     }
 
     csvFile.close();
