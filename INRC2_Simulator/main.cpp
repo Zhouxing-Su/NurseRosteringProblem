@@ -62,7 +62,7 @@ void benchmarkRun()
 
     int runCount = 512;
     int threadBeginInterval = 3;
-    int threadNum = 4;
+    int threadNum = thread::hardware_concurrency();
     vector<thread> vt;
     for (int i = 0; i < threadNum; ++i) {
         id.str( string() );

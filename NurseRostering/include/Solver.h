@@ -63,46 +63,6 @@ public:
     // ratio of biased nurse selected by penalty of each nurse
     static const int INVERSE_PENALTY_BIAS_RATIO = 5;
 
-    enum InitAlgorithm
-    {
-        Greedy, Exact
-    };
-
-    enum SolveAlgorithm
-    {
-        RandomWalk, IterativeLocalSearch,
-        TabuSearch_Possibility, TabuSearch_Loop, TabuSearch_Rand,
-        BiasTabuSearch, SwapChainSearch
-    };
-
-    enum TabuTenureCoefficientIndex
-    {
-        TableSize, NurseNum, DayNum, ShiftNum, SIZE
-    };
-
-    class Config
-    {
-    public:
-        Config() : solveAlgorithm( SolveAlgorithm::TabuSearch_Rand ),
-            maxNoImproveCoefficient( 1 )
-        {
-            dayTabuCoefficient[TabuTenureCoefficientIndex::TableSize] = 0;
-            dayTabuCoefficient[TabuTenureCoefficientIndex::NurseNum] = 0;
-            dayTabuCoefficient[TabuTenureCoefficientIndex::DayNum] = 1;
-            dayTabuCoefficient[TabuTenureCoefficientIndex::ShiftNum] = 0;
-
-            shiftTabuCoefficient[TabuTenureCoefficientIndex::TableSize] = 0;
-            shiftTabuCoefficient[TabuTenureCoefficientIndex::NurseNum] = 0;
-            shiftTabuCoefficient[TabuTenureCoefficientIndex::DayNum] = 1;
-            shiftTabuCoefficient[TabuTenureCoefficientIndex::ShiftNum] = 0;
-        }
-
-        SolveAlgorithm solveAlgorithm;
-        double maxNoImproveCoefficient;
-        double dayTabuCoefficient[TabuTenureCoefficientIndex::SIZE];
-        double shiftTabuCoefficient[TabuTenureCoefficientIndex::SIZE];
-    };
-
 
     const NurseRostering &problem;
     const Timer::TimePoint startTime;
@@ -155,8 +115,6 @@ public:
     IterCount MaxNoImproveForSingleNeighborhood() const { return maxNoImproveForSingleNeighborhood; }
     IterCount MaxNoImproveForAllNeighborhood() const { return maxNoImproveForAllNeighborhood; }
     IterCount MaxNoImproveForBiasTabuSearch() const { return maxNoImproveForBiasTabuSearch; }
-    IterCount MaxNoImproveSwapChainLength() const { return maxNoImproveSwapChainLength; }
-    IterCount MaxSwapChainRestartCount() const { return maxSwapChainRestartCount; }
 
 
     mutable std::mt19937 randGen;
@@ -193,16 +151,14 @@ protected:
     void setShiftTabuTenure_ShiftNum( double coefficient );
 
     // set the max no improve count
-    void setMaxNoImprove( double coefficient )
+    void setMaxNoImprove()
     {
         maxNoImproveForSingleNeighborhood = static_cast<IterCount>(
-            coefficient * problem.scenario.nurseNum * Weekday::NUM);
+            problem.scenario.nurseNum * Weekday::NUM);
         maxNoImproveForAllNeighborhood = static_cast<IterCount>(
-            coefficient * problem.scenario.nurseNum * Weekday::NUM *
+            problem.scenario.nurseNum * Weekday::NUM *
             sqrt( problem.scenario.shiftTypeNum * problem.scenario.skillTypeNum ));
         maxNoImproveForBiasTabuSearch = maxNoImproveForSingleNeighborhood / INVERSE_TOTAL_BIAS_RATIO;
-        maxNoImproveSwapChainLength = maxNoImproveForSingleNeighborhood;
-        maxSwapChainRestartCount = static_cast<IterCount>(sqrt( problem.scenario.nurseNum ));
     }
 
 
@@ -212,8 +168,6 @@ protected:
     NursesHasSameSkill nursesHasSameSkill;
 
     Output optima;
-
-    Config config;
 
     // information for log record
     std::string runID;
@@ -228,8 +182,6 @@ protected:
     IterCount maxNoImproveForSingleNeighborhood;
     IterCount maxNoImproveForAllNeighborhood;
     IterCount maxNoImproveForBiasTabuSearch;
-    IterCount maxNoImproveSwapChainLength;
-    IterCount maxSwapChainRestartCount;
 
     Solution sln;
 

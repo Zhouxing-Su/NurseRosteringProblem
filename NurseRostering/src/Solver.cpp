@@ -389,7 +389,7 @@ void NurseRostering::Solver::init( const std::string &id )
     randGen.seed( problem.randSeed );
 
     setTabuTenure();
-    setMaxNoImprove( config.maxNoImproveCoefficient );
+    setMaxNoImprove();
 
     discoverNurseSkillRelation();
 
@@ -399,8 +399,8 @@ void NurseRostering::Solver::init( const std::string &id )
 
 void NurseRostering::Solver::solve()
 {
-    //biasTabuSearch();
-    tabuSearch( MaxNoImproveForAllNeighborhood() );
+    biasTabuSearch();
+    //tabuSearch( MaxNoImproveForAllNeighborhood() );
 
 #ifdef INRC2_LOG
     if (problem.history.currentWeek < problem.scenario.totalWeekNum) {
@@ -486,86 +486,9 @@ void NurseRostering::Solver::biasTabuSearch()
 
 void NurseRostering::Solver::setTabuTenure()
 {
-    setDayTabuTenure_TableSize( config.dayTabuCoefficient[TabuTenureCoefficientIndex::TableSize] );
-    setDayTabuTenure_NurseNum( config.dayTabuCoefficient[TabuTenureCoefficientIndex::NurseNum] );
-    setDayTabuTenure_DayNum( config.dayTabuCoefficient[TabuTenureCoefficientIndex::DayNum] );
-    setDayTabuTenure_ShiftNum( config.dayTabuCoefficient[TabuTenureCoefficientIndex::ShiftNum] );
+    dayTabuTenureBase = 1 + Weekday::NUM;
+    shiftTabuTenureBase = 1 + Weekday::NUM;
 
-    setShiftTabuTenure_TableSize( config.shiftTabuCoefficient[TabuTenureCoefficientIndex::TableSize] );
-    setShiftTabuTenure_NurseNum( config.shiftTabuCoefficient[TabuTenureCoefficientIndex::NurseNum] );
-    setShiftTabuTenure_DayNum( config.shiftTabuCoefficient[TabuTenureCoefficientIndex::DayNum] );
-    setShiftTabuTenure_ShiftNum( config.shiftTabuCoefficient[TabuTenureCoefficientIndex::ShiftNum] );
-
-    if (dayTabuTenureBase < MIN_TABU_BASE) { dayTabuTenureBase = MIN_TABU_BASE; }
-    if (shiftTabuTenureBase < MIN_TABU_BASE) { shiftTabuTenureBase = MIN_TABU_BASE; }
     dayTabuTenureAmp = 1 + dayTabuTenureBase / TABU_BASE_TO_AMP;
     shiftTabuTenureAmp = 1 + shiftTabuTenureBase / TABU_BASE_TO_AMP;
-}
-
-void NurseRostering::Solver::setDayTabuTenure_TableSize( double coefficient )
-{
-    if (coefficient > 0) {
-        // plus 1 to make sure it will not be 0
-        dayTabuTenureBase *= static_cast<IterCount>(1 + coefficient *
-            problem.scenario.nurseNum * Weekday::NUM);
-    }
-}
-
-void NurseRostering::Solver::setShiftTabuTenure_TableSize( double coefficient )
-{
-    if (coefficient > 0) {
-        // plus 1 to make sure it will not be 0
-        shiftTabuTenureBase *= static_cast<IterCount>(1 + coefficient *
-            problem.scenario.nurseNum * Weekday::NUM * problem.scenario.shiftTypeNum * problem.scenario.skillTypeNum);
-    }
-}
-
-void NurseRostering::Solver::setDayTabuTenure_NurseNum( double coefficient )
-{
-    if (coefficient > 0) {
-        // plus 1 to make sure it will not be 0
-        dayTabuTenureBase *= static_cast<IterCount>(1 + coefficient * problem.scenario.nurseNum);
-    }
-}
-
-void NurseRostering::Solver::setShiftTabuTenure_NurseNum( double coefficient )
-{
-    if (coefficient > 0) {
-        // plus 1 to make sure it will not be 0
-        shiftTabuTenureBase *= static_cast<IterCount>(1 + coefficient * problem.scenario.nurseNum);
-    }
-}
-
-void NurseRostering::Solver::setDayTabuTenure_DayNum( double coefficient )
-{
-    if (coefficient > 0) {
-        // plus 1 to make sure it will not be 0
-        dayTabuTenureBase *= static_cast<IterCount>(1 + coefficient * Weekday::NUM);
-    }
-}
-
-void NurseRostering::Solver::setShiftTabuTenure_DayNum( double coefficient )
-{
-    if (coefficient > 0) {
-        // plus 1 to make sure it will not be 0
-        shiftTabuTenureBase *= static_cast<IterCount>(1 + coefficient * Weekday::NUM);
-    }
-}
-
-void NurseRostering::Solver::setDayTabuTenure_ShiftNum( double coefficient )
-{
-    if (coefficient > 0) {
-        // plus 1 to make sure it will not be 0
-        dayTabuTenureBase *= static_cast<IterCount>(1 + coefficient *
-            problem.scenario.shiftTypeNum * problem.scenario.skillTypeNum);
-    }
-}
-
-void NurseRostering::Solver::setShiftTabuTenure_ShiftNum( double coefficient )
-{
-    if (coefficient > 0) {
-        // plus 1 to make sure it will not be 0
-        shiftTabuTenureBase *= static_cast<IterCount>(1 + coefficient *
-            problem.scenario.shiftTypeNum * problem.scenario.skillTypeNum);
-    }
 }
