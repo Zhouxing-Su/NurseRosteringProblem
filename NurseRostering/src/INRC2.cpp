@@ -6,9 +6,6 @@ using namespace std;
 
 namespace INRC2
 {
-    const std::string LOG_FILE_NAME( "log.csv" );
-
-    const std::string ARGV_ID( "id" );
     const std::string ARGV_SCENARIO( "sce" );
     const std::string ARGV_HISTORY( "his" );
     const std::string ARGV_WEEKDATA( "week" );
@@ -18,8 +15,6 @@ namespace INRC2
     const std::string ARGV_RANDOM_SEED( "rand" );
     const std::string ARGV_TIME( "timeout" );  // in seconds
     const std::string ARGV_ITER( "iter" );
-    const std::string ARGV_CONFIG( "config" );
-    const std::string ARGV_HELP( "help" );
 
     const std::string weekdayNames[NurseRostering::Weekday::SIZE] = {
         "HIS", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun", "NEXT_WEEK"
@@ -69,13 +64,11 @@ namespace INRC2
         } else if (argvMap.find( ARGV_HISTORY ) != argvMap.end()) {
             readHistory( argvMap[ARGV_HISTORY], input );
         } else {
-            errorLog( "missing obligate argument(history)" );
             return -1;
         }
 
         // check solution file name
         if (argvMap.find( ARGV_SOLUTION ) == argvMap.end()) {
-            errorLog( "missing obligate argument(solution file name)" );
             return -1;
         }
 
@@ -110,7 +103,7 @@ namespace INRC2
         // start computation
         input.adjustRangeOfTotalAssignByWorkload();
         NurseRostering::Solver solver( input, startTime );
-        solver.init( argvMap[ARGV_ID] );
+        solver.init();
         solver.solve();
 
         // write output
@@ -118,18 +111,6 @@ namespace INRC2
         if (argvMap.find( ARGV_CUSTOM_OUTPUT ) != argvMap.end()) {
             writeCustomOutput( argvMap[ARGV_CUSTOM_OUTPUT], solver );
         }
-
-#ifdef INRC2_LOG
-        solver.print();
-
-        ostringstream oss;
-        int historyFileNameIndex = argvMap[ARGV_HISTORY].find_last_of( "/\\" ) + 1;
-        int weekdataFileNameIndex = argvMap[ARGV_WEEKDATA].find_last_of( "/\\" ) + 1;
-        oss << input.names.scenarioName
-            << '[' << argvMap[ARGV_HISTORY].substr( historyFileNameIndex ) << ']'
-            << '[' << argvMap[ARGV_WEEKDATA].substr( weekdataFileNameIndex ) << ']';
-        solver.record( LOG_FILE_NAME, oss.str() );
-#endif
 
         return 0;
     }
@@ -142,7 +123,6 @@ namespace INRC2
         ifstream ifs( scenarioFileName );
 
         if (!ifs.is_open()) {
-            errorLog( "fail to open scenario file : " + scenarioFileName );
             return false;
         }
 
@@ -251,7 +231,6 @@ namespace INRC2
         ifstream ifs( historyFileName );
 
         if (!ifs.is_open()) {
-            errorLog( "fail to open history file : " + historyFileName );
             return false;
         }
 
@@ -302,7 +281,6 @@ namespace INRC2
         ifstream ifs( weekDataFileName );
 
         if (!ifs.is_open()) {
-            errorLog( "fail to open weekdata file : " + weekDataFileName );
             return false;
         }
 
@@ -354,7 +332,6 @@ namespace INRC2
         ifstream ifs( customInputFileName, ios::binary );
 
         if (!ifs.is_open()) {
-            errorLog( "fail to open custom input file." );
             return false;
         }
 
@@ -404,7 +381,6 @@ namespace INRC2
         ofstream ofs( solutionFileName );
 
         if (!ofs.is_open()) {
-            errorLog( "fail to open solution file : " + solutionFileName );
             return false;
         }
 
@@ -439,7 +415,6 @@ namespace INRC2
         ofstream ofs( customOutputFileName, ios::binary );
 
         if (!ofs.is_open()) {
-            errorLog( "fail to open custom output file : " + customOutputFileName );
             return false;
         }
 

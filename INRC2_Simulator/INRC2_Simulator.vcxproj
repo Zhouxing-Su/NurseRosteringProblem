@@ -185,7 +185,6 @@
     <ClCompile Include="..\NurseRostering\src\NurseRostering.cpp" />
     <ClCompile Include="..\NurseRostering\src\Solution.cpp" />
     <ClCompile Include="..\NurseRostering\src\Solver.cpp" />
-    <ClCompile Include="..\NurseRostering\src\utility.cpp" />
     <ClCompile Include="BatchTest.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>

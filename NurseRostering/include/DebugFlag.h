@@ -13,12 +13,12 @@
 // performance switch
 // comment to reduce error messages and log
 #ifndef INRC2_LOG
-#define INRC2_LOG
+//#define INRC2_LOG
 #endif
 
 // comment to reduce unnecessary calculation
 #ifndef INRC2_DEBUG
-#define INRC2_DEBUG
+//#define INRC2_DEBUG
 #endif
 
 // comment to reduce console output

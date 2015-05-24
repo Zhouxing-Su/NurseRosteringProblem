@@ -8,15 +8,9 @@
 #define UTILITY_H
 
 
-#include <iostream>
-#include <fstream>
 #include <string>
-#include <cstdlib>
 #include <random>
 #include <chrono>
-#include <thread>
-#include <mutex>
-#include <cstdio>
 
 #include "DebugFlag.h"
 
@@ -138,17 +132,6 @@ private:
     int count;
 };
 
-//
-std::string getLastNoneEmptyLine( const std::string &filename );
-
-//
-std::string getTime();
-
-//
-extern std::mutex logFileMutex;
-
-// 
-void errorLog( const std::string &msg );
 
 
 #endif

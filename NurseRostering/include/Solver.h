@@ -70,10 +70,9 @@ public:
 
 
     Solver( const NurseRostering &input, Timer::TimePoint startTime = Timer::Clock::now() );
-    Solver( const NurseRostering &input, const Output &optima, Timer::TimePoint startTime = Timer::Clock::now() );
 
     // set algorithm name, set parameters, generate initial solution
-    void init( const std::string &runID = std::string() );
+    void init();
     // search for optima
     void solve();
     // return true if global optima or population is updated
@@ -82,22 +81,12 @@ public:
     History genHistory() const;
     // return const reference of the optima
     const Output& getOptima() const { return optima; }
-    // print simple information of the solution to console
-    void print() const;
-    // record solution to specified file and create custom file if required
-    void record( const std::string logFileName, const std::string &instanceName ) const;  // contain check()
-    // log with time and runID
-    void errorLog( const std::string &msg ) const;
-    // return true if the optima solution is feasible and objValue is the same
-    bool check() const;
+
 
     // use original input instead of auxiliary data structure
     // return 0 if no violation of hard constraints
     ObjValue checkFeasibility( const AssignTable &assgin ) const;
     ObjValue checkFeasibility() const;  // check optima assign
-    // return objective value if solution is legal
-    ObjValue checkObjValue( const AssignTable &assign ) const;
-    ObjValue checkObjValue() const;  // check optima assign
 
     const NurseNumOfSkill& getNurseNumOfSkill() const { return nurseNumOfSkill; }
     const NurseWithSkill& getNurseWithSkill() const { return nurseWithSkill; }
@@ -120,22 +109,13 @@ public:
     mutable std::mt19937 randGen;
 
 protected:
-    // create header of the table ( require ios::app flag or "a" mode )
-    static void initResultSheet( std::ofstream &csvFile );
-
     NurseNumsOnSingleAssign countNurseNums( const AssignTable &assign ) const;
-    void checkConsecutiveViolation( int &objValue,
-        const AssignTable &assign, NurseID nurse, int weekday, ShiftID lastShiftID,
-        int &consecutiveShift, int &consecutiveDay, int &consecutiveDayOff,
-        bool &shiftBegin, bool &dayBegin, bool &dayoffBegin ) const;
 
     // initialize assist data about nurse-skill relation
     void discoverNurseSkillRelation();
 
     // turn the objective to optimize a subset of nurses when no improvement
     void biasTabuSearch();
-    // search with tabu table
-    void tabuSearch( IterCount maxNoImproveCount );
 
     // set tabu tenure according to certain feature
     void setTabuTenure();
@@ -170,7 +150,6 @@ protected:
     Output optima;
 
     // information for log record
-    std::string runID;
     IterCount iterationCount;
     IterCount generationCount;
 
@@ -184,9 +163,6 @@ protected:
     IterCount maxNoImproveForBiasTabuSearch;
 
     Solution sln;
-
-private:    // forbidden operators
-    Solver& operator=(const Solver &) { return *this; }
 };
 
 

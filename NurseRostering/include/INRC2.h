@@ -14,8 +14,6 @@
 #include <map>
 #include <string>
 #include <sstream>
-#include <cstdlib>
-#include <ctime>
 
 #include "DebugFlag.h"
 #include "NurseRostering.h"
@@ -28,9 +26,6 @@ namespace INRC2
     const int MAX_BUF_SIZE = 1000;   // max size for char array buf
     const int MAX_BUF_LEN = MAX_BUF_SIZE - 1;   // max length for char array buf
 
-    extern const std::string LOG_FILE_NAME;
-
-    extern const std::string ARGV_ID;
     extern const std::string ARGV_SCENARIO;
     extern const std::string ARGV_HISTORY;
     extern const std::string ARGV_WEEKDATA;
@@ -40,14 +35,10 @@ namespace INRC2
     extern const std::string ARGV_RANDOM_SEED;
     extern const std::string ARGV_TIME;  // in seconds
     extern const std::string ARGV_ITER;
-    extern const std::string ARGV_CONFIG;
-    extern const std::string ARGV_HELP;
 
     extern const std::string weekdayNames[NurseRostering::Weekday::SIZE];
     extern const std::map<std::string, int> weekdayMap;
 
-
-    void help();
 
     int run( int argc, char *argv[] );
 

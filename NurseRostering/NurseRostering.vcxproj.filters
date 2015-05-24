@@ -24,9 +24,6 @@
     <ClCompile Include="src\INRC2.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="src\utility.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="src\Solver.cpp">
       <Filter>源文件</Filter>
     </ClCompile>

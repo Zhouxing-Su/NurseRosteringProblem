@@ -36,9 +36,6 @@
     <ClCompile Include="..\NurseRostering\src\Solver.cpp">
       <Filter>NurseRostering</Filter>
     </ClCompile>
-    <ClCompile Include="..\NurseRostering\src\utility.cpp">
-      <Filter>NurseRostering</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BatchTest.h">

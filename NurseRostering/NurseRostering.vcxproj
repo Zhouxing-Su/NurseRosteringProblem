@@ -104,7 +104,6 @@
     <ClCompile Include="src\NurseRostering.cpp" />
     <ClCompile Include="src\Solution.cpp" />
     <ClCompile Include="src\Solver.cpp" />
-    <ClCompile Include="src\utility.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\DebugFlag.h" />

@@ -36,9 +36,8 @@ class NurseRostering::Output
 public:
     // assume initial solution will never be the global optima
     Output() : objValue( DefaultPenalty::FORBIDDEN_MOVE ), secondaryObjValue( DefaultPenalty::FORBIDDEN_MOVE ) {}
-    Output( ObjValue objVal, const AssignTable &assignment, double secondaryObjVal = DefaultPenalty::FORBIDDEN_MOVE,
-        Timer::TimePoint findAssignTime = std::chrono::steady_clock::now() )
-        : objValue( objVal ), secondaryObjValue( secondaryObjVal ), assign( assignment ), findTime( findAssignTime )
+    Output( ObjValue objVal, const AssignTable &assignment, double secondaryObjVal = DefaultPenalty::FORBIDDEN_MOVE )
+        : objValue( objVal ), secondaryObjValue( secondaryObjVal ), assign( assignment )
     {
     }
 
@@ -49,13 +48,11 @@ public:
     const AssignTable& getAssignTable() const { return assign; }
     ObjValue getObjValue() const { return objValue; }
     double getSecondaryObjValue() const { return secondaryObjValue; }
-    Timer::TimePoint getFindTime() const { return findTime; }
 
 protected:
     AssignTable assign;
     ObjValue objValue;
     double secondaryObjValue;
-    Timer::TimePoint findTime;
 };
 
 
@@ -140,7 +137,6 @@ public:
         }
 #endif
         if (objValue < optima.getObjValue()) {
-            findTime = Timer::Clock::now();
             optima = *this;
             return true;
         } else if (objValue == optima.getObjValue()) {
@@ -150,7 +146,6 @@ public:
             bool isSelected = ((solver.randGen() % 2) == 0);
 #endif
             if (isSelected) {
-                findTime = Timer::Clock::now();
                 optima = *this;
                 return true;
             }
