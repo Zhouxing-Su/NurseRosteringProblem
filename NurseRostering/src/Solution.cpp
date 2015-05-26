@@ -454,11 +454,9 @@ bool NurseRostering::Solution::repair( const Timer &timer )
     // must not use swap for swap mode is not compatible with repair mode
     // also, the repair procedure doesn't need the technique to jump through infeasible solutions
     Solution::FindBestMoveTable fbmt = {
-        &NurseRostering::Solution::findBestARBoth, 
+        &NurseRostering::Solution::findBestAdd,
         &NurseRostering::Solution::findBestChange,
-        // more move for no tabu condition to get rid of local optima
-        &NurseRostering::Solution::findBestAddOnBlockBorder,
-        &NurseRostering::Solution::findBestChangeOnBlockBorder
+        &NurseRostering::Solution::findBestRemove
     };
 
     penalty.setRepairMode();
@@ -471,9 +469,9 @@ bool NurseRostering::Solution::repair( const Timer &timer )
         {
             int modeNum = fbmt.size();
 
-            const int weight_NoImprove = 256;   // min weight
-            const int weight_ImproveCur = 1024; // max weight (less than (RAND_MAX / modeNum))
-            const int initWeight = (weight_ImproveCur + weight_NoImprove) / 2;
+            const int minWeight = 256;  // min weight
+            const int maxWeight = 1024; // max weight (less than (RAND_MAX / modeNum))
+            const int initWeight = (maxWeight + minWeight) / 2;
             const int deltaIncRatio = 8;    // = weights[mode] / weightDelta
             const int incError = deltaIncRatio - 1;
             const int deltaDecRatio = 8;    // = weights[mode] / weightDelta
@@ -494,12 +492,16 @@ bool NurseRostering::Solution::repair( const Timer &timer )
                 // update tabu list first because it requires original assignment
                 ( this->*updateTabuTable[bestMove.mode] )(bestMove);
 #endif
-                applyBasicMove( bestMove );
+                if (bestMove.delta < DefaultPenalty::MAX_OBJ_VALUE) {
+                    applyBasicMove( bestMove );
 
-                if (bestMove.delta < 0) {    // improve current solution
-                    weightDelta = (incError + weight_ImproveCur - weights[modeSelect]) / deltaIncRatio;
-                } else {    // no improve but valid
-                    weightDelta = (decError + weight_NoImprove - weights[modeSelect]) / deltaDecRatio;
+                    if (bestMove.delta < 0) {    // improve current solution
+                        weightDelta = (incError + maxWeight - weights[modeSelect]) / deltaIncRatio;
+                    } else {    // no improve
+                        weightDelta = (decError + minWeight - weights[modeSelect]) / deltaDecRatio;
+                    }
+                } else {    // invalid
+                    weightDelta = (decError + minWeight - weights[modeSelect]) / deltaDecRatio;
                 }
 
                 weights[modeSelect] += weightDelta;
@@ -508,7 +510,7 @@ bool NurseRostering::Solution::repair( const Timer &timer )
         }
         feasible = (objValue == 0);
     }
-    penalty.setDefaultMode();
+    penalty.recoverLastMode();
 
     if (violation != 0) {   // the tabu search has been proceed
         evaluateObjValue();
@@ -629,7 +631,7 @@ void NurseRostering::Solution::swapChainSearch_DoubleHead( const Timer &timer, I
                 }
             }
         }
-        penalty.setDefaultMode();
+        penalty.recoverLastMode();
 
         if (bestMove.delta < DefaultPenalty::MAX_OBJ_VALUE) {
             if (genSwapChain( timer, bestMove, maxNoImproveChainLength )) {
@@ -681,7 +683,7 @@ void NurseRostering::Solution::swapChainSearch( const Timer &timer, IterCount ma
                     }
                 }
             }
-            penalty.setDefaultMode();
+            penalty.recoverLastMode();
         }
 
         Move head;
@@ -765,7 +767,7 @@ bool NurseRostering::Solution::genSwapChain( const Timer &timer, const Move &hea
                 move.weekday2 = c.dayHigh[move.weekday] + 1;
             }
         }
-        penalty.setDefaultMode();
+        penalty.recoverLastMode();
 
         // apply add/change/remove/shift if there is improvement
 #ifdef INRC2_SWAP_CHAIN_MAKE_BAD_MOVE
@@ -834,7 +836,7 @@ bool NurseRostering::Solution::genSwapChain( const Timer &timer, const Move &hea
                 }
             }
         }
-        penalty.setDefaultMode();
+        penalty.recoverLastMode();
 
 #ifdef INRC2_SWAP_CHAIN_MAKE_BAD_MOVE
         if (bestMove.delta >= DefaultPenalty::MAX_OBJ_VALUE) {
@@ -1317,7 +1319,7 @@ bool NurseRostering::Solution::findBestSwap( Move &bestMove ) const
     }
 #endif
 
-    penalty.setDefaultMode();
+    penalty.recoverLastMode();
     return (bestMove.delta < 0);
 }
 
@@ -1349,7 +1351,7 @@ bool NurseRostering::Solution::findBestBlockSwap( Move &bestMove ) const
 #ifdef INRC2_BLOCK_SWAP_FIRST_IMPROVE
                         if (bestMove.delta < 0) {
                             findBestBlockSwap_startNurse = move.nurse;
-                            penalty.setDefaultMode();
+                            penalty.recoverLastMode();
                             return true;
                         }
 #endif
@@ -1360,7 +1362,7 @@ bool NurseRostering::Solution::findBestBlockSwap( Move &bestMove ) const
     }
 
     findBestBlockSwap_startNurse = move.nurse;
-    penalty.setDefaultMode();
+    penalty.recoverLastMode();
     return (bestMove.delta < 0);
 }
 
@@ -1403,7 +1405,7 @@ bool NurseRostering::Solution::findBestBlockSwap_cached( Move &bestMove ) const
         isBlockSwapCacheValid[move.nurse] = true;
     }
 
-    penalty.setDefaultMode();
+    penalty.recoverLastMode();
     return (bestMove.delta < 0);
 }
 
@@ -1434,7 +1436,7 @@ bool NurseRostering::Solution::findBestBlockSwap_fast( Move &bestMove ) const
 #ifdef INRC2_BLOCK_SWAP_FIRST_IMPROVE
                     if (bestMove.delta < 0) {
                         findBestBlockSwap_startNurse = move.nurse;
-                        penalty.setDefaultMode();
+                        penalty.recoverLastMode();
                         return true;
                     }
 #endif
@@ -1444,7 +1446,7 @@ bool NurseRostering::Solution::findBestBlockSwap_fast( Move &bestMove ) const
     }
 
     findBestBlockSwap_startNurse = move.nurse;
-    penalty.setDefaultMode();
+    penalty.recoverLastMode();
     return (bestMove.delta < 0);
 }
 
@@ -1476,7 +1478,7 @@ bool NurseRostering::Solution::findBestBlockSwap_part( Move &bestMove ) const
 #ifdef INRC2_BLOCK_SWAP_FIRST_IMPROVE
                     if (bestMove.delta < 0) {
                         findBestBlockSwap_startNurse = move.nurse;
-                        penalty.setDefaultMode();
+                        penalty.recoverLastMode();
                         return true;
                     }
 #endif
@@ -1486,7 +1488,7 @@ bool NurseRostering::Solution::findBestBlockSwap_part( Move &bestMove ) const
     }
 
     findBestBlockSwap_startNurse = move.nurse;
-    penalty.setDefaultMode();
+    penalty.recoverLastMode();
     return (bestMove.delta < 0);
 }
 
@@ -1517,7 +1519,7 @@ bool NurseRostering::Solution::findBestBlockSwap_rand( Move &bestMove ) const
 #ifdef INRC2_BLOCK_SWAP_FIRST_IMPROVE
                     if (bestMove.delta < 0) {
                         findBestBlockSwap_startNurse = move.nurse;
-                        penalty.setDefaultMode();
+                        penalty.recoverLastMode();
                         return true;
                     }
 #endif
@@ -1527,7 +1529,7 @@ bool NurseRostering::Solution::findBestBlockSwap_rand( Move &bestMove ) const
     }
 
     findBestBlockSwap_startNurse = move.nurse;
-    penalty.setDefaultMode();
+    penalty.recoverLastMode();
     return (bestMove.delta < 0);
 }
 
@@ -1570,7 +1572,7 @@ bool NurseRostering::Solution::findBestExchange( Move &bestMove ) const
     }
 #endif
 
-    penalty.setDefaultMode();
+    penalty.recoverLastMode();
     return (bestMove.delta < 0);
 }
 
@@ -1621,7 +1623,7 @@ bool NurseRostering::Solution::findBestBlockShift( Move &bestMove ) const
     }
 #endif
 
-    penalty.setDefaultMode();
+    penalty.recoverLastMode();
     return (bestMove.delta < 0);
 }
 
@@ -1899,7 +1901,7 @@ bool NurseRostering::Solution::findBestSwapOnBlockBorder( Move &bestMove ) const
     }
 #endif
 
-    penalty.setDefaultMode();
+    penalty.recoverLastMode();
     return (bestMove.delta < 0);
 }
 
@@ -1944,7 +1946,7 @@ bool NurseRostering::Solution::findBestExchangeOnBlockBorder( Move &bestMove ) c
     }
 #endif
 
-    penalty.setDefaultMode();
+    penalty.recoverLastMode();
     return (bestMove.delta < 0);
 }
 
@@ -2679,7 +2681,7 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapNurse( const Move &mov
 {
     penalty.setSwapMode();
     ObjValue delta = trySwapNurse( move.weekday, move.nurse, move.nurse2 );
-    penalty.setDefaultMode();
+    penalty.recoverLastMode();
 
     return delta;
 }
@@ -2783,7 +2785,7 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock( const Move &mov
 {
     penalty.setBlockSwapMode();
     ObjValue delta = trySwapBlock( move.weekday, move.weekday2, move.nurse, move.nurse2 );
-    penalty.setDefaultMode();
+    penalty.recoverLastMode();
 
     return delta;
 }
@@ -2954,7 +2956,7 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock_fast( const Move
 {
     penalty.setBlockSwapMode();
     ObjValue delta = trySwapBlock( move.weekday, move.weekday2, move.nurse, move.nurse2 );
-    penalty.setDefaultMode();
+    penalty.recoverLastMode();
 
     return delta;
 }
@@ -3031,7 +3033,7 @@ NurseRostering::ObjValue NurseRostering::Solution::tryExchangeDay( const Move &m
 {
     penalty.setExchangeMode();
     ObjValue delta = tryExchangeDay( move.weekday, move.nurse, move.weekday2 );
-    penalty.setDefaultMode();
+    penalty.recoverLastMode();
 
     return delta;
 }

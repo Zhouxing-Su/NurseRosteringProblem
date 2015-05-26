@@ -44,87 +44,70 @@ void NurseRostering::adjustRangeOfTotalAssignByWorkload()
 }
 
 
-void NurseRostering::Penalty::setDefaultMode()
+void NurseRostering::Penalty::reset()
 {
-    singleAssign = DefaultPenalty::FORBIDDEN_MOVE;
-    underStaff = DefaultPenalty::FORBIDDEN_MOVE;
-    succession = DefaultPenalty::FORBIDDEN_MOVE;
-    missSkill = DefaultPenalty::FORBIDDEN_MOVE;
+    modeStack.clear();
 
-    insufficientStaff = DefaultPenalty::InsufficientStaff;
-    consecutiveShift = DefaultPenalty::ConsecutiveShift;
-    consecutiveDay = DefaultPenalty::ConsecutiveDay;
-    consecutiveDayOff = DefaultPenalty::ConsecutiveDayOff;
-    preference = DefaultPenalty::Preference;
-    completeWeekend = DefaultPenalty::CompleteWeekend;
-    totalAssign = DefaultPenalty::TotalAssign;
-    totalWorkingWeekend = DefaultPenalty::TotalWorkingWeekend;
+    pm.singleAssign = DefaultPenalty::FORBIDDEN_MOVE;
+    pm.underStaff = DefaultPenalty::FORBIDDEN_MOVE;
+    pm.succession = DefaultPenalty::FORBIDDEN_MOVE;
+    pm.missSkill = DefaultPenalty::FORBIDDEN_MOVE;
+
+    pm.insufficientStaff = DefaultPenalty::InsufficientStaff;
+    pm.consecutiveShift = DefaultPenalty::ConsecutiveShift;
+    pm.consecutiveDay = DefaultPenalty::ConsecutiveDay;
+    pm.consecutiveDayOff = DefaultPenalty::ConsecutiveDayOff;
+    pm.preference = DefaultPenalty::Preference;
+    pm.completeWeekend = DefaultPenalty::CompleteWeekend;
+    pm.totalAssign = DefaultPenalty::TotalAssign;
+    pm.totalWorkingWeekend = DefaultPenalty::TotalWorkingWeekend;
+}
+
+void NurseRostering::Penalty::recoverLastMode()
+{
+    pm = modeStack.back();
+    modeStack.pop_back();
 }
 
 void NurseRostering::Penalty::setSwapMode()
 {
-    singleAssign = 0;   // due to no extra assignments
-    underStaff = 0;     // due to no extra assignments
-    succession = DefaultPenalty::FORBIDDEN_MOVE;
-    missSkill = DefaultPenalty::FORBIDDEN_MOVE;
+    modeStack.push_back( pm );
 
-    insufficientStaff = 0;  // due to no extra assignments
-    consecutiveShift = DefaultPenalty::ConsecutiveShift;
-    consecutiveDay = DefaultPenalty::ConsecutiveDay;
-    consecutiveDayOff = DefaultPenalty::ConsecutiveDayOff;
-    preference = DefaultPenalty::Preference;
-    completeWeekend = DefaultPenalty::CompleteWeekend;
-    totalAssign = DefaultPenalty::TotalAssign;
-    totalWorkingWeekend = DefaultPenalty::TotalWorkingWeekend;
+    pm.underStaff = 0;          // due to no extra assignments
+    pm.insufficientStaff = 0;   // due to no extra assignments
 }
 
 void NurseRostering::Penalty::setBlockSwapMode()
 {
-    singleAssign = 0;   // due to no extra assignments
-    underStaff = 0;     // due to no extra assignments
-    succession = 0; // due to it is calculated outside the try
-    missSkill = 0;  // due to it is calculated outside the try
+    modeStack.push_back( pm );
 
-    insufficientStaff = 0;  // due to no extra assignments
-    consecutiveShift = DefaultPenalty::ConsecutiveShift;
-    consecutiveDay = DefaultPenalty::ConsecutiveDay;
-    consecutiveDayOff = DefaultPenalty::ConsecutiveDayOff;
-    preference = DefaultPenalty::Preference;
-    completeWeekend = DefaultPenalty::CompleteWeekend;
-    totalAssign = DefaultPenalty::TotalAssign;
-    totalWorkingWeekend = DefaultPenalty::TotalWorkingWeekend;
+    pm.underStaff = 0;  // due to no extra assignments
+    pm.succession = 0;  // due to it is checked manually
+    pm.missSkill = 0;   // due to it is checked manually
+    pm.insufficientStaff = 0;   // due to no extra assignments
 }
 
 void NurseRostering::Penalty::setExchangeMode()
 {
-    singleAssign = 0;   // due to no extra assignments
-    underStaff = DefaultPenalty::FORBIDDEN_MOVE;
-    succession = 0;     // due to it is calculated outside the try
-    missSkill = 0;      // due to it is the same nurse
+    modeStack.push_back( pm );
 
-    insufficientStaff = DefaultPenalty::InsufficientStaff;
-    consecutiveShift = DefaultPenalty::ConsecutiveShift;
-    consecutiveDay = DefaultPenalty::ConsecutiveDay;
-    consecutiveDayOff = DefaultPenalty::ConsecutiveDayOff;
-    preference = DefaultPenalty::Preference;
-    completeWeekend = DefaultPenalty::CompleteWeekend;
-    totalAssign = 0;
-    totalWorkingWeekend = DefaultPenalty::TotalWorkingWeekend;
+    pm.succession = 0;  // due to it is checked manually
+    pm.missSkill = 0;   // due to it is the same nurse
+    pm.totalAssign = 0; // due to it is the same nurse
 }
 
 void NurseRostering::Penalty::setRepairMode( ObjValue WeightOnUnderStaff, ObjValue WeightOnSuccesion, ObjValue softConstraintDecay )
 {
-    singleAssign = DefaultPenalty::FORBIDDEN_MOVE;
-    underStaff = WeightOnUnderStaff;
-    succession = WeightOnSuccesion;
-    missSkill = DefaultPenalty::FORBIDDEN_MOVE;
+    modeStack.push_back( pm );
 
-    insufficientStaff = DefaultPenalty::InsufficientStaff / softConstraintDecay;
-    consecutiveShift = DefaultPenalty::ConsecutiveShift / softConstraintDecay;
-    consecutiveDay = DefaultPenalty::ConsecutiveDay / softConstraintDecay;
-    consecutiveDayOff = DefaultPenalty::ConsecutiveDayOff / softConstraintDecay;
-    preference = DefaultPenalty::Preference / softConstraintDecay;
-    completeWeekend = DefaultPenalty::CompleteWeekend / softConstraintDecay;
-    totalAssign = DefaultPenalty::TotalAssign / softConstraintDecay;
-    totalWorkingWeekend = DefaultPenalty::TotalWorkingWeekend / softConstraintDecay;
+    pm.underStaff = WeightOnUnderStaff;
+    pm.succession = WeightOnSuccesion;
+    pm.insufficientStaff = DefaultPenalty::InsufficientStaff / softConstraintDecay;
+    pm.consecutiveShift = DefaultPenalty::ConsecutiveShift / softConstraintDecay;
+    pm.consecutiveDay = DefaultPenalty::ConsecutiveDay / softConstraintDecay;
+    pm.consecutiveDayOff = DefaultPenalty::ConsecutiveDayOff / softConstraintDecay;
+    pm.preference = DefaultPenalty::Preference / softConstraintDecay;
+    pm.completeWeekend = DefaultPenalty::CompleteWeekend / softConstraintDecay;
+    pm.totalAssign = DefaultPenalty::TotalAssign / softConstraintDecay;
+    pm.totalWorkingWeekend = DefaultPenalty::TotalWorkingWeekend / softConstraintDecay;
 }

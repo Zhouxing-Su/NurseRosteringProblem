@@ -226,46 +226,9 @@ public:
 
     };
 
-    class Penalty
+    class PenaltyMode
     {
     public:
-        Penalty() { setDefaultMode(); }
-
-        // hard constraints must be satisfied 
-        // and soft constraints get their original penalty
-        void setDefaultMode();
-        // UnderStaff and InsufficientStaff is not considered
-        // due to nurse number will not change on each shift
-        void setSwapMode();
-        // 
-        void setBlockSwapMode();
-        // TotalAssign is not considered due to total assign will not change
-        // succession should be 
-        void setExchangeMode();
-        // allow hard constraints UnderStaff and Succession being violated
-        // but with much greater penalty than soft constraints
-        // set softConstraintDecay to MAX_OBJ_VALUE to make them does not count
-        void setRepairMode( ObjValue WeightOnUnderStaff = DefaultPenalty::UnderStaff_Repair,
-            ObjValue WeightOnSuccesion = DefaultPenalty::Succession_Repair,
-            ObjValue softConstraintDecay = DefaultPenalty::MAX_OBJ_VALUE );
-
-        // hard constraint
-        ObjValue UnderStaff() const { return underStaff; }
-        ObjValue SingleAssign() const { return singleAssign; }
-        ObjValue Succession() const { return succession; };
-        ObjValue MissSkill() const { return missSkill; }
-
-        // soft constraint
-        ObjValue InsufficientStaff() const { return insufficientStaff; }
-        ObjValue ConsecutiveShift() const { return consecutiveShift; }
-        ObjValue ConsecutiveDay() const { return consecutiveDay; }
-        ObjValue ConsecutiveDayOff() const { return consecutiveDayOff; }
-        ObjValue Preference() const { return preference; }
-        ObjValue CompleteWeekend() const { return completeWeekend; }
-        ObjValue TotalAssign() const { return totalAssign; }
-        ObjValue TotalWorkingWeekend() const { return totalWorkingWeekend; }
-
-    private:
         // hard constraint
         ObjValue singleAssign;
         ObjValue underStaff;
@@ -281,6 +244,54 @@ public:
         ObjValue completeWeekend;
         ObjValue totalAssign;
         ObjValue totalWorkingWeekend;
+    };
+
+    class Penalty
+    {
+    public:
+        Penalty() { reset(); }
+
+        // reset to default mode and clear mode stack
+        void reset();
+
+        // hard constraints must be satisfied 
+        // and soft constraints get their original penalty
+        void recoverLastMode();
+        // UnderStaff and InsufficientStaff is not considered
+        // due to nurse number will not change on each shift
+        void setSwapMode();
+        // not considering hard constraints, soft constraints
+        // are the same as swap mode
+        void setBlockSwapMode();
+        // TotalAssign is not considered due to total assign will not change
+        // succession should be 
+        void setExchangeMode();
+        // allow hard constraints UnderStaff and Succession being violated
+        // but with much greater penalty than soft constraints
+        // set softConstraintDecay to MAX_OBJ_VALUE to make them does not count
+        void setRepairMode( ObjValue WeightOnUnderStaff = DefaultPenalty::UnderStaff_Repair,
+            ObjValue WeightOnSuccesion = DefaultPenalty::Succession_Repair,
+            ObjValue softConstraintDecay = DefaultPenalty::MAX_OBJ_VALUE );
+
+        // hard constraint
+        ObjValue UnderStaff() const { return pm.underStaff; }
+        ObjValue SingleAssign() const { return pm.singleAssign; }
+        ObjValue Succession() const { return pm.succession; };
+        ObjValue MissSkill() const { return pm.missSkill; }
+
+        // soft constraint
+        ObjValue InsufficientStaff() const { return pm.insufficientStaff; }
+        ObjValue ConsecutiveShift() const { return pm.consecutiveShift; }
+        ObjValue ConsecutiveDay() const { return pm.consecutiveDay; }
+        ObjValue ConsecutiveDayOff() const { return pm.consecutiveDayOff; }
+        ObjValue Preference() const { return pm.preference; }
+        ObjValue CompleteWeekend() const { return pm.completeWeekend; }
+        ObjValue TotalAssign() const { return pm.totalAssign; }
+        ObjValue TotalWorkingWeekend() const { return pm.totalWorkingWeekend; }
+
+    private:
+        PenaltyMode pm;
+        std::vector<PenaltyMode> modeStack;
     };
 
     class Output;
@@ -300,8 +311,9 @@ public:
 
 
     // timeout for generating a feasible solution (if there is)
+    // default value for timeout
     static const Timer::Duration MIN_RUNNING_TIME;
-    // 
+    // default value for maxIterCount
     static const IterCount MAX_ITER_COUNT;
 
 
@@ -325,13 +337,16 @@ public:
 
 
     // data to identify a nurse rostering problem
-    int randSeed;
-    Timer::Duration timeout;    // time in clock count. 0 for just generate initial solution
-    IterCount maxIterCount;
-    WeekData weekData;
     Scenario scenario;
+    WeekData weekData;
     History history;
+
     Names names;
+
+    int randSeed;
+    // the solver will exit either timeout or maxIterCount is reached
+    Timer::Duration timeout;
+    IterCount maxIterCount;
 
 private:    // forbidden operators
     NurseRostering& operator=(const NurseRostering&) { return *this; }

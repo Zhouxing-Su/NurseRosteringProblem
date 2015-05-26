@@ -197,6 +197,7 @@ void loadConfig()
     ifstream ifs( configFileName );
     string s;
 
+    configString = string();
     while (ifs >> s) {
         configString += s;
     }
