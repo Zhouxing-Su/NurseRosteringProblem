@@ -526,7 +526,7 @@ void NurseRostering::TabuSolver::iterativeLocalSearch( Solution::ModeSeq modeSeq
     }
 
     double perturbStrength = INIT_PERTURB_STRENGTH;
-    while (!timer.isTimeOut()) {
+    while (!timer.isTimeOut() && (iterationCount < problem.maxIterCount)) {
         ObjValue lastObj = optima.getObjValue();
 
         sln.localSearch( timer, ((randGen() % 2) ? fbmt : fbmtobb) );
@@ -558,7 +558,7 @@ void NurseRostering::TabuSolver::tabuSearch( Solution::ModeSeq modeSeq, Solution
 
     double perturbStrength = INIT_PERTURB_STRENGTH;
     double perturbStrengthDelta = PERTURB_STRENGTH_DELTA;
-    while (!timer.isTimeOut()) {
+    while (!timer.isTimeOut() && (iterationCount < problem.maxIterCount)) {
         (sln.*search)(timer, fbmt, maxNoImproveCount);
         ++generationCount;
 
@@ -600,7 +600,7 @@ void NurseRostering::TabuSolver::biasTabuSearch( Solution::ModeSeq modeSeq )
         fbmt[i] = Solution::findBestMove[modeSeqPat[i]];
     }
 
-    while (!timer.isTimeOut()) {
+    while (!timer.isTimeOut() && (iterationCount < problem.maxIterCount)) {
         sln.tabuSearch_Rand( timer, fbmt, MaxNoImproveForAllNeighborhood() );
 
         updateOptima( sln.getOptima() );
@@ -634,7 +634,7 @@ void NurseRostering::TabuSolver::swapChainSearch( Solution::ModeSeq modeSeq )
 
     double perturbStrength = INIT_PERTURB_STRENGTH;
     double perturbStrengthDelta = PERTURB_STRENGTH_DELTA;
-    while (!timer.isTimeOut()) {
+    while (!timer.isTimeOut() && (iterationCount < problem.maxIterCount)) {
         sln.tabuSearch_Rand( timer, fbmt, MaxNoImproveForAllNeighborhood() );
 #ifdef INRC2_SWAP_CHAIN_DOUBLE_HEAD
         sln.swapChainSearch_DoubleHead( timer, MaxNoImproveSwapChainLength() );
