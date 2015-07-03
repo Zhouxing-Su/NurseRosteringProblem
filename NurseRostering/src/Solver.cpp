@@ -160,7 +160,7 @@ NurseRostering::History NurseRostering::Solver::genHistory() const
 
 void NurseRostering::Solver::biasTabuSearch()
 {
-    while (!timer.isTimeOut()) {
+    while (!timer.isTimeOut() && (iterationCount < problem.maxIterCount)) {
         sln.tabuSearch_Rand( timer, MaxNoImproveForAllNeighborhood() );
 
         updateOptima( sln.getOptima() );

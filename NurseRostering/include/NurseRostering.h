@@ -20,7 +20,7 @@
 class NurseRostering
 {
 public:
-    enum Weekday { HIS = 0, Mon, Tue, Wed, Thu, Fri, Sat, Sun, NUM = Sun, NEXT_WEEK, SIZE };
+    enum Weekday { HIS = 0, Mon, Tue, Wed, Thu, Fri, Sat, Sun, NEXT_WEEK, SIZE, NUM = Sun - Mon + 1 };
     enum DefaultPenalty
     {
         // (delta >= MAX_OBJ_MAX) stands for forbidden move
@@ -136,7 +136,7 @@ public:
         std::vector< std::vector< std::vector<bool> > > shiftOffs;
         // optNurseNums[day][shift][skill] is a number of nurse
         NurseNumsOnSingleAssign optNurseNums;
-        // optNurseNums[day][shift][skill] is a number of nurse
+        // minNurseNums[day][shift][skill] is a number of nurse
         NurseNumsOnSingleAssign minNurseNums;
     };
 
@@ -188,7 +188,7 @@ public:
 
         bool isWorking() const
         {
-            return (shift != NurseRostering::Scenario::Shift::ID_NONE);
+            return isWorking( shift );
         }
 
         ShiftID shift;
