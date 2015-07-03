@@ -22,7 +22,7 @@ namespace INRC2
     const std::string ARGV_HELP( "help" );
 
     const std::string weekdayNames[NurseRostering::Weekday::SIZE] = {
-        "HIS", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun", "NEXT_WEEK"
+        "HIS", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"
     };
     const std::map<std::string, int> weekdayMap = {
         { weekdayNames[NurseRostering::Weekday::Mon], NurseRostering::Weekday::Mon },

@@ -454,9 +454,8 @@ bool NurseRostering::Solution::repair( const Timer &timer )
     // must not use swap for swap mode is not compatible with repair mode
     // also, the repair procedure doesn't need the technique to jump through infeasible solutions
     Solution::FindBestMoveTable fbmt = {
-        &NurseRostering::Solution::findBestAdd,
-        &NurseRostering::Solution::findBestChange,
-        &NurseRostering::Solution::findBestRemove
+        &NurseRostering::Solution::findBestARBoth,
+        &NurseRostering::Solution::findBestChange
     };
 
     penalty.setRepairMode();
@@ -3187,7 +3186,7 @@ void NurseRostering::Solution::updateConsecutive( int weekday, NurseID nurse, Sh
     }
 }
 
-void NurseRostering::Solution::assignHigh( int weekday, int high[Weekday::SIZE], int low[Weekday::SIZE], bool affectRight )
+void NurseRostering::Solution::assignHigh( int weekday, int high[], int low[], bool affectRight )
 {
     int nextDay = weekday + 1;
     int prevDay = weekday - 1;
@@ -3205,7 +3204,7 @@ void NurseRostering::Solution::assignHigh( int weekday, int high[Weekday::SIZE],
     low[weekday] = weekday;
 }
 
-void NurseRostering::Solution::assignLow( int weekday, int high[Weekday::SIZE], int low[Weekday::SIZE], bool affectLeft )
+void NurseRostering::Solution::assignLow( int weekday, int high[], int low[], bool affectLeft )
 {
     int nextDay = weekday + 1;
     int prevDay = weekday - 1;
@@ -3223,7 +3222,7 @@ void NurseRostering::Solution::assignLow( int weekday, int high[Weekday::SIZE], 
     high[weekday] = weekday;
 }
 
-void NurseRostering::Solution::assignMiddle( int weekday, int high[Weekday::SIZE], int low[Weekday::SIZE] )
+void NurseRostering::Solution::assignMiddle( int weekday, int high[], int low[] )
 {
     int nextDay = weekday + 1;
     int prevDay = weekday - 1;
@@ -3237,7 +3236,7 @@ void NurseRostering::Solution::assignMiddle( int weekday, int high[Weekday::SIZE
     low[weekday] = weekday;
 }
 
-void NurseRostering::Solution::assignSingle( int weekday, int high[Weekday::SIZE], int low[Weekday::SIZE], bool affectRight, bool affectLeft )
+void NurseRostering::Solution::assignSingle( int weekday, int high[], int low[], bool affectRight, bool affectLeft )
 {
     int nextDay = weekday + 1;
     int prevDay = weekday - 1;

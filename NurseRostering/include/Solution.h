@@ -37,7 +37,7 @@ class NurseRostering::Output
 public:
     // assume initial solution will never be the global optima
     Output() : objValue( DefaultPenalty::FORBIDDEN_MOVE ), secondaryObjValue( DefaultPenalty::FORBIDDEN_MOVE ) {}
-    Output( ObjValue objVal, const AssignTable &assignment, double secondaryObjVal = DefaultPenalty::FORBIDDEN_MOVE, 
+    Output( ObjValue objVal, const AssignTable &assignment, double secondaryObjVal = DefaultPenalty::FORBIDDEN_MOVE,
         Timer::TimePoint findAssignTime = std::chrono::steady_clock::now() )
         : objValue( objVal ), secondaryObjValue( secondaryObjVal ), assign( assignment ), findTime( findAssignTime )
     {
@@ -347,38 +347,34 @@ private:
     class Consecutive
     {
     public:
+        static const int SIZE = Weekday::Sun + 1;   // no need for a solt for next week
+
         Consecutive() {}
         Consecutive( const History &his, NurseID nurse )
         {
             if (Assign::isWorking( his.lastShifts[nurse] )) {
-                std::fill( dayLow, dayLow + Weekday::SIZE, Weekday::Mon );
-                std::fill( dayHigh, dayHigh + Weekday::SIZE, Weekday::Sun );
-                std::fill( shiftLow, shiftLow + Weekday::SIZE, Weekday::Mon );
-                std::fill( shiftHigh, shiftHigh + Weekday::SIZE, Weekday::Sun );
+                std::fill( dayLow, dayLow + SIZE, Weekday::Mon );
+                std::fill( dayHigh, dayHigh + SIZE, Weekday::Sun );
+                std::fill( shiftLow, shiftLow + SIZE, Weekday::Mon );
+                std::fill( shiftHigh, shiftHigh + SIZE, Weekday::Sun );
                 dayHigh[Weekday::HIS] = Weekday::HIS;
                 dayLow[Weekday::HIS] = 1 - his.consecutiveDayNums[nurse];
                 shiftHigh[Weekday::HIS] = Weekday::HIS;
                 shiftLow[Weekday::HIS] = 1 - his.consecutiveShiftNums[nurse];
             } else {    // day off
-                std::fill( dayLow, dayLow + Weekday::SIZE, 1 - his.consecutiveDayoffNums[nurse] );
-                std::fill( dayHigh, dayHigh + Weekday::SIZE, Weekday::Sun );
-                std::fill( shiftLow, shiftLow + Weekday::SIZE, 1 - his.consecutiveDayoffNums[nurse] );
-                std::fill( shiftHigh, shiftHigh + Weekday::SIZE, Weekday::Sun );
+                std::fill( dayLow, dayLow + SIZE, 1 - his.consecutiveDayoffNums[nurse] );
+                std::fill( dayHigh, dayHigh + SIZE, Weekday::Sun );
+                std::fill( shiftLow, shiftLow + SIZE, 1 - his.consecutiveDayoffNums[nurse] );
+                std::fill( shiftHigh, shiftHigh + SIZE, Weekday::Sun );
             }
         }
         Consecutive( const Consecutive &c )
         {
-            memcpy( dayHigh, c.dayHigh, sizeof( dayHigh ) );
-            memcpy( dayLow, c.dayLow, sizeof( dayLow ) );
-            memcpy( shiftHigh, c.shiftHigh, sizeof( shiftHigh ) );
-            memcpy( shiftLow, c.shiftLow, sizeof( shiftLow ) );
+            memcpy( this, &c, sizeof( Consecutive ) );
         }
         Consecutive& operator=(const Consecutive &c)
         {
-            memcpy( dayHigh, c.dayHigh, sizeof( dayHigh ) );
-            memcpy( dayLow, c.dayLow, sizeof( dayLow ) );
-            memcpy( shiftHigh, c.shiftHigh, sizeof( shiftHigh ) );
-            memcpy( shiftLow, c.shiftLow, sizeof( shiftLow ) );
+            memcpy( this, &c, sizeof( Consecutive ) );
             return *this;
         }
 
@@ -393,12 +389,10 @@ private:
             return (dayLow[Weekday::Sun] <= Weekday::Mon);
         }
 
-        int dayLow[Weekday::SIZE];
-        int dayHigh[Weekday::SIZE];
-        int shiftLow[Weekday::SIZE];
-        int shiftHigh[Weekday::SIZE];
-
-    private:    // forbidden operators
+        int dayLow[SIZE];
+        int dayHigh[SIZE];
+        int shiftLow[SIZE];
+        int shiftHigh[SIZE];
     };
 
     // fine-grained tabu list for add or remove on each shift
@@ -530,13 +524,13 @@ private:
 
     void updateConsecutive( int weekday, NurseID nurse, ShiftID shift );
     // the assignment is on the right side of a consecutive block
-    void assignHigh( int weekday, int high[Weekday::SIZE], int low[Weekday::SIZE], bool affectRight );
+    void assignHigh( int weekday, int high[], int low[], bool affectRight );
     // the assignment is on the left side of a consecutive block
-    void assignLow( int weekday, int high[Weekday::SIZE], int low[Weekday::SIZE], bool affectLeft );
+    void assignLow( int weekday, int high[], int low[], bool affectLeft );
     // the assignment is in the middle of a consecutive block
-    void assignMiddle( int weekday, int high[Weekday::SIZE], int low[Weekday::SIZE] );
+    void assignMiddle( int weekday, int high[], int low[] );
     // the assignment is on a consecutive block with single slot
-    void assignSingle( int weekday, int high[Weekday::SIZE], int low[Weekday::SIZE], bool affectRight, bool affectLeft );
+    void assignSingle( int weekday, int high[], int low[], bool affectRight, bool affectLeft );
 
 #ifdef INRC2_USE_TABU
     bool noAddTabu( const Move &move ) const

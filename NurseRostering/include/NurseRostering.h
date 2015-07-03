@@ -21,7 +21,7 @@
 class NurseRostering
 {
 public:
-    enum Weekday { HIS = 0, Mon, Tue, Wed, Thu, Fri, Sat, Sun, NUM = Sun, NEXT_WEEK, SIZE };
+    enum Weekday { HIS = 0, Mon, Tue, Wed, Thu, Fri, Sat, Sun, NEXT_WEEK, SIZE, NUM = Sun - Mon + 1 };
     enum DefaultPenalty
     {
         // (delta >= MAX_OBJ_MAX) stands for forbidden move
@@ -118,6 +118,7 @@ public:
         {
         public:
             static const NurseID ID_NONE;
+
             ContractID contract;
             int restMinShiftNum;    // total assignments in the planning horizon
             int restMaxShiftNum;    // total assignments in the planning horizon
@@ -137,7 +138,7 @@ public:
         std::vector< std::vector< std::vector<bool> > > shiftOffs;
         // optNurseNums[day][shift][skill] is a number of nurse
         NurseNumsOnSingleAssign optNurseNums;
-        // optNurseNums[day][shift][skill] is a number of nurse
+        // minNurseNums[day][shift][skill] is a number of nurse
         NurseNumsOnSingleAssign minNurseNums;
     };
 
@@ -180,7 +181,7 @@ public:
     {
     public:
         // the default constructor means there is no assignment
-        Assign( ShiftID sh = Scenario::Shift::ID_NONE, SkillID sk = NurseRostering::Scenario::Skill::ID_NONE ) :shift( sh ), skill( sk ) {}
+        Assign( ShiftID sh = Scenario::Shift::ID_NONE, SkillID sk = Scenario::Skill::ID_NONE ) :shift( sh ), skill( sk ) {}
 
         static bool isWorking( ShiftID shift )
         {
@@ -189,7 +190,7 @@ public:
 
         bool isWorking() const
         {
-            return (shift != NurseRostering::Scenario::Shift::ID_NONE);
+            return isWorking( shift );
         }
 
         ShiftID shift;
@@ -210,7 +211,7 @@ public:
             std::istringstream iss( assignString );
 
             for (NurseID nurse = 0; nurse < nurseNum; ++nurse) {
-                for (int weekday = Weekday::Mon; weekday < weekdayNum; ++weekday) {
+                for (int weekday = Weekday::Mon; weekday <= Weekday::Sun; ++weekday) {
                     iss >> at( nurse ).at( weekday ).shift
                         >> at( nurse ).at( weekday ).skill;
                 }
@@ -264,7 +265,7 @@ public:
         // are the same as swap mode
         void setBlockSwapMode();
         // TotalAssign is not considered due to total assign will not change
-        // succession should be 
+        // succession should be checked before try
         void setExchangeMode();
         // allow hard constraints UnderStaff and Succession being violated
         // but with much greater penalty than soft constraints
