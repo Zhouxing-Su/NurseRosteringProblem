@@ -1,6 +1,8 @@
 ﻿using System;
-using System.Threading;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.Serialization.Json;
+using System.IO;
 
 
 namespace NurseRostering
@@ -8,15 +10,22 @@ namespace NurseRostering
     class Program
     {
         static void Main(string[] args) {
-            string instName = Input.INRC2_JsonData.Instance.n005w4.ToString();
+            string instName = Input_INRC2Json.Instance.n005w4.ToString();
             char weekdataIndex = '4';
             char initHistoryIndex = '1';
-            Input.INRC2_JsonData i = Input.INRC2_JsonData.ReadInstance(
-                Input.INRC2_JsonData.GetScenarioFilePath(instName),
-                Input.INRC2_JsonData.GetWeekdataFilePath(instName, weekdataIndex),
-                Input.INRC2_JsonData.GetInitHistoryFilePath(instName, initHistoryIndex));
+            Input_INRC2Json i = new Input_INRC2Json();
 
-            Input.Data d = new Input.Data(i);
+            i.scenario = Input_INRC2Json.readFile<Input_INRC2Json.ScenarioInfo>(
+                Input_INRC2Json.getScenarioFilePath(instName));
+            i.weekdata = Input_INRC2Json.readFile<Input_INRC2Json.WeekdataInfo>(
+                Input_INRC2Json.getWeekdataFilePath(instName, weekdataIndex));
+            i.history = Input_INRC2Json.readFile<Input_INRC2Json.HistoryInfo>(
+                Input_INRC2Json.getInitHistoryFilePath(instName, initHistoryIndex));
+
+            Solver.Input d = new Solver.Input();
+            d.loadScenario(i);
+            d.loadWeekdata(i);
+            d.loadHistory(i);
 
             //System.Console.WriteLine(Stopwatch.Frequency);
             //Stopwatch sw = new Stopwatch();
