@@ -347,7 +347,7 @@ private:
     class Consecutive
     {
     public:
-        static const int SIZE = Weekday::Sun + 1;   // no need for a solt for next week
+        static const int SIZE = Weekday::Sun + 1;   // no need for a slot for next week
 
         Consecutive() {}
         Consecutive( const History &his, NurseID nurse )

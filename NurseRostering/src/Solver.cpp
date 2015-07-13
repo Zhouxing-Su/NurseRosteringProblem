@@ -165,18 +165,24 @@ NurseRostering::ObjValue NurseRostering::Solver::checkObjValue( const AssignTabl
 
     // check S6: Total assignments (20)
     // check S7: Total working weekends (30)
-    for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
-        int min = problem.scenario.nurses[nurse].restMinShiftNum;
-        int max = problem.scenario.nurses[nurse].restMaxShiftNum;
-        int assignNum = 0;
-        for (int weekday = Weekday::Mon; weekday <= Weekday::Sun; ++weekday) {
-            assignNum += assign.isWorking( nurse, weekday );
-        }
-#ifdef INRC2_LOG
-        if (problem.history.currentWeek == problem.scenario.totalWeekNum) {
-#endif
+    if (problem.history.currentWeek == problem.scenario.totalWeekNum) {
+        for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
+            int assignNum = 0;
+            for (int weekday = Weekday::Mon; weekday <= Weekday::Sun; ++weekday) {
+                assignNum += assign.isWorking( nurse, weekday );
+            }
+#ifdef INRC2_AVERAGE_TOTAL_SHIFT_NUM
+            assignNum += problem.history.totalAssignNums[nurse];
+            int min = problem.scenario.contracts[problem.scenario.nurses[nurse].contract].minShiftNum;
+            int max = problem.scenario.contracts[problem.scenario.nurses[nurse].contract].maxShiftNum;
+            objValue += DefaultPenalty::TotalAssign * distanceToRange(
+                assignNum, min, max );
+#else
+            int min = problem.scenario.nurses[nurse].restMinShiftNum;
+            int max = problem.scenario.nurses[nurse].restMaxShiftNum;
             objValue += DefaultPenalty::TotalAssign * distanceToRange(
                 assignNum * problem.history.restWeekCount, min, max ) / problem.history.restWeekCount;
+#endif
 
 #ifdef INRC2_AVERAGE_MAX_WORKING_WEEKEND
             int maxWeekend = problem.scenario.contracts[problem.scenario.nurses[nurse].contract].maxWorkingWeekendNum;
@@ -192,9 +198,7 @@ NurseRostering::ObjValue NurseRostering::Solver::checkObjValue( const AssignTabl
                 workingWeekendNum * problem.history.restWeekCount,
                 problem.scenario.nurses[nurse].restMaxWorkingWeekendNum ) / problem.history.restWeekCount;
 #endif
-#ifdef INRC2_LOG
         }
-#endif
     }
 
     return objValue;

@@ -162,12 +162,10 @@ namespace INRC2
             writeCustomOutput( argvMap[ARGV_CUSTOM_OUTPUT], solver );
         }
 
-#ifdef INRC2_DEBUG
+#ifdef INRC2_LOG
         solver.check();
         solver.print();
-#endif
 
-#ifdef INRC2_LOG
         ostringstream oss;
         int historyFileNameIndex = argvMap[ARGV_HISTORY].find_last_of( "/\\" ) + 1;
         int weekdataFileNameIndex = argvMap[ARGV_WEEKDATA].find_last_of( "/\\" ) + 1;

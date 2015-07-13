@@ -50,6 +50,11 @@
 #define INRC2_AVERAGE_MAX_WORKING_WEEKEND
 #endif
 
+// comment to use rest max shift number
+#ifndef INRC2_AVERAGE_TOTAL_SHIFT_NUM
+#define INRC2_AVERAGE_TOTAL_SHIFT_NUM
+#endif
+
 // [fix] comment to use random pick
 #ifndef INRC2_SECONDARY_OBJ_VALUE
 #define INRC2_SECONDARY_OBJ_VALUE
