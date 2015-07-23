@@ -22,7 +22,7 @@ namespace NurseRostering
             i.history = Input_INRC2Json.readFile<Input_INRC2Json.HistoryInfo>(
                 Input_INRC2Json.getInitHistoryFilePath(instName, initHistoryIndex));
 
-            Solver.Input d = new Solver.Input();
+            Problem d = new Problem();
             d.loadScenario(i);
             d.loadWeekdata(i);
             d.loadHistory(i);
