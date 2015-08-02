@@ -1,4 +1,10 @@
-﻿#region performance switch
+﻿// TODO[9]: mark methods as fixed time or contain infinite loop.
+// TODO[5]: record distance to optima after every move, analyze if it is circling around.
+// TODO[4]: use polymorphisms on Move to replace TryMove, ApplyMove and UpdateTabu delegate
+//          and simplify invalidateCacheFlag().
+
+
+#region performance switch
 // comment to reduce error messages and log
 #define INRC2_LOG
 
@@ -6,7 +12,7 @@
 #define INRC2_DEBUG
 
 // comment to reduce console output
-//#define INRC2_PERFORMANCE_TEST
+#define INRC2_PERFORMANCE_TEST
 #endregion performance switch
 
 #region input switch
@@ -48,9 +54,9 @@
 //#define INRC2_BLOCK_SWAP_STRONG_TABU
 //#define INRC2_BLOCK_SWAP_WEAK_TABU
 //#define INRC2_BLOCK_SWAP_NO_TABU
-#else   // must be no tabu if global setting is no tabu
+#else // INRC2_USE_TABU  // must be no tabu if global setting is no tabu
 #define INRC2_BLOCK_SWAP_NO_TABU
-#endif
+#endif // INRC2_USE_TABU
 
 // [fix] grain of block swap
 //#define INRC2_BLOCK_SWAP_ORGN
@@ -81,8 +87,8 @@ namespace NurseRostering
     #region type alias
     // TUNEUP[2]: Int32 of ShiftID, SkillID and NurseID to Int16? (speed up AssignTable copying)
     using ContractID = Int32;
-    using Duration = Double;
-    using TimePoint = Int64;
+    using Duration = Int64;     // in milliseconds
+    using TimePoint = Int64;    // in ticks
     using IterCount = Int32;
     using NurseID = Int32;
     using ObjValue = Int32;
@@ -139,7 +145,7 @@ namespace NurseRostering
         public const SkillID Begin = None + 1;
     }
 
-    public static class EnumContractID
+    public static class ContractIDs
     {
         public const ContractID None = Begin - 1;
         public const ContractID Begin = default(ContractID);
@@ -147,7 +153,7 @@ namespace NurseRostering
 
     public static class Weekdays
     {
-        public const Weekday LastWeek = 0;          // sentinel
+        public const Weekday LastWeek = 0;          // sentinel for history and succession
         public const Weekday Mon = LastWeek + 1;
         public const Weekday Tue = Mon + 1;
         public const Weekday Wed = Tue + 1;
@@ -155,10 +161,12 @@ namespace NurseRostering
         public const Weekday Fri = Thu + 1;
         public const Weekday Sat = Fri + 1;
         public const Weekday Sun = Sat + 1;
-        public const Weekday NextWeek = Sun + 1;    // sentinel
+        public const Weekday NextWeek = Sun + 1;    // sentinel for succession
 
-        /// <summary> take all sentinel into consideration (recommended). </summary>
-        public const Weekday Length = NextWeek + 1;
+        /// <summary> weekday bound for common use. </summary>
+        public const Weekday Length = Sun + 1;
+        /// <summary> take all sentinel into consideration (speed up succession check). </summary>
+        public const Weekday Length_Full = NextWeek + 1;
         /// <summary> number of days in a week. </summary>
         public const Weekday Num = Sun - Mon + 1;
 
@@ -456,9 +464,6 @@ namespace NurseRostering
         #region Method
         /// <summary> scenario must be loaded first. </summary>
         public void loadScenario(Input_INRC2Json input) {
-            scenario = new ScenarioInfo();
-            names = new NameInfo();
-
             int i;
             int length;
 
@@ -473,7 +478,7 @@ namespace NurseRostering
             names.skillNames = new string[scenario.SkillsLength];
             names.skillMap = new Dictionary<string, SkillID>();
             i = 0;
-            for (SkillID sk = SkillIDs.Begin; sk < scenario.SkillsLength; ++i, ++sk) {
+            for (SkillID sk = SkillIDs.Begin; sk < scenario.SkillsLength; i++, sk++) {
                 string name = input.scenario.skills[i];
                 names.skillNames[sk] = name;
                 names.skillMap[name] = sk;
@@ -487,7 +492,7 @@ namespace NurseRostering
             names.shiftMap[ShiftIDs.AnyStr] = ShiftIDs.Any;
             names.shiftMap[ShiftIDs.NoneStr] = ShiftIDs.None;
             i = 0;
-            for (ShiftID sh = ShiftIDs.Begin; sh < names.shiftNames.Length; ++i, ++sh) {
+            for (ShiftID sh = ShiftIDs.Begin; sh < names.shiftNames.Length; i++, sh++) {
                 string name = input.scenario.shiftTypes[i].id;
                 names.shiftNames[sh] = name;
                 names.shiftMap[name] = sh;
@@ -497,35 +502,34 @@ namespace NurseRostering
                     input.scenario.shiftTypes[i].maximumNumberOfConsecutiveAssignments;
                 scenario.shifts[sh].legalNextShifts = Util.CreateArray(length, true);
             }
-            for (i = 0; i < input.scenario.forbiddenShiftTypeSuccessions.Length; ++i) {
+            for (i = 0; i < input.scenario.forbiddenShiftTypeSuccessions.Length; i++) {
                 Input_INRC2Json.ScenarioInfo.ForbiddenShiftTypeSuccession succession = input.scenario.forbiddenShiftTypeSuccessions[i];
                 ShiftID priorShift = names.shiftMap[succession.precedingShiftType];
                 bool[] legalNextShift = scenario.shifts[priorShift].legalNextShifts;
-                for (int j = 0; j < succession.succeedingShiftTypes.Length; ++j) {
+                for (int j = 0; j < succession.succeedingShiftTypes.Length; j++) {
                     ShiftID nextShift = names.shiftMap[succession.succeedingShiftTypes[j]];
                     scenario.shifts[priorShift].legalNextShifts[nextShift] = false;
                 }
             }
 
-            length = input.scenario.contracts.Length + EnumContractID.Begin;
+            length = input.scenario.contracts.Length + ContractIDs.Begin;
             scenario.contracts = new ScenarioInfo.Contract[length];
             names.contractNames = new string[length];
             names.contractMap = new Dictionary<string, ContractID>();
             i = 0;
-            for (ContractID c = EnumContractID.Begin; c < names.contractNames.Length; ++i, ++c) {
+            for (ContractID c = ContractIDs.Begin; c < names.contractNames.Length; i++, c++) {
                 string name = input.scenario.contracts[i].id;
                 names.contractNames[c] = name;
                 names.contractMap[name] = c;
                 Input_INRC2Json.ScenarioInfo.Contract inContract = input.scenario.contracts[i];
-                ScenarioInfo.Contract contract = scenario.contracts[c];
-                contract.minShiftNum = inContract.minimumNumberOfAssignments;
-                contract.maxShiftNum = inContract.maximumNumberOfAssignments;
-                contract.maxWorkingWeekendNum = inContract.maximumNumberOfWorkingWeekends;
-                contract.completeWeekend = Convert.ToBoolean(inContract.completeWeekends);
-                contract.minConsecutiveDayNum = inContract.minimumNumberOfConsecutiveWorkingDays;
-                contract.maxConsecutiveDayNum = inContract.maximumNumberOfConsecutiveWorkingDays;
-                contract.minConsecutiveDayoffNum = inContract.minimumNumberOfConsecutiveDaysOff;
-                contract.maxConsecutiveDayoffNum = inContract.maximumNumberOfConsecutiveDaysOff;
+                scenario.contracts[c].minShiftNum = inContract.minimumNumberOfAssignments;
+                scenario.contracts[c].maxShiftNum = inContract.maximumNumberOfAssignments;
+                scenario.contracts[c].maxWorkingWeekendNum = inContract.maximumNumberOfWorkingWeekends;
+                scenario.contracts[c].completeWeekend = Convert.ToBoolean(inContract.completeWeekends);
+                scenario.contracts[c].minConsecutiveDayNum = inContract.minimumNumberOfConsecutiveWorkingDays;
+                scenario.contracts[c].maxConsecutiveDayNum = inContract.maximumNumberOfConsecutiveWorkingDays;
+                scenario.contracts[c].minConsecutiveDayoffNum = inContract.minimumNumberOfConsecutiveDaysOff;
+                scenario.contracts[c].maxConsecutiveDayoffNum = inContract.maximumNumberOfConsecutiveDaysOff;
             }
 
             length = input.scenario.nurses.Length + NurseIDs.Begin;
@@ -533,24 +537,21 @@ namespace NurseRostering
             names.nurseNames = new string[length];
             names.nurseMap = new Dictionary<string, NurseID>();
             i = 0;
-            for (NurseID n = NurseIDs.Begin; n < names.nurseNames.Length; ++i, ++n) {
+            for (NurseID n = NurseIDs.Begin; n < names.nurseNames.Length; i++, n++) {
                 string name = input.scenario.nurses[i].id;
                 names.nurseNames[n] = name;
                 names.nurseMap[name] = n;
                 Input_INRC2Json.ScenarioInfo.Nurse inNurse = input.scenario.nurses[i];
-                ScenarioInfo.Nurse nurse = scenario.nurses[n];
-                nurse.contract = names.contractMap[inNurse.contract];
-                nurse.skills = new bool[scenario.SkillsLength]; // default value is false which means no such skill
-                for (int j = 0; j < inNurse.skills.Length; ++j) {
-                    nurse.skills[names.skillMap[inNurse.skills[j]]] = true;
+                scenario.nurses[n].contract = names.contractMap[inNurse.contract];
+                scenario.nurses[n].skills = new bool[scenario.SkillsLength]; // default value is false which means no such skill
+                for (int j = 0; j < inNurse.skills.Length; j++) {
+                    scenario.nurses[n].skills[names.skillMap[inNurse.skills[j]]] = true;
                 }
             }
         }
 
         /// <summary> weekdata must be loaded after scenario. </summary>
         public void loadWeekdata(Input_INRC2Json input) {
-            weekdata = new WeekdataInfo();
-
             // default value is false which means no shift off request
             weekdata.shiftOffs = new bool[scenario.nurses.Length, Weekdays.Length, scenario.shifts.Length];
             foreach (Input_INRC2Json.WeekdataInfo.ShiftOffRequest request in input.weekdata.shiftOffRequests) {
@@ -584,8 +585,6 @@ namespace NurseRostering
 
         /// <summary> history must be loaded after scenario. </summary>
         public void loadHistory(Input_INRC2Json input) {
-            history = new HistoryInfo();
-
             history.accObjValue = 0;
             history.pastWeekCount = input.history.week;
             history.currentWeek = history.pastWeekCount + 1;
@@ -625,7 +624,7 @@ namespace NurseRostering
         /// the result is calculated from input data.
         /// </summary>
         public bool haveSameSkill(NurseID nurse, NurseID nurse2) {
-            for (SkillID sk = ShiftIDs.Begin; sk < scenario.SkillsLength; ++sk) {
+            for (SkillID sk = ShiftIDs.Begin; sk < scenario.SkillsLength; sk++) {
                 if (scenario.nurses[nurse].skills[sk] && scenario.nurses[nurse2].skills[sk]) {
                     return true;
                 }
@@ -645,6 +644,7 @@ namespace NurseRostering
         [DataContract]
         public struct ScenarioInfo
         {
+            // TUNEUP[1]: make it class? (easier for variable alias)
             [DataContract]
             public struct Shift
             {
@@ -894,7 +894,7 @@ namespace NurseRostering
         }
 
         public Output(Problem problem)
-            : this(problem.Scenario.nurses.Length, Weekdays.Length) {
+            : this(problem.Scenario.nurses.Length, Weekdays.Length_Full) {
         }
 
         /// <summary> mainly used for debugging. </summary>
@@ -903,8 +903,8 @@ namespace NurseRostering
             : this(nursesLength, weekdaysLength, objValue, secondaryObjValue, findTime) {
             int i = 0;
             string[] s = assignStr.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-            for (NurseID nurse = NurseIDs.Begin; nurse < nursesLength; ++nurse) {
-                for (int weekday = Weekdays.Mon; weekday <= Weekdays.Sun; ++weekday) {
+            for (NurseID nurse = NurseIDs.Begin; nurse < nursesLength; nurse++) {
+                for (int weekday = Weekdays.Mon; weekday <= Weekdays.Sun; weekday++) {
                     assignTable[nurse, weekday] =
                         new Assign(ShiftID.Parse(s[i]), SkillID.Parse(s[i + 1]));
                     i += 2;
@@ -937,7 +937,7 @@ namespace NurseRostering
 
         /// <summary>
         ///	protected getter to avoid outside modification on array elements. <para />
-        /// use indexer to access single elements.
+        /// use indexer to access single elements. AssignTable[nurse,day] is an Assign.
         /// </summary>
         protected Assign[,] AssignTable {
             get { return assignTable; }
@@ -954,6 +954,7 @@ namespace NurseRostering
             protected set { secondaryObjValue = value; }
         }
 
+        /// <summary> time from the solver start in ticks. </summary>
         public TimePoint FindTime {
             get { return findTime; }
             protected set { findTime = value; }
@@ -983,12 +984,12 @@ namespace NurseRostering
     {
         #region Constructor
         /// <summary> create with default settings. </summary>
-        public SolverConfigure(int id, string instanceName, int randSeed, Duration timeout) {
+        public SolverConfigure(int id, string instanceName, int randSeed, double timeoutInSeconds) {
             // TODO[0]: update default configuration to optima.
             this.id = id;
             this.instanceName = instanceName;
             this.randSeed = randSeed;
-            this.timeout = timeout;
+            this.timeoutInSeconds = timeoutInSeconds;
             this.maxIterCount = IterCounts.Max;
             this.initAlgorithm = InitAlgorithm.Random;
             this.solveAlgorithm = SolveAlgorithm.BiasTabuSearch;
@@ -1035,7 +1036,7 @@ namespace NurseRostering
         public int randSeed;
 
         [DataMember]
-        public Duration timeout;
+        public double timeoutInSeconds;
         [DataMember]
         public IterCount maxIterCount;
 
@@ -1057,8 +1058,8 @@ namespace NurseRostering
             this.iterationCount = 0;
             this.generationCount = 0;
             this.optima = new Output(problem);
-            this.endTimeInTicks = (TimePoint)(config.timeout * Durations.Frequency);
-            this.endTimeInMilliseconds = (TimePoint)(config.timeout * Durations.MillisecondsInSecond);
+            this.endTimeInTicks = (TimePoint)((config.timeoutInSeconds - SaveSolutionTimeInSeconds) * Durations.Frequency);
+            this.endTimeInMilliseconds = (TimePoint)((config.timeoutInSeconds - SaveSolutionTimeInSeconds) * Durations.MillisecondsInSecond);
         }
         #endregion Constructor
 
@@ -1098,9 +1099,9 @@ namespace NurseRostering
             for (int weekday = Weekdays.Mon; weekday <= Weekdays.Sun; weekday++) {
                 for (ShiftID shift = ShiftIDs.Begin; shift < problem.Scenario.shifts.Length; shift++) {
                     for (SkillID skill = SkillIDs.Begin; skill < problem.Scenario.SkillsLength; skill++) {
-                        if (nurseNums[weekday, shift, skill] < problem.Weekdata.minNurseNums[weekday, shift, skill]) {
-                            objValue += DefaultPenalty.Understaff_Repair *
-                                (problem.Weekdata.minNurseNums[weekday, shift, skill] - nurseNums[weekday, shift, skill]);
+                        if (assignedNurseNums[weekday, shift, skill] < problem.Weekdata.minNurseNums[weekday, shift, skill]) {
+                            objValue += DefaultPenalty.Understaff_Repair
+                                * (problem.Weekdata.minNurseNums[weekday, shift, skill] - assignedNurseNums[weekday, shift, skill]);
                         }
                     }
                 }
@@ -1142,7 +1143,7 @@ namespace NurseRostering
                 for (ShiftID shift = ShiftIDs.Begin; shift < problem.Scenario.shifts.Length; shift++) {
                     for (SkillID skill = SkillIDs.Begin; skill < problem.Scenario.SkillsLength; skill++) {
                         int missingNurse = (problem.Weekdata.optNurseNums[weekday, shift, skill]
-                            - nurseNums[weekday, shift, skill]);
+                            - assignedNurseNums[weekday, shift, skill]);
                         if (missingNurse > 0) {
                             objValue += DefaultPenalty.InsufficientStaff * missingNurse;
                         }
@@ -1153,14 +1154,14 @@ namespace NurseRostering
             // check S2: Consecutive assignments (15/30)
             // check S3: Consecutive days off (30)
             for (NurseID nurse = NurseIDs.Begin; nurse < problem.Scenario.nurses.Length; nurse++) {
-                int consecutiveShift = problem.History.consecutiveShiftNums[nurse];
-                int consecutiveDay = problem.History.consecutiveDayNums[nurse];
-                int consecutiveDayOff = problem.History.consecutiveDayoffNums[nurse];
+                int consecutiveShift = H.consecutiveShiftNums[nurse];
+                int consecutiveDay = H.consecutiveDayNums[nurse];
+                int consecutiveDayOff = H.consecutiveDayoffNums[nurse];
                 bool shiftBegin = (consecutiveShift != 0);
                 bool dayBegin = (consecutiveDay != 0);
                 bool dayoffBegin = (consecutiveDayOff != 0);
 
-                checkConsecutiveViolation(ref objValue, output, nurse, Weekdays.Mon, problem.History.lastShifts[nurse],
+                checkConsecutiveViolation(ref objValue, output, nurse, Weekdays.Mon, H.lastShifts[nurse],
                     ref consecutiveShift, ref consecutiveDay, ref consecutiveDayOff,
                     ref shiftBegin, ref dayBegin, ref dayoffBegin);
 
@@ -1171,25 +1172,27 @@ namespace NurseRostering
                 }
                 // since penalty was calculated when switching assign, the penalty of last 
                 // consecutive assignments are not considered. so finish it here.
-                ContractID contractID = problem.Scenario.nurses[nurse].contract;
-                Problem.ScenarioInfo.Contract contract = problem.Scenario.contracts[contractID];
-                if (dayoffBegin && problem.History.consecutiveDayoffNums[nurse] > contract.maxConsecutiveDayoffNum) {
+                ContractID cid = problem.Scenario.nurses[nurse].contract;
+                Problem.ScenarioInfo.Contract[] cs = problem.Scenario.contracts;
+                ShiftID shid = output[nurse, Weekdays.Sun].shift;
+                Problem.ScenarioInfo.Shift[] sh = problem.Scenario.shifts;
+                if (dayoffBegin && H.consecutiveDayoffNums[nurse] > cs[cid].maxConsecutiveDayoffNum) {
                     objValue += DefaultPenalty.ConsecutiveDayOff * Weekdays.Num;
-                } else if (consecutiveDayOff > contract.maxConsecutiveDayoffNum) {
-                    objValue += DefaultPenalty.ConsecutiveDayOff *
-                        (consecutiveDayOff - contract.maxConsecutiveDayoffNum);
+                } else if (consecutiveDayOff > cs[cid].maxConsecutiveDayoffNum) {
+                    objValue += DefaultPenalty.ConsecutiveDayOff
+                        * (consecutiveDayOff - cs[cid].maxConsecutiveDayoffNum);
                 } else if (consecutiveDayOff == 0) {    // working day
-                    if (shiftBegin && problem.History.consecutiveShiftNums[nurse] > problem.Scenario.shifts[output[nurse, Weekdays.Sun].shift].maxConsecutiveShiftNum) {
+                    if (shiftBegin && H.consecutiveShiftNums[nurse] > sh[shid].maxConsecutiveShiftNum) {
                         objValue += DefaultPenalty.ConsecutiveShift * Weekdays.Num;
-                    } else if (consecutiveShift > problem.Scenario.shifts[output[nurse, Weekdays.Sun].shift].maxConsecutiveShiftNum) {
-                        objValue += DefaultPenalty.ConsecutiveShift *
-                            (consecutiveShift - problem.Scenario.shifts[output[nurse, Weekdays.Sun].shift].maxConsecutiveShiftNum);
+                    } else if (consecutiveShift > sh[shid].maxConsecutiveShiftNum) {
+                        objValue += DefaultPenalty.ConsecutiveShift
+                            * (consecutiveShift - sh[shid].maxConsecutiveShiftNum);
                     }
-                    if (dayBegin && problem.History.consecutiveDayNums[nurse] > contract.maxConsecutiveDayNum) {
+                    if (dayBegin && H.consecutiveDayNums[nurse] > cs[cid].maxConsecutiveDayNum) {
                         objValue += DefaultPenalty.ConsecutiveDay * Weekdays.Num;
-                    } else if (consecutiveDay > contract.maxConsecutiveDayNum) {
-                        objValue += DefaultPenalty.ConsecutiveDay *
-                            (consecutiveDay - contract.maxConsecutiveDayNum);
+                    } else if (consecutiveDay > cs[cid].maxConsecutiveDayNum) {
+                        objValue += DefaultPenalty.ConsecutiveDay
+                            * (consecutiveDay - cs[cid].maxConsecutiveDayNum);
                     }
                 }
             }
@@ -1213,9 +1216,9 @@ namespace NurseRostering
 
             // check S6: Total assignments (20)
             // check S7: Total working weekends (30)
-            if (problem.History.currentWeek == problem.Scenario.totalWeekNum) {
+            if (H.currentWeek == problem.Scenario.totalWeekNum) {
                 for (NurseID nurse = NurseIDs.Begin; nurse < problem.Scenario.nurses.Length; nurse++) {
-                    int assignNum = problem.History.totalAssignNums[nurse];
+                    int assignNum = H.totalAssignNums[nurse];
                     for (int weekday = Weekdays.Mon; weekday <= Weekdays.Sun; weekday++) {
                         if (output[nurse, weekday].IsWorking) { assignNum++; }
                     }
@@ -1225,7 +1228,7 @@ namespace NurseRostering
                     objValue += DefaultPenalty.TotalAssign * Util.distanceToRange(assignNum, min, max);
 
                     int maxWeekend = problem.Scenario.contracts[problem.Scenario.nurses[nurse].contract].maxWorkingWeekendNum;
-                    int weekendNum = problem.History.totalWorkingWeekendNums[nurse];
+                    int weekendNum = H.totalWorkingWeekendNums[nurse];
                     if (output[nurse, Weekdays.Sat].IsWorking || output[nurse, Weekdays.Sun].IsWorking) {
                         weekendNum++;
                     }
@@ -1245,91 +1248,90 @@ namespace NurseRostering
             Output output, NurseID nurse, int weekday, ShiftID lastShiftID,
             ref int consecutiveShift, ref int consecutiveDay, ref int consecutiveDayOff,
             ref bool shiftBegin, ref bool dayBegin, ref bool dayoffBegin) {
-            ContractID contractID = problem.Scenario.nurses[nurse].contract;
-            Problem.ScenarioInfo.Contract contract = problem.Scenario.contracts[contractID];
+            ContractID cid = problem.Scenario.nurses[nurse].contract;
+            Problem.ScenarioInfo.Contract[] cs = problem.Scenario.contracts;
+            Problem.ScenarioInfo.Shift[] sh = problem.Scenario.shifts;
             ShiftID shift = output[nurse, weekday].shift;
             if (ShiftIDs.isWorking(shift)) {    // working day
                 if (consecutiveDay == 0) {  // switch from consecutive day off to working
                     if (dayoffBegin) {
-                        if (problem.History.consecutiveDayoffNums[nurse] > contract.maxConsecutiveDayoffNum) {
+                        if (H.consecutiveDayoffNums[nurse] > cs[cid].maxConsecutiveDayoffNum) {
                             objValue += DefaultPenalty.ConsecutiveDayOff * (weekday - Weekdays.Mon);
                         } else {
                             objValue += DefaultPenalty.ConsecutiveDayOff * Util.distanceToRange(consecutiveDayOff,
-                                contract.minConsecutiveDayoffNum, contract.maxConsecutiveDayoffNum);
+                                cs[cid].minConsecutiveDayoffNum, cs[cid].maxConsecutiveDayoffNum);
                         }
                         dayoffBegin = false;
                     } else {
                         objValue += DefaultPenalty.ConsecutiveDayOff * Util.distanceToRange(consecutiveDayOff,
-                            contract.minConsecutiveDayoffNum, contract.maxConsecutiveDayoffNum);
+                            cs[cid].minConsecutiveDayoffNum, cs[cid].maxConsecutiveDayoffNum);
                     }
                     consecutiveDayOff = 0;
                     consecutiveShift = 1;
                 } else {    // keep working
                     if (shift == lastShiftID) {
-                        ++consecutiveShift;
+                        consecutiveShift++;
                     } else { // another shift
-                        Problem.ScenarioInfo.Shift lastShift = problem.Scenario.shifts[lastShiftID];
                         if (shiftBegin) {
-                            if (problem.History.consecutiveShiftNums[nurse] > lastShift.maxConsecutiveShiftNum) {
+                            if (H.consecutiveShiftNums[nurse] > sh[lastShiftID].maxConsecutiveShiftNum) {
                                 objValue += DefaultPenalty.ConsecutiveShift * (weekday - Weekdays.Mon);
                             } else {
                                 objValue += DefaultPenalty.ConsecutiveShift * Util.distanceToRange(consecutiveShift,
-                                    lastShift.minConsecutiveShiftNum, lastShift.maxConsecutiveShiftNum);
+                                    sh[lastShiftID].minConsecutiveShiftNum, sh[lastShiftID].maxConsecutiveShiftNum);
                             }
                             shiftBegin = false;
                         } else {
                             objValue += DefaultPenalty.ConsecutiveShift * Util.distanceToRange(consecutiveShift,
-                                lastShift.minConsecutiveShiftNum, lastShift.maxConsecutiveShiftNum);
+                                sh[lastShiftID].minConsecutiveShiftNum, sh[lastShiftID].maxConsecutiveShiftNum);
                         }
                         consecutiveShift = 1;
                     }
                 }
-                ++consecutiveDay;
+                consecutiveDay++;
             } else {    // day off
                 if (consecutiveDayOff == 0) {   // switch from consecutive working to day off
-                    Problem.ScenarioInfo.Shift lastShift = problem.Scenario.shifts[lastShiftID];
                     if (shiftBegin) {
-                        if (problem.History.consecutiveShiftNums[nurse] > lastShift.maxConsecutiveShiftNum) {
+                        if (H.consecutiveShiftNums[nurse] > sh[lastShiftID].maxConsecutiveShiftNum) {
                             objValue += DefaultPenalty.ConsecutiveShift * (weekday - Weekdays.Mon);
                         } else {
                             objValue += DefaultPenalty.ConsecutiveShift * Util.distanceToRange(consecutiveShift,
-                                lastShift.minConsecutiveShiftNum, lastShift.maxConsecutiveShiftNum);
+                                sh[lastShiftID].minConsecutiveShiftNum, sh[lastShiftID].maxConsecutiveShiftNum);
                         }
                         shiftBegin = false;
                     } else {
                         objValue += DefaultPenalty.ConsecutiveShift * Util.distanceToRange(consecutiveShift,
-                            lastShift.minConsecutiveShiftNum, lastShift.maxConsecutiveShiftNum);
+                            sh[lastShiftID].minConsecutiveShiftNum, sh[lastShiftID].maxConsecutiveShiftNum);
                     }
                     if (dayBegin) {
-                        if (problem.History.consecutiveDayNums[nurse] > contract.maxConsecutiveDayNum) {
+                        if (H.consecutiveDayNums[nurse] > cs[cid].maxConsecutiveDayNum) {
                             objValue += DefaultPenalty.ConsecutiveDay * (weekday - Weekdays.Mon);
                         } else {
                             objValue += DefaultPenalty.ConsecutiveDay * Util.distanceToRange(consecutiveDay,
-                                contract.minConsecutiveDayNum, contract.maxConsecutiveDayNum);
+                                cs[cid].minConsecutiveDayNum, cs[cid].maxConsecutiveDayNum);
                         }
                         dayBegin = false;
                     } else {
                         objValue += DefaultPenalty.ConsecutiveDay * Util.distanceToRange(consecutiveDay,
-                            contract.minConsecutiveDayNum, contract.maxConsecutiveDayNum);
+                            cs[cid].minConsecutiveDayNum, cs[cid].maxConsecutiveDayNum);
                     }
                     consecutiveShift = 0;
                     consecutiveDay = 0;
                 }
-                ++consecutiveDayOff;
+                consecutiveDayOff++;
             }
         }
 
-        /// <summary> generate nurse numbers in $nurseNums[day,shift,skill]. </summary>
+        /// <summary> generate nurse numbers in $assignedNurseNums[day,shift,skill]. </summary>
         private void countNurseNums(Output output) {
-            if (nurseNums == null) {
-                nurseNums = new int[Weekdays.Length,
+            if (assignedNurseNums == null) {
+                assignedNurseNums = new int[Weekdays.Length,
                     problem.Scenario.shifts.Length, problem.Scenario.SkillsLength];
             }
 
             for (NurseID nurse = NurseIDs.Begin; nurse < problem.Scenario.nurses.Length; nurse++) {
                 for (Weekday weekday = Weekdays.Mon; weekday <= Weekdays.Sun; weekday++) {
                     Assign a = output[nurse, weekday];
-                    nurseNums[weekday, a.shift, a.skill]++;
+                    assignedNurseNums[weekday, a.shift, a.skill]++;
                 }
             }
         }
@@ -1359,7 +1361,7 @@ namespace NurseRostering
                 .Append(checkFeasibility()).Append(",")
                 .Append((checkObjValue() - Optima.ObjValue) / DefaultPenalty.Amp).Append(",")
                 .Append(Optima.ObjValue / DefaultPenalty.Amp).Append(",")
-                .Append((Optima.ObjValue + problem.History.accObjValue) / DefaultPenalty.Amp).Append(",");
+                .Append((Optima.ObjValue + H.accObjValue) / DefaultPenalty.Amp).Append(",");
 
             for (NurseID nurse = NurseIDs.Begin; nurse < problem.Scenario.nurses.Length; nurse++) {
                 for (Weekday weekday = Weekdays.Mon; weekday <= Weekdays.Sun; weekday++) {
@@ -1372,16 +1374,15 @@ namespace NurseRostering
         }
 
         /// <summary> log to console with time and runID. </summary>
+        [Conditional("INRC2_LOG")]
         public void errorLog(string msg) {
-#if INRC2_LOG
             Console.Error.Write(DateTime.Now.ToString(Durations.TimeFormat_Readable));
             Console.Error.Write("," + Config.id + ",");
             Console.Error.WriteLine(msg);
-#endif
         }
 
         /// <summary> generate history for next week from optima. </summary>
-        public abstract Problem.HistoryInfo generateHistory();
+        public abstract void generateHistory(out Problem.HistoryInfo newHistory);
 
         /// <summary> return true if global optima or population is updated. </summary>
         protected abstract bool updateOptima(Output localOptima);
@@ -1394,9 +1395,16 @@ namespace NurseRostering
         }
 
         public bool IsTimeout { get { return (clock.ElapsedTicks > endTimeInTicks); } }
-        public Duration TimeLeft { get { return (endTimeInMilliseconds - clock.ElapsedMilliseconds); } }
+        public Duration TimeLeft { get { return (Duration)(endTimeInMilliseconds - clock.ElapsedMilliseconds); } }
 
         protected abstract TConfig Config { get; set; }
+
+        /// <summary> short hand for scenario. </summary>
+        protected Problem.ScenarioInfo S { get { return problem.Scenario; } }
+        /// <summary> short hand for weekdata. </summary>
+        protected Problem.WeekdataInfo W { get { return problem.Weekdata; } }
+        /// <summary> short hand for history. </summary>
+        protected Problem.HistoryInfo H { get { return problem.History; } }
         #endregion Property
 
         #region Type
@@ -1432,7 +1440,7 @@ namespace NurseRostering
 
             #region Method
             // reset to default penalty mode and clear mode stack
-            void reset() {
+            public void reset() {
                 modeStack.Clear();
 
                 pm.singleAssign = DefaultPenalty.ForbiddenMove;
@@ -1450,18 +1458,18 @@ namespace NurseRostering
                 pm.totalWorkingWeekend = DefaultPenalty.TotalWorkingWeekend;
             }
 
-            void recoverLastMode() {
+            public void recoverLastMode() {
                 pm = modeStack.Pop();
             }
 
-            void setSwapMode() {
+            public void setSwapMode() {
                 modeStack.Push(pm);
 
                 pm.understaff = 0;          // due to no extra assignments
                 pm.insufficientStaff = 0;   // due to no extra assignments
             }
 
-            void setBlockSwapMode() {
+            public void setBlockSwapMode() {
                 modeStack.Push(pm);
 
                 pm.understaff = 0;  // due to no extra assignments
@@ -1470,7 +1478,7 @@ namespace NurseRostering
                 pm.insufficientStaff = 0;   // due to no extra assignments
             }
 
-            void setExchangeMode() {
+            public void setExchangeMode() {
                 modeStack.Push(pm);
 
                 pm.succession = 0;  // due to it is checked manually
@@ -1483,7 +1491,7 @@ namespace NurseRostering
             /// but with much greater penalty than soft constraints. <para />
             /// set softConstraintDecay to MaxObjValue to make them does not count.
             /// </summary>
-            void setRepairMode(ObjValue WeightOnUnderStaff = DefaultPenalty.Understaff_Repair,
+            public void setRepairMode(ObjValue WeightOnUnderStaff = DefaultPenalty.Understaff_Repair,
                 ObjValue WeightOnSuccesion = DefaultPenalty.Succession_Repair,
                 ObjValue softConstraintDecay = DefaultPenalty.MaxObjValue) {
                 modeStack.Push(pm);
@@ -1535,7 +1543,7 @@ namespace NurseRostering
 
         #region Constant
         /// <summary> preserved time for IO in the total given time. </summary>
-        public const Duration SaveSolutionTime = 500;
+        public const double SaveSolutionTimeInSeconds = 0.5;
         #endregion Constant
 
         #region Field
@@ -1548,8 +1556,11 @@ namespace NurseRostering
 
         private Output optima;
 
-        /// <summary> hold the array to avoid reallocation in countNurseNums(). </summary>
-        private int[, ,] nurseNums;
+        /// <summary> 
+        /// assignedNurseNums[day,shift,skill] is nurse numbers in that slot.
+        /// hold the array to avoid reallocation in countNurseNums(). 
+        /// </summary>
+        private int[, ,] assignedNurseNums;
 
         /// <summary> when clock time is greater than this, the solver should stop. </summary>
         private TimePoint endTimeInTicks;
@@ -1562,8 +1573,8 @@ namespace NurseRostering
         #region Constructor
         public TabuSolver(Problem problem, Configure config)
             : base(problem, config) {
-            // TODO[9]: make them static member? 
-            //          (turn init and search into static method with a parameter of a TabuSolver)
+            // TUNEUP[3]: make them static method with $this as first parameter
+            //          to avoid maintaining the table for every solution object.
             generateInitSolution = new GenerateInitSolution[] {
                 randomInit, greedyInit, exactInit
             };
@@ -1580,12 +1591,10 @@ namespace NurseRostering
             // TODO[6]: handle constraints on the entire planning horizon.
         }
 
-        public override Problem.HistoryInfo generateHistory() {
-            Problem.HistoryInfo newHistory = new Problem.HistoryInfo();
-
-            // UNDONE[0]: generate history from assign table.
-
-            return newHistory;
+        public override void generateHistory(out Problem.HistoryInfo newHistory) {
+            Solution s = new Solution(this);
+            s.rebuild(Optima);
+            s.generateHistory(out newHistory);
         }
 
         public bool haveSameSkill(NurseID nurse, NurseID nurse2) {
@@ -1599,9 +1608,9 @@ namespace NurseRostering
             } else if (localOptima.ObjValue == Optima.ObjValue) {
 #if INRC2_SECONDARY_OBJ_VALUE
                 bool isSelected = (localOptima.SecondaryObjValue < Optima.SecondaryObjValue);
-#else
+#else // INRC2_SECONDARY_OBJ_VALUE
                 bool isSelected = ((rand.Next(2)) == 0);
-#endif
+#endif // INRC2_SECONDARY_OBJ_VALUE
                 if (isSelected) {
                     Optima = localOptima;
                     return true;
@@ -1638,17 +1647,18 @@ namespace NurseRostering
             restMaxShiftNum = new int[problem.Scenario.nurses.Length];
             restMaxWorkingWeekendNum = new int[problem.Scenario.nurses.Length];
 
-            for (NurseID nurse = NurseIDs.Begin; nurse < problem.Scenario.nurses.Length; ++nurse) {
-                Problem.ScenarioInfo.Contract c = problem.Scenario.contracts[problem.Scenario.nurses[nurse].contract];
+            for (NurseID nurse = NurseIDs.Begin; nurse < problem.Scenario.nurses.Length; nurse++) {
+                ContractID cid = problem.Scenario.nurses[nurse].contract;
+                Problem.ScenarioInfo.Contract[] cs = problem.Scenario.contracts;
 #if INRC2_IGNORE_MIN_SHIFT_IN_EARLY_WEEKS
-                int weekToStartCountMin = problem.Scenario.totalWeekNum * c.minShiftNum;
-                bool ignoreMinShift = ((problem.History.currentWeek * c.maxShiftNum) < weekToStartCountMin);
-                restMinShiftNum[nurse] = (ignoreMinShift) ? 0 : (c.minShiftNum - problem.History.totalAssignNums[nurse]);
-#else
-                restMinShiftNum[nurse] = c.minShiftNum - problem.History.totalAssignNums[nurse];
-#endif
-                restMaxShiftNum[nurse] = c.maxShiftNum - problem.History.totalAssignNums[nurse];
-                restMaxWorkingWeekendNum[nurse] = c.maxWorkingWeekendNum - problem.History.totalWorkingWeekendNums[nurse];
+                int weekToStartCountMin = problem.Scenario.totalWeekNum * cs[cid].minShiftNum;
+                bool ignoreMinShift = ((H.currentWeek * cs[cid].maxShiftNum) < weekToStartCountMin);
+                restMinShiftNum[nurse] = (ignoreMinShift) ? 0 : (cs[cid].minShiftNum - H.totalAssignNums[nurse]);
+#else // INRC2_IGNORE_MIN_SHIFT_IN_EARLY_WEEKS
+                restMinShiftNum[nurse] = cs[cid].minShiftNum - h.totalAssignNums[nurse];
+#endif // INRC2_IGNORE_MIN_SHIFT_IN_EARLY_WEEKS
+                restMaxShiftNum[nurse] = cs[cid].maxShiftNum - H.totalAssignNums[nurse];
+                restMaxWorkingWeekendNum[nurse] = cs[cid].maxWorkingWeekendNum - H.totalWorkingWeekendNums[nurse];
             }
         }
 
@@ -1678,34 +1688,34 @@ namespace NurseRostering
         private void setTabuTenure() {
             // plus 1 to make sure it will not be 0
             // table size
-            dayTabuTenureBase = (IterCount)(1 + config.dayTabuFactors.tableSize *
-                problem.Scenario.NurseNum * Weekdays.Num);
-            shiftTabuTenureBase = (IterCount)(1 + config.shiftTabuFactors.tableSize *
-                problem.Scenario.NurseNum * Weekdays.Num * problem.Scenario.ShiftNum * problem.Scenario.SkillNum);
+            DayTabuTenureBase = (IterCount)(1 + config.dayTabuFactors.tableSize
+                * problem.Scenario.NurseNum * Weekdays.Num);
+            ShiftTabuTenureBase = (IterCount)(1 + config.shiftTabuFactors.tableSize
+                * problem.Scenario.NurseNum * Weekdays.Num * problem.Scenario.ShiftNum * problem.Scenario.SkillNum);
             // nurse number
-            dayTabuTenureBase *= (IterCount)(1 + config.dayTabuFactors.nurseNum * problem.Scenario.NurseNum);
-            shiftTabuTenureBase *= (IterCount)(1 + config.shiftTabuFactors.nurseNum * problem.Scenario.NurseNum);
+            DayTabuTenureBase *= (IterCount)(1 + config.dayTabuFactors.nurseNum * problem.Scenario.NurseNum);
+            ShiftTabuTenureBase *= (IterCount)(1 + config.shiftTabuFactors.nurseNum * problem.Scenario.NurseNum);
             // day number
-            dayTabuTenureBase *= (IterCount)(1 + config.dayTabuFactors.dayNum * Weekdays.Num);
-            shiftTabuTenureBase *= (IterCount)(1 + config.shiftTabuFactors.dayNum * Weekdays.Num);
+            DayTabuTenureBase *= (IterCount)(1 + config.dayTabuFactors.dayNum * Weekdays.Num);
+            ShiftTabuTenureBase *= (IterCount)(1 + config.shiftTabuFactors.dayNum * Weekdays.Num);
             // shift number
-            dayTabuTenureBase *= (IterCount)(1 + config.dayTabuFactors.shiftNum *
-                problem.Scenario.ShiftNum * problem.Scenario.SkillNum);
-            shiftTabuTenureBase *= (IterCount)(1 + config.shiftTabuFactors.shiftNum *
-                problem.Scenario.ShiftNum * problem.Scenario.SkillNum);
+            DayTabuTenureBase *= (IterCount)(1 + config.dayTabuFactors.shiftNum
+                * problem.Scenario.ShiftNum * problem.Scenario.SkillNum);
+            ShiftTabuTenureBase *= (IterCount)(1 + config.shiftTabuFactors.shiftNum
+                * problem.Scenario.ShiftNum * problem.Scenario.SkillNum);
 
-            if (dayTabuTenureBase < config.minTabuBase) { dayTabuTenureBase = config.minTabuBase; }
-            if (shiftTabuTenureBase < config.minTabuBase) { shiftTabuTenureBase = config.minTabuBase; }
-            dayTabuTenureAmp = 1 + dayTabuTenureBase / config.inverseTabuAmpRatio;
-            shiftTabuTenureAmp = 1 + shiftTabuTenureBase / config.inverseTabuAmpRatio;
+            if (DayTabuTenureBase < config.minTabuBase) { DayTabuTenureBase = config.minTabuBase; }
+            if (ShiftTabuTenureBase < config.minTabuBase) { ShiftTabuTenureBase = config.minTabuBase; }
+            DayTabuTenureAmp = 1 + DayTabuTenureBase / config.inverseTabuAmpRatio;
+            ShiftTabuTenureAmp = 1 + ShiftTabuTenureBase / config.inverseTabuAmpRatio;
         }
 
         private void setMaxNoImprove() {
             MaxNoImproveForSingleNeighborhood = (IterCount)(
                 config.maxNoImproveFactor * problem.Scenario.NurseNum * Weekdays.Num);
             MaxNoImproveForAllNeighborhood = (IterCount)(
-                config.maxNoImproveFactor * problem.Scenario.NurseNum * Weekdays.Num *
-                Math.Sqrt(problem.Scenario.ShiftNum * problem.Scenario.SkillNum));
+                config.maxNoImproveFactor * problem.Scenario.NurseNum * Weekdays.Num
+                * Math.Sqrt(problem.Scenario.ShiftNum * problem.Scenario.SkillNum));
 
             MaxNoImproveForBiasTabuSearch = MaxNoImproveForSingleNeighborhood / config.inverseTotalBiasRatio;
 
@@ -1714,15 +1724,29 @@ namespace NurseRostering
         }
 
         private void randomInit() {
-
+            if (!Util.Worker.WorkUntilTimeout(sln.generateInitSolution_Random, (int)TimeLeft)) {
+                errorLog("randomInit() fail to generate feasible init solution.");
+            }
         }
 
         private void greedyInit() {
-
+            int greedyInitRetryCount = (int)Math.Sqrt(problem.Scenario.NurseNum);
+            for (; greedyInitRetryCount > 0; greedyInitRetryCount--) {
+                sln.generateInitSolution_Greedy();
+                if (sln.ObjValue < DefaultPenalty.MaxObjValue) { return; }
+            }
+            if (!Util.Worker.WorkUntilTimeout(sln.repair_AlwaysEvaluateObjValue, (int)TimeLeft)) {
+                errorLog("greedyInit() fail to generate feasible init solution.");
+            }
         }
 
         private void exactInit() {
-
+            Duration initTime = TimeLeft - (TimeLeft / InverseRatioOfRepairTimeInInit);
+            if (!Util.Worker.WorkUntilTimeout(sln.generateInitSolution_BranchAndCut, (int)initTime)) {
+                if (!Util.Worker.WorkUntilTimeout(sln.repair_AlwaysEvaluateObjValue, (int)TimeLeft)) {
+                    errorLog("exactInit() fail to generate feasible init solution.");
+                }
+            }
         }
         #endregion init
 
@@ -1761,16 +1785,92 @@ namespace NurseRostering
             #region Constructor
             public Solution(TabuSolver solver)
                 : base(solver.problem) {
+                // init sentinels
+                for (NurseID nurse = NurseIDs.Begin; nurse < solver.problem.Scenario.nurses.Length; nurse++) {
+                    base.AssignTable[nurse, Weekdays.LastWeek].shift = solver.problem.History.lastShifts[nurse];
+                    base.AssignTable[nurse, Weekdays.NextWeek].shift = ShiftIDs.None;
+                }
+
                 this.solver = solver;
                 this.problem = solver.problem;
 
+                this.optima = new Output(problem);
+
+                this.penalty = new Penalty();
+                this.nurseWeights = new ObjValue[problem.Scenario.nurses.Length];
+
                 this.iterCount = 1;
 
-                // init sentinels
-                for (NurseID nurse = NurseIDs.Begin; nurse < problem.Scenario.nurses.Length; nurse++) {
-                    AssignTable[nurse, Weekdays.LastWeek].shift = problem.History.lastShifts[nurse];
-                    AssignTable[nurse, Weekdays.NextWeek].shift = ShiftIDs.None;
+                this.totalAssignNums = new int[problem.Scenario.nurses.Length];
+                this.assignedNurseNums = new int[Weekdays.Length,
+                    problem.Scenario.shifts.Length, problem.Scenario.SkillsLength];
+                this.missingNurseNums = new int[Weekdays.Length,
+                    problem.Scenario.shifts.Length, problem.Scenario.SkillsLength];
+                this.consecutives = new Consecutive[problem.Scenario.nurses.Length];
+                this.consecutives_Backup = new Consecutive[problem.Scenario.nurses.Length];
+                for (NurseID nurse = 0; nurse < problem.Scenario.NurseNum; nurse++) {
+                    this.consecutives[nurse] = new Consecutive();
+                    this.consecutives_Backup[nurse] = new Consecutive(problem, nurse);
                 }
+
+                this.blockSwapCache = new BlockSwapCacheItem[problem.Scenario.nurses.Length, problem.Scenario.nurses.Length];
+                this.isBlockSwapCacheValid = new bool[problem.Scenario.nurses.Length];
+
+#if INRC2_USE_TABU
+                // TUNEUP[9]: remove dependency on default value of IterCount to be 0.
+                this.shiftTabu = new IterCount[problem.Scenario.nurses.Length, Weekdays.Length,
+                    problem.Scenario.shifts.Length, problem.Scenario.SkillsLength];
+                this.dayTabu = new IterCount[problem.Scenario.nurses.Length, Weekdays.Length];
+#endif // INRC2_USE_TABU
+
+                // TUNEUP[3]: make them static method with $this as first parameter
+                //          to avoid maintaining the table for every solution object.
+                findBestMove = new FindBestMove[] { 
+                    this.findBestAdd,
+                    this.findBestRemove,
+                    this.findBestChange,
+                    this.findBestExchange,
+                    this.findBestSwap,
+#if INRC2_BLOCK_SWAP_ORGN
+                    this.findBestBlockSwap,
+#elif INRC2_BLOCK_SWAP_CACHED
+                    this.findBestBlockSwap_Cached,
+#elif INRC2_BLOCK_SWAP_FAST
+                    this.findBestBlockSwap_Fast,
+#elif INRC2_BLOCK_SWAP_PART
+                    this.findBestBlockSwap_Part,
+#elif INRC2_BLOCK_SWAP_RAND
+                    this.findBestBlockSwap_Rand,
+#endif
+                    this.findBestBlockShift,
+                    this.findBestARLoop,
+                    this.findBestARRand,
+                    this.findBestARBoth
+                };
+                tryMove = new TryMove[] {
+                    this.tryAddAssign,
+                    this.tryRemoveAssign,
+                    this.tryChangeAssign,
+                    this.tryExchangeDay,
+                    this.trySwapNurse,
+                    this.trySwapBlock 
+                };
+                applyMove = new ApplyMove[] { 
+                    this.addAssign,
+                    this.removeAssign,
+                    this.changeAssign,
+                    this.exchangeDay,
+                    this.swapNurse,
+                    this.swapBlock
+                };
+                updateTabu = new UpdateTabu[] {
+                    this.updateAddTabu,
+                    this.updateRemoveTabu,
+                    this.updateChangeTabu,
+                    this.updateExchangeTabu,
+                    this.updateSwapTabu,
+                    this.updateBlockSwapTabu 
+                };
             }
             #endregion Constructor
 
@@ -1779,12 +1879,15 @@ namespace NurseRostering
                 resetAssign();
                 resetAssistData();
 
+                NurseID nurse;
+                Weekday weekday;
+                Assign assign;
+
                 for (int i = 0; i < solver.totalOptNurseNum; i++) {
-                    NurseID nurse = solver.rand.Next(NurseIDs.Begin, problem.Scenario.nurses.Length);
-                    Weekday weekday = solver.rand.Next(Weekdays.Mon, Weekdays.NextWeek);
-                    Assign assign = new Assign(
-                        solver.rand.Next(ShiftIDs.Begin, problem.Scenario.shifts.Length),
-                        solver.rand.Next(SkillIDs.Begin, problem.Scenario.SkillsLength));
+                    nurse = solver.rand.Next(NurseIDs.Begin, problem.Scenario.nurses.Length);
+                    weekday = solver.rand.Next(Weekdays.Mon, Weekdays.NextWeek);
+                    assign.shift = solver.rand.Next(ShiftIDs.Begin, problem.Scenario.shifts.Length);
+                    assign.skill = solver.rand.Next(SkillIDs.Begin, problem.Scenario.SkillsLength);
 
                     if ((!AssignTable[nurse, weekday].IsWorking)
                         && problem.Scenario.nurses[nurse].skills[assign.skill]) {
@@ -1792,18 +1895,422 @@ namespace NurseRostering
                     }
                 }
 
-                // if it does not work out within total timeout, the solution is meaningless
-                if (Util.Worker.WorkUntilTimeout(repair, (int)solver.TimeLeft)) {
-                    evaluateObjValue(); // TUNEUP[0]: objective might have been evaluated in repair()!
+                repair_AlwaysEvaluateObjValue();
+            }
+            public void generateInitSolution_Greedy() {
+                resetAssign();
+                resetAssistData();
+
+                // UNDONE[6]: generateInitSolution_Greedy
+            }
+            public void generateInitSolution_BranchAndCut() {
+                resetAssign();
+
+                if (fillAssign(Weekdays.Mon, ShiftIDs.Begin, SkillIDs.Begin, NurseIDs.Begin, 0)) {
+                    rebuild();
                 } else {
                     ObjValue = DefaultPenalty.ForbiddenMove;
                 }
             }
-            public void generateInitSolution_Greedy() {
 
+            /// <summary> get history for next week, only used for custom file. </summary>
+            public void generateHistory(out Problem.HistoryInfo newHistory) {
+                newHistory = new Problem.HistoryInfo();
+
+                newHistory.accObjValue = H.accObjValue + ObjValue;
+                newHistory.pastWeekCount = H.currentWeek;
+                newHistory.currentWeek = H.currentWeek + 1;
+                newHistory.restWeekCount = H.restWeekCount - 1;
+
+                newHistory.totalAssignNums = (int[])(H.totalAssignNums.Clone());
+                newHistory.totalWorkingWeekendNums = (int[])(H.totalWorkingWeekendNums.Clone());
+                newHistory.lastShifts = new ShiftID[problem.Scenario.nurses.Length];
+                newHistory.consecutiveShiftNums = new int[problem.Scenario.nurses.Length];
+                newHistory.consecutiveDayNums = new int[problem.Scenario.nurses.Length];
+                newHistory.consecutiveDayoffNums = new int[problem.Scenario.nurses.Length];
+
+                for (NurseID nurse = 0; nurse < problem.Scenario.nurses.Length; nurse++) {
+                    newHistory.totalAssignNums[nurse] += totalAssignNums[nurse];
+                    if (AssignTable[nurse, Weekdays.Sat].IsWorking
+                        || AssignTable[nurse, Weekdays.Sun].IsWorking) {
+                        newHistory.totalWorkingWeekendNums[nurse]++;
+                    }
+                    newHistory.lastShifts[nurse] = AssignTable[nurse, Weekdays.Sun].shift;
+                    Consecutive c = consecutives[nurse];
+                    if (AssignTable[nurse, Weekdays.Sun].IsWorking) {
+                        newHistory.consecutiveShiftNums[nurse] =
+                            c.shiftHigh[Weekdays.Sun] - c.shiftLow[Weekdays.Sun] + 1;
+                        newHistory.consecutiveDayNums[nurse] =
+                            c.dayHigh[Weekdays.Sun] - c.dayLow[Weekdays.Sun] + 1;
+                    } else {
+                        newHistory.consecutiveDayoffNums[nurse] =
+                            c.dayHigh[Weekdays.Sun] - c.dayLow[Weekdays.Sun] + 1;
+                    }
+                }
             }
-            public void generateInitSolution_BranchAndCut() {
 
+            /// <summary>
+            /// select single neighborhood to search in each iteration randomly
+            /// the random select process is a discrete distribution
+            /// the possibility to be selected will increase if the neighborhood
+            /// improve the solution, else decrease it. the sum of possibilities is 1.0
+            /// </summary>
+            public void tabuSearch_Rand(FindBestMove[] findBestMove_Search, IterCount maxNoImproveCount) {
+#if INRC2_PERFORMANCE_TEST
+                IterCount startIterCount = iterCount;
+                Stopwatch clock = new Stopwatch();
+                clock.Start();
+#endif
+                const int weight_Invalid = 128;     // min weight
+                const int weight_NoImprove = 256;
+                const int weight_ImproveCur = 1024;
+                const int weight_ImproveOpt = 4096; // max weight (less than (RAND_MAX / findBestMove_Search.Length))
+                const int initWeight = (weight_ImproveCur + weight_NoImprove) / 2;
+                const int deltaIncRatio = 8;    // = weights[mode] / weightDelta
+                const int incError = deltaIncRatio - 1;
+                const int deltaDecRatio = 8;    // = weights[mode] / weightDelta
+                const int decError = -(deltaDecRatio - 1);
+
+                Optima = this;
+
+                int[] weights = new int[findBestMove_Search.Length];
+                weights.fill(initWeight);
+                int totalWeight = initWeight * findBestMove_Search.Length;
+
+                IterCount noImprove = maxNoImproveCount;
+                Move bestMove = new Move();
+                for (; (noImprove > 0) && (iterCount < solver.Config.maxIterCount); iterCount++) {
+                    int modeSelect = 0;
+                    for (int w = solver.rand.Next(totalWeight); (w -= weights[modeSelect]) >= 0; modeSelect++) { }
+
+                    bestMove.delta = DefaultPenalty.ForbiddenMove;
+                    findBestMove_Search[modeSelect](ref bestMove);
+
+                    int weightDelta;
+                    if (bestMove.delta < DefaultPenalty.MaxObjValue) {
+#if INRC2_USE_TABU
+                        // update tabu list first because it requires original assignment
+                        updateTabu[bestMove.ModeIndex](ref bestMove);
+#endif
+                        applyBasicMove(ref bestMove);
+
+                        if (updateOptima()) {   // improve optima
+#if INRC2_LS_AFTER_TSR_UPDATE_OPT
+                            localSearch( timer, findBestMoveTable );
+#endif
+                            noImprove = maxNoImproveCount;
+                            weightDelta = (incError + weight_ImproveOpt - weights[modeSelect]) / deltaIncRatio;
+                        } else {
+                            noImprove--;
+                            if (bestMove.delta < 0) {    // improve current solution
+                                weightDelta = (weights[modeSelect] < weight_ImproveCur)
+                                    ? (incError + weight_ImproveCur - weights[modeSelect]) / deltaIncRatio
+                                    : (decError + weight_ImproveCur - weights[modeSelect]) / deltaDecRatio;
+                            } else {    // no improve but valid
+                                weightDelta = (weights[modeSelect] < weight_NoImprove)
+                                    ? (incError + weight_NoImprove - weights[modeSelect]) / deltaIncRatio
+                                    : (decError + weight_NoImprove - weights[modeSelect]) / deltaDecRatio;
+                            }
+                        }
+                    } else {    // invalid
+                        weightDelta = (decError + weight_Invalid - weights[modeSelect]) / deltaDecRatio;
+                    }
+
+                    weights[modeSelect] += weightDelta;
+                    totalWeight += weightDelta;
+                }
+#if INRC2_PERFORMANCE_TEST
+                IterCount iterDelta = (iterCount - startIterCount);
+                Console.WriteLine("[tabuSearch_Rand] speed: "
+                    + (iterDelta * Durations.MillisecondsInSecond / clock.ElapsedMilliseconds)
+                    + " iter: " + iterDelta + " time: " + clock.ElapsedMilliseconds);
+#endif
+            }
+            /// <summary>
+            /// loop to select neighborhood to search until timeout or there is no
+            /// improvement on (NeighborhoodNum + 2) neighborhood consecutively.
+            /// switch neighborhood when maxNoImproveForSingleNeighborhood has
+            /// been reach, then restart from optima in current trajectory.
+            /// </summary>
+            public void tabuSearch_Loop(FindBestMove[] findBestMove_Search, IterCount maxNoImproveCount) {
+#if INRC2_PERFORMANCE_TEST
+                IterCount startIterCount = iterCount;
+                Stopwatch clock = new Stopwatch();
+                clock.Start();
+#endif
+                Optima = this;
+
+                int failCount = findBestMove_Search.Length;
+                int modeSelect = 0;
+                // since there is randomness on the search trajectory, there will be 
+                // chance to make a difference on neighborhoods which have been searched.
+                // so repeat (findBestMove_Search.Length + 1) times.
+                while (failCount >= 0) {
+                    // reset current solution to best solution found in last neighborhood
+                    rebuild(Optima);
+
+                    IterCount noImprove_Single = maxNoImproveCount;
+                    Move bestMove = new Move();
+                    for (; (noImprove_Single > 0) && (iterCount < solver.Config.maxIterCount); iterCount++) {
+                        bestMove.delta = DefaultPenalty.ForbiddenMove;
+                        findBestMove_Search[modeSelect](ref bestMove);
+
+                        if (bestMove.delta >= DefaultPenalty.MaxObjValue) { break; }
+#if INRC2_USE_TABU
+                        // update tabu list first because it requires original assignment
+                        updateTabu[bestMove.ModeIndex](ref bestMove);
+#endif
+                        applyBasicMove(ref bestMove);
+
+                        if (updateOptima()) {   // improved
+                            failCount = findBestMove_Search.Length;
+                            noImprove_Single = maxNoImproveCount;
+                        } else {    // not improved
+                            noImprove_Single--;
+                        }
+                    }
+
+                    failCount--;
+                    modeSelect++;
+                    modeSelect %= findBestMove_Search.Length;
+                }
+#if INRC2_PERFORMANCE_TEST
+                IterCount iterDelta = (iterCount - startIterCount);
+                Console.WriteLine("[tabuSearch_Loop] speed: "
+                    + (iterDelta * Durations.MillisecondsInSecond / clock.ElapsedMilliseconds)
+                    + " iter: " + iterDelta + " time: " + clock.ElapsedMilliseconds);
+#endif
+            }
+            /// <summary>
+            /// randomly select neighborhood to search until timeout or no improve move count 
+            /// reaches maxNoImproveForAllNeighborhood. for each neighborhood i, the possibility 
+            /// to select is P[i]. increase the possibility to select when no improvement. in detail, 
+            /// the P[i] contains two part, local and global. the local part will increase if the 
+            /// neighborhood i makes improvement, and decrease vice versa. the global part will 
+            /// increase if recent search (not only on neighborhood i) can not make improvement, 
+            /// otherwise, it will decrease. in case the iteration  takes too much time, it can be 
+            /// changed from best improvement to first improvement. if no neighborhood has been selected, 
+            /// prepare a loop queue. select the one by one in the queue until a valid move is found. 
+            /// move the head to the tail of the queue if it makes no improvement.
+            /// </summary>
+            public void tabuSearch_Possibility(FindBestMove[] findBestMove_Search, IterCount maxNoImproveCount) {
+#if INRC2_PERFORMANCE_TEST
+                IterCount startIterCount = iterCount;
+                Stopwatch clock = new Stopwatch();
+                clock.Start();
+#endif
+                Optima = this;
+
+                int modeNum = findBestMove_Search.Length;
+                int startMode = 0;
+
+                double maxP_Local = 1.0 / modeNum;
+                double maxP_Global = 1 - maxP_Local;
+                double amp_Local = 1.0 / (2 * modeNum);
+                double amp_Global = 1.0 / (4 * modeNum * modeNum);
+                double dec_Local = (2.0 * modeNum - 1) / (2 * modeNum);
+                double dec_Global = (2.0 * modeNum * modeNum - 1) / (2 * modeNum * modeNum);
+                double P_Global = 1.0 / modeNum;    // initial value
+                double[] P_Local = new double[modeNum];
+
+                IterCount noImprove = maxNoImproveCount;
+                Move bestMove = new Move();
+                for (; (noImprove > 0) && (iterCount < solver.Config.maxIterCount); iterCount++) {
+                    int modeSelect = startMode;
+                    MoveMode bestMoveMode = MoveMode.Length;
+                    bool isBlockSwapSelected = false;
+                    bestMove.delta = DefaultPenalty.ForbiddenMove;
+                    // judge every neighborhood whether to select and search when selected
+                    // start from big end to make sure block swap will be tested before swap
+                    for (int i = modeNum; i-- > 0; ) {
+                        if (solver.rand.NextDouble() < (P_Global + P_Local[i])) { // selected
+                            isBlockSwapSelected |= (findBestMove_Search[i] == findBestMove[(int)MoveMode.BlockSwap]);
+                            if ((findBestMove_Search[i] != findBestMove[(int)MoveMode.Swap]) || !isBlockSwapSelected) {
+                                findBestMove_Search[i](ref bestMove);
+                            }
+                            if (bestMoveMode != bestMove.mode) {
+                                bestMoveMode = bestMove.mode;
+                                modeSelect = i;
+                            }
+                        }
+                    }
+
+                    // no one is selected
+                    while (bestMove.delta >= DefaultPenalty.MaxObjValue) {
+                        findBestMove_Search[modeSelect](ref bestMove);
+                        if (bestMove.delta >= DefaultPenalty.MaxObjValue) { modeSelect++; }
+                        modeSelect %= modeNum;
+                    }
+#if INRC2_USE_TABU
+                    // update tabu list first because it requires original assignment
+                    updateTabu[bestMove.ModeIndex](ref bestMove);
+#endif
+                    applyBasicMove(ref bestMove);
+
+                    if (updateOptima()) {   // improved
+                        noImprove = maxNoImproveCount;
+                        P_Global = (P_Global * dec_Global);
+                        P_Local[modeSelect] += (amp_Local * (maxP_Local - P_Local[modeSelect]));
+                    } else {    // not improved
+                        noImprove--;
+                        startMode++;
+                        startMode %= modeNum;
+                        P_Global += (amp_Global * (maxP_Global - P_Global));
+                        P_Local[modeSelect] = (P_Local[modeSelect] * dec_Local);
+                    }
+                }
+#if INRC2_PERFORMANCE_TEST
+                IterCount iterDelta = (iterCount - startIterCount);
+                Console.WriteLine("[tabuSearch_Possibility] speed: "
+                    + (iterDelta * Durations.MillisecondsInSecond / clock.ElapsedMilliseconds)
+                    + " iter: " + iterDelta + " time: " + clock.ElapsedMilliseconds);
+#endif
+            }
+            /// <summary>
+            /// try add shift until there is no improvement , then try change shift,
+            /// then try remove shift, then try add shift again. if all of them
+            /// can't improve or time is out, return.
+            /// </summary>
+            public void localSearch(FindBestMove[] findBestMove_Search) {
+#if INRC2_PERFORMANCE_TEST
+                IterCount startIterCount = iterCount;
+                Stopwatch clock = new Stopwatch();
+                clock.Start();
+#endif
+                Optima = this;
+
+                int failCount = findBestMove_Search.Length;
+                int modeSelect = 0;
+                Move bestMove = new Move();
+                while ((failCount > 0) && (iterCount != solver.Config.maxIterCount)) {
+                    bestMove.delta = DefaultPenalty.ForbiddenMove;
+                    findBestMove_Search[modeSelect](ref bestMove);
+                    if (bestMove.delta < DefaultPenalty.MaxObjValue) {
+                        applyBasicMove(ref bestMove);
+                        updateOptima();
+                        iterCount++;
+                        failCount = findBestMove_Search.Length;
+                    } else {
+                        failCount--;
+                        modeSelect++;
+                        modeSelect %= findBestMove_Search.Length;
+                    }
+                }
+#if INRC2_PERFORMANCE_TEST
+                IterCount iterDelta = (iterCount - startIterCount);
+                Console.WriteLine("[localSearch] speed: "
+                    + (iterDelta * Durations.MillisecondsInSecond / clock.ElapsedMilliseconds)
+                    + " iter: " + iterDelta + " time: " + clock.ElapsedMilliseconds);
+#endif
+            }
+            /// <summary> randomly apply add, change or remove shift for $stepNum times. </summary>
+            public void randomWalk(IterCount stepNum) {
+#if INRC2_PERFORMANCE_TEST
+                IterCount startIterCount = iterCount;
+                Stopwatch clock = new Stopwatch();
+                clock.Start();
+#endif
+                Optima = this;
+
+                stepNum += iterCount;
+                Move move = new Move();
+                while ((iterCount < stepNum) && (iterCount < solver.Config.maxIterCount)) {
+                    move.mode = (MoveMode)solver.rand.Next((int)MoveMode.BasicMovesLength);
+                    move.weekday = Weekdays.Mon + solver.rand.Next(Weekdays.Num);
+                    move.weekday2 = Weekdays.Mon + solver.rand.Next(Weekdays.Num);
+                    if (move.weekday > move.weekday2) { Util.Swap(ref move.weekday, ref move.weekday2); }
+                    move.nurse = NurseIDs.Begin + solver.rand.Next(problem.Scenario.NurseNum);
+                    move.nurse2 = NurseIDs.Begin + solver.rand.Next(problem.Scenario.NurseNum);
+                    move.assign.shift = ShiftIDs.Begin + solver.rand.Next(problem.Scenario.ShiftNum);
+                    move.assign.skill = SkillIDs.Begin + solver.rand.Next(problem.Scenario.SkillNum);
+
+                    move.delta = tryMove[move.ModeIndex](ref move);
+                    if (move.delta < DefaultPenalty.MaxObjValue) {
+                        applyBasicMove(ref move);
+                        iterCount++;
+                    }
+                }
+#if INRC2_PERFORMANCE_TEST
+                IterCount iterDelta = (iterCount - startIterCount);
+                Console.WriteLine("[randomWalk] speed: "
+                    + (iterDelta * Durations.MillisecondsInSecond / clock.ElapsedMilliseconds)
+                    + " iter: " + iterDelta + " time: " + clock.ElapsedMilliseconds);
+#endif
+            }
+
+            /// <summary> change solution structure in certain complexity. </summary>
+            public void perturb(double strength) {
+                // TODO[3] : make this change solution structure in certain complexity
+                int randomWalkStepCount = (int)(strength * Weekdays.Num
+                    * problem.Scenario.ShiftNum * problem.Scenario.NurseNum);
+
+                randomWalk(randomWalkStepCount);
+
+                updateOptima();
+            }
+
+            /// <summary> check if the result of incremental update, evaluate and checkObjValue is the same. </summary>
+            [Conditional("INRC2_DEBUG")]
+            public void checkIncrementalUpdate() {
+                ObjValue incrementalVal = ObjValue;
+                evaluateObjValue();
+                if (solver.checkFeasibility(this) != 0) {
+                    solver.errorLog("infeasible solution @" + iterCount);
+                }
+                ObjValue checkResult = solver.checkObjValue(this);
+                if (checkResult != ObjValue) {
+                    solver.errorLog("check conflict with evaluate @" + iterCount);
+                }
+                if (ObjValue != incrementalVal) {
+                    solver.errorLog("evaluate conflict with incremental update @" + iterCount);
+                }
+            }
+
+            /// <summary> 
+            /// set weights of nurses with less penalty to 0. 
+            /// each contract will got same ratio of nurses with weight changed.
+            /// </summary>
+            /// <remarks> attention that rebuild() with clear the effect of this method. </remarks>
+            public void adjustWeightToBiasNurseWithGreaterPenalty() {
+                int biasedNurseNum = 0;
+                int targetNurseNum;
+                nurseWeights.fill(0);
+
+                ObjValue[] nurseObj = new ObjValue[problem.Scenario.nurses.Length];
+                for (NurseID nurse = 0; nurse < problem.Scenario.nurses.Length; nurse++) {
+                    nurseObj[nurse] += evaluateConsecutiveShift(nurse);
+                    nurseObj[nurse] += evaluateConsecutiveDay(nurse);
+                    nurseObj[nurse] += evaluateConsecutiveDayOff(nurse);
+                    nurseObj[nurse] += evaluatePreference(nurse);
+                    nurseObj[nurse] += evaluateCompleteWeekend(nurse);
+                    nurseObj[nurse] += evaluateTotalAssign(nurse);
+                    nurseObj[nurse] += evaluateTotalWorkingWeekend(nurse);
+                }
+
+                for (ContractID c = ContractIDs.Begin; c < problem.Scenario.contracts.Length; c++) {
+                    NurseID[] nurses = problem.Scenario.contracts[c].nurses;
+                    Array.Sort(nurses, (lhs, rhs) => { return (nurseObj[lhs] - nurseObj[rhs]); });
+                    targetNurseNum = nurses.Length / solver.Config.inversePenaltyBiasRatio;
+                    biasedNurseNum += targetNurseNum;
+                    for (int i = 0; i < targetNurseNum; i++) {
+                        nurseWeights[nurses[i]] = 1;
+                    }
+                    if (solver.rand.Next(solver.Config.inversePenaltyBiasRatio)
+                        < (nurses.Length % solver.Config.inversePenaltyBiasRatio)) {
+                        nurseWeights[nurses[targetNurseNum]] = 1;
+                        biasedNurseNum++;
+                    }
+                }
+
+                // pick nurse randomly to meet the TotalBiasRatio
+                targetNurseNum = problem.Scenario.nurses.Length / solver.Config.inverseTotalBiasRatio;
+                while (biasedNurseNum < targetNurseNum) {
+                    NurseID nurse = solver.rand.Next(problem.Scenario.nurses.Length);
+                    if (nurseWeights[nurse] == 0) {
+                        nurseWeights[nurse] = 1;
+                        biasedNurseNum++;
+                    }
+                }
             }
 
             /// <summary>
@@ -1832,12 +2339,7 @@ namespace NurseRostering
                     }
                 }
 
-                // if it does not work out within total timeout, the solution is meaningless
-                if (Util.Worker.WorkUntilTimeout(repair, (int)solver.TimeLeft)) {
-                    evaluateObjValue(); // TUNEUP[0]: objective might have been evaluated in repair()!
-                } else {
-                    ObjValue = DefaultPenalty.ForbiddenMove;
-                }
+                repair_AlwaysEvaluateObjValue();
             }
             /// <summary> 
             /// set assignments to output.AssignTable and rebuild assist data.
@@ -1869,6 +2371,82 @@ namespace NurseRostering
                 evaluateObjValue();
             }
 
+            /// <summary> make infeasible solution feasible. </summary>
+            public void repair(bool isAlwaysEvaluateObjValue = false) {
+#if INRC2_PERFORMANCE_TEST
+                IterCount startIterCount = iterCount;
+                Stopwatch clock = new Stopwatch();
+                clock.Start();
+#endif
+                // must not use swap for swap mode is not compatible with repair mode
+                // also, the repair procedure doesn't need the technique to jump through infeasible solutions
+                FindBestMove[] findBestMove_Repair = { this.findBestARBoth, this.findBestChange };
+
+                ObjValue violation = solver.checkFeasibility(this);
+
+                if (violation == 0) {
+                    if (isAlwaysEvaluateObjValue) { evaluateObjValue(); }
+                    return;
+                }
+
+                #region reduced tabuSearch_Rand()
+                penalty.setRepairMode();
+
+                ObjValue = violation;
+
+                const int minWeight = 256;  // min weight
+                const int maxWeight = 1024; // max weight (less than (RAND_MAX / findBestMove_Repair.Length))
+                const int initWeight = (maxWeight + minWeight) / 2;
+                const int deltaIncRatio = 8;    // = weights[mode] / weightDelta
+                const int incError = deltaIncRatio - 1;
+                const int deltaDecRatio = 8;    // = weights[mode] / weightDelta
+                const int decError = -(deltaDecRatio - 1);
+                int[] weights = new int[findBestMove_Repair.Length];
+                int totalWeight = initWeight * findBestMove_Repair.Length;
+
+                for (; (ObjValue > 0) && (iterCount < solver.config.maxIterCount); iterCount++) {
+                    int modeSelect = 0;
+                    for (int w = solver.rand.Next(totalWeight); (w -= weights[modeSelect]) >= 0; modeSelect++) { }
+
+                    Move bestMove = new Move();
+                    findBestMove_Repair[modeSelect](ref bestMove);
+
+#if INRC2_USE_TABU
+                    // update tabu list first because it requires original assignment
+                    updateTabu[bestMove.ModeIndex](ref bestMove);
+#endif
+                    int weightDelta;
+                    if (bestMove.delta < DefaultPenalty.MaxObjValue) {
+                        applyBasicMove(ref bestMove);
+
+                        if (bestMove.delta < 0) {    // improve current solution
+                            weightDelta = (incError + maxWeight - weights[modeSelect]) / deltaIncRatio;
+                        } else {    // no improve
+                            weightDelta = (decError + minWeight - weights[modeSelect]) / deltaDecRatio;
+                        }
+                    } else {    // invalid
+                        weightDelta = (decError + minWeight - weights[modeSelect]) / deltaDecRatio;
+                    }
+
+                    weights[modeSelect] += weightDelta;
+                    totalWeight += weightDelta;
+                }
+
+                penalty.recoverLastMode();
+                #endregion reduced tabuSearch_Rand()
+
+                violation = ObjValue;
+                evaluateObjValue();
+
+#if INRC2_PERFORMANCE_TEST
+                Console.WriteLine("[repair] " + ((violation == 0) ? "(success)" : "(fail)")
+                    + " iter: " + (iterCount - startIterCount) + " time: " + clock.ElapsedMilliseconds);
+#endif
+            }
+            public void repair_AlwaysEvaluateObjValue() {
+                repair(true);
+            }
+
             /// <summary> set data structure to default value. </summary>
             /// <remarks> must be called before building up a solution. </remarks> 
             private void resetAssign() {
@@ -1881,16 +2459,30 @@ namespace NurseRostering
             /// <summary> set data structure to default value. </summary>
             /// <remarks> must be called before building up a solution. </remarks> 
             private void resetAssistData() {
+                totalAssignNums.fill(0);
+                Array.Copy(problem.Weekdata.optNurseNums, missingNurseNums, problem.Weekdata.optNurseNums.Length);
+                Array.Clear(assignedNurseNums, 0, assignedNurseNums.Length);
+                for (NurseID nurse = 0; nurse < problem.Scenario.NurseNum; nurse++) {
+                    consecutives_Backup[nurse].copyTo(consecutives[nurse]);
+                }
+                nurseWeights.fill(1);   // TUNEUP[6]: leave it out if not using it.
+                isBlockSwapCacheValid.fill(false);
 
+#if INRC2_USE_TABU
+                iterCount += (solver.ShiftTabuTenureBase + solver.ShiftTabuTenureAmp
+                    + solver.DayTabuTenureBase + solver.DayTabuTenureAmp);
+#endif // INRC2_USE_TABU
             }
 
+            /// <summary> for each skill on each shift on each day, try assign each nurse to it or not. </summary>
+            /// <param name="nurseNum"> number of nurses who were assigned to current slot. </param>
+            /// <returns> true if all slots have been filled. </returns>
             private bool fillAssign(Weekday weekday, ShiftID shift, SkillID skill, NurseID nurse, int nurseNum) {
-                if (nurse >= problem.Scenario.nurses.Length) {
-                    if (nurseNum < problem.Weekdata.minNurseNums[weekday, shift, skill]) {
-                        return false;
-                    } else {
-                        return fillAssign(weekday, shift, skill + 1, NurseIDs.Begin, 0);
-                    }
+                if ((problem.Scenario.nurses.Length - nurse + nurseNum)
+                    < problem.Weekdata.minNurseNums[weekday, shift, skill]) {
+                    return false;
+                } else if (nurse >= problem.Scenario.nurses.Length) {
+                    return fillAssign(weekday, shift, skill + 1, NurseIDs.Begin, 0);
                 } else if (skill >= problem.Scenario.SkillsLength) {
                     return fillAssign(weekday, shift + 1, SkillIDs.Begin, NurseIDs.Begin, 0);
                 } else if (shift >= problem.Scenario.shifts.Length) {
@@ -1931,25 +2523,280 @@ namespace NurseRostering
                 return false;
             }
 
-            /// <summary> 
-            /// evaluate objective by assist data structure.
-            /// must be called after Penalty change or direct access to AssignTable.
-            /// </summary>
-            private void evaluateObjValue(bool considerSpanningConstraint = true) {
-
+            /// <summary> evaluate objective by assist data structure. </summary>
+            /// <remarks> must be called after Penalty change or direct access to AssignTable. </remarks>
+            private void evaluateObjValue() {
+                evaluateObjValue_IgnoreSpanningConstraint();
+                for (NurseID nurse = NurseIDs.Begin; nurse < problem.Scenario.nurses.Length; nurse++) {
+                    ObjValue += evaluateTotalAssign(nurse);
+                    ObjValue += evaluateTotalWorkingWeekend(nurse);
+                }
             }
-            private ObjValue evaluateInsufficientStaff() { return 0; }
-            private ObjValue evaluateConsecutiveShift(NurseID nurse) { return 0; }
-            private ObjValue evaluateConsecutiveDay(NurseID nurse) { return 0; }
-            private ObjValue evaluateConsecutiveDayOff(NurseID nurse) { return 0; }
-            private ObjValue evaluatePreference(NurseID nurse) { return 0; }
-            private ObjValue evaluateCompleteWeekend(NurseID nurse) { return 0; }
-            private ObjValue evaluateTotalAssign(NurseID nurse) { return 0; }
-            private ObjValue evaluateTotalWorkingWeekend(NurseID nurse) { return 0; }
+            /// <summary> 
+            /// evaluate objective by assist data structure. 
+            /// (TotalAssign and TotalWorkingWeekend is ignored)
+            /// </summary>
+            private void evaluateObjValue_IgnoreSpanningConstraint() {
+                ObjValue += evaluateInsufficientStaff();
+                for (NurseID nurse = NurseIDs.Begin; nurse < problem.Scenario.nurses.Length; nurse++) {
+                    ObjValue += evaluateConsecutiveShift(nurse);
+                    ObjValue += evaluateConsecutiveDay(nurse);
+                    ObjValue += evaluateConsecutiveDayOff(nurse);
+                    ObjValue += evaluatePreference(nurse);
+                    ObjValue += evaluateCompleteWeekend(nurse);
+                }
+            }
+            private ObjValue evaluateInsufficientStaff() {
+                ObjValue obj = 0;
 
-            /// <summary> make infeasible solution feasible. </summary>
-            private void repair() {
+                for (int weekday = Weekdays.Mon; weekday <= Weekdays.Sun; weekday++) {
+                    for (ShiftID shift = ShiftIDs.Begin; shift < problem.Scenario.shifts.Length; shift++) {
+                        for (SkillID skill = SkillIDs.Begin; skill < problem.Scenario.SkillsLength; skill++) {
+                            if (missingNurseNums[weekday, shift, skill] > 0) {
+                                obj += penalty.InsufficientStaff * missingNurseNums[weekday, shift, skill];
+                            }
+                        }
+                    }
+                }
 
+                return obj;
+            }
+            private ObjValue evaluateConsecutiveShift(NurseID nurse) {
+                ObjValue obj = 0;
+
+                Consecutive c = consecutives[nurse];
+                Problem.ScenarioInfo.Shift[] sh = problem.Scenario.shifts;
+
+                int nextday = c.shiftHigh[Weekdays.Mon] + 1;
+                if (nextday <= Weekdays.Sun) {   // the entire week is not one block
+                    // handle first block with history
+                    if (AssignTable[nurse, Weekdays.Mon].IsWorking) {
+                        ShiftID shid = AssignTable[nurse, Weekdays.Mon].shift;
+                        if (H.lastShifts[nurse] == AssignTable[nurse, Weekdays.Mon].shift) {
+                            if (H.consecutiveShiftNums[nurse] > sh[shid].maxConsecutiveShiftNum) {
+                                // (high - low + 1) which low is Mon for exceeding part in previous week has been counted
+                                obj += penalty.ConsecutiveShift * (c.shiftHigh[Weekdays.Mon] - Weekdays.Mon + 1);
+                            } else {
+                                obj += penalty.ConsecutiveShift * Util.distanceToRange(
+                                    c.shiftHigh[Weekdays.Mon] - c.shiftLow[Weekdays.Mon] + 1,
+                                    sh[shid].minConsecutiveShiftNum, sh[shid].maxConsecutiveShiftNum);
+                            }
+                        } else {
+                            obj += penalty.ConsecutiveShift * Util.distanceToRange(c.shiftHigh[Weekdays.Mon] - Weekdays.Mon + 1,
+                                sh[shid].minConsecutiveShiftNum, sh[shid].maxConsecutiveShiftNum);
+                            if (ShiftIDs.isWorking(H.lastShifts[nurse])) {
+                                obj += penalty.ConsecutiveShift * Util.absentCount(H.consecutiveShiftNums[nurse],
+                                    sh[H.lastShifts[nurse]].minConsecutiveShiftNum);
+                            }
+                        }
+                    } else if (ShiftIDs.isWorking(H.lastShifts[nurse])) {
+                        obj += penalty.ConsecutiveShift * Util.absentCount(
+                            H.consecutiveShiftNums[nurse], sh[H.lastShifts[nurse]].minConsecutiveShiftNum);
+                    }
+                    // handle blocks in the middle of the week
+                    for (; c.shiftHigh[nextday] < Weekdays.Sun; nextday = c.shiftHigh[nextday] + 1) {
+                        if (AssignTable[nurse, nextday].IsWorking) {
+                            ShiftID shid = AssignTable[nurse, nextday].shift;
+                            obj += penalty.ConsecutiveShift *
+                                Util.distanceToRange(c.shiftHigh[nextday] - c.shiftLow[nextday] + 1,
+                                sh[shid].minConsecutiveShiftNum, sh[shid].maxConsecutiveShiftNum);
+                        }
+                    }
+                }
+                // handle last consecutive block
+                int consecutiveShift_EntireWeek = H.consecutiveShiftNums[nurse] + Weekdays.Num;
+                int consecutiveShift = c.shiftHigh[Weekdays.Sun] - c.shiftLow[Weekdays.Sun] + 1;
+                if (AssignTable[nurse, Weekdays.Sun].IsWorking) {
+                    ShiftID shid = AssignTable[nurse, Weekdays.Sun].shift;
+                    if (c.IsSingleConsecutiveShift) { // the entire week is one block
+                        if (H.lastShifts[nurse] == AssignTable[nurse, Weekdays.Sun].shift) {
+                            if (H.consecutiveShiftNums[nurse] > sh[shid].maxConsecutiveShiftNum) {
+                                obj += penalty.ConsecutiveShift * Weekdays.Num;
+                            } else {
+                                obj += penalty.ConsecutiveShift * Util.exceedCount(
+                                    consecutiveShift_EntireWeek, sh[shid].maxConsecutiveShiftNum);
+                            }
+                        } else {    // different shifts
+                            if (Weekdays.Num > sh[shid].maxConsecutiveShiftNum) {
+                                obj += penalty.ConsecutiveShift *
+                                    (Weekdays.Num - sh[shid].maxConsecutiveShiftNum);
+                            }
+                            if (ShiftIDs.isWorking(H.lastShifts[nurse])) {
+                                obj += penalty.ConsecutiveShift * Util.absentCount(H.consecutiveShiftNums[nurse],
+                                    sh[H.lastShifts[nurse]].minConsecutiveShiftNum);
+                            }
+                        }
+                    } else {
+                        obj += penalty.ConsecutiveShift * Util.exceedCount(
+                            consecutiveShift, sh[shid].maxConsecutiveShiftNum);
+                    }
+                } else if (c.IsSingleConsecutiveShift // the entire week is one block
+                    && ShiftIDs.isWorking(H.lastShifts[nurse])) {
+                    obj += penalty.ConsecutiveShift * Util.absentCount(
+                        H.consecutiveShiftNums[nurse], sh[H.lastShifts[nurse]].minConsecutiveShiftNum);
+                }
+
+                return obj;
+            }
+            private ObjValue evaluateConsecutiveDay(NurseID nurse) {
+                ObjValue obj = 0;
+
+                Consecutive c = consecutives[nurse];
+                ContractID cid = problem.Scenario.nurses[nurse].contract;
+                Problem.ScenarioInfo.Contract[] cs = problem.Scenario.contracts;
+
+                int nextday = c.dayHigh[Weekdays.Mon] + 1;
+                if (nextday <= Weekdays.Sun) {   // the entire week is not one block
+                    // handle first block with history
+                    if (AssignTable[nurse, Weekdays.Mon].IsWorking) {
+                        if (H.consecutiveDayNums[nurse] > cs[cid].maxConsecutiveDayNum) {
+                            // (high - low + 1) which low is Mon for exceeding part in previous week has been counted
+                            obj += penalty.ConsecutiveDay * (c.dayHigh[Weekdays.Mon] - Weekdays.Mon + 1);
+                        } else {
+                            obj += penalty.ConsecutiveDay * Util.distanceToRange(
+                                c.dayHigh[Weekdays.Mon] - c.dayLow[Weekdays.Mon] + 1,
+                                cs[cid].minConsecutiveDayNum, cs[cid].maxConsecutiveDayNum);
+                        }
+                    } else if (ShiftIDs.isWorking(H.lastShifts[nurse])) {
+                        obj += penalty.ConsecutiveDay * Util.absentCount
+                            (H.consecutiveDayNums[nurse], cs[cid].minConsecutiveDayNum);
+                    }
+                    // handle blocks in the middle of the week
+                    for (; c.dayHigh[nextday] < Weekdays.Sun; nextday = c.dayHigh[nextday] + 1) {
+                        if (AssignTable[nurse, nextday].IsWorking) {
+                            obj += penalty.ConsecutiveDay *
+                                Util.distanceToRange(c.dayHigh[nextday] - c.dayLow[nextday] + 1,
+                                cs[cid].minConsecutiveDayNum, cs[cid].maxConsecutiveDayNum);
+                        }
+                    }
+                }
+                // handle last consecutive block
+                int consecutiveDay = c.dayHigh[Weekdays.Sun] - c.dayLow[Weekdays.Sun] + 1;
+                if (AssignTable[nurse, Weekdays.Sun].IsWorking) {
+                    if (c.IsSingleConsecutiveDay) {   // the entire week is one block
+                        if (H.consecutiveDayNums[nurse] > cs[cid].maxConsecutiveDayNum) {
+                            obj += penalty.ConsecutiveDay * Weekdays.Num;
+                        } else {
+                            obj += penalty.ConsecutiveDay * Util.exceedCount(
+                                consecutiveDay, cs[cid].maxConsecutiveDayNum);
+                        }
+                    } else {
+                        obj += penalty.ConsecutiveDay * Util.exceedCount(
+                            consecutiveDay, cs[cid].maxConsecutiveDayNum);
+                    }
+                } else if (c.IsSingleConsecutiveDay // the entire week is one block
+                    && ShiftIDs.isWorking(H.lastShifts[nurse])) {
+                    obj += penalty.ConsecutiveDay * Util.absentCount(
+                        H.consecutiveDayNums[nurse], cs[cid].minConsecutiveDayNum);
+                }
+
+                return obj;
+            }
+            private ObjValue evaluateConsecutiveDayOff(NurseID nurse) {
+                ObjValue obj = 0;
+
+                Consecutive c = consecutives[nurse];
+                ContractID cid = problem.Scenario.nurses[nurse].contract;
+                Problem.ScenarioInfo.Contract[] cs = problem.Scenario.contracts;
+
+                int nextday = c.dayHigh[Weekdays.Mon] + 1;
+                if (nextday <= Weekdays.Sun) {   // the entire week is not one block
+                    // handle first block with history
+                    if (!AssignTable[nurse, Weekdays.Mon].IsWorking) {
+                        if (H.consecutiveDayoffNums[nurse] > cs[cid].maxConsecutiveDayoffNum) {
+                            obj += penalty.ConsecutiveDayOff * (c.dayHigh[Weekdays.Mon] - Weekdays.Mon + 1);
+                        } else {
+                            obj += penalty.ConsecutiveDayOff * Util.distanceToRange(
+                                c.dayHigh[Weekdays.Mon] - c.dayLow[Weekdays.Mon] + 1,
+                                cs[cid].minConsecutiveDayoffNum, cs[cid].maxConsecutiveDayoffNum);
+                        }
+                    } else if (!ShiftIDs.isWorking(H.lastShifts[nurse])) {
+                        obj += penalty.ConsecutiveDayOff * Util.absentCount(
+                            H.consecutiveDayoffNums[nurse], cs[cid].minConsecutiveDayoffNum);
+                    }
+                    // handle blocks in the middle of the week
+                    for (; c.dayHigh[nextday] < Weekdays.Sun; nextday = c.dayHigh[nextday] + 1) {
+                        if (!AssignTable[nurse, nextday].IsWorking) {
+                            obj += penalty.ConsecutiveDayOff *
+                                Util.distanceToRange(c.dayHigh[nextday] - c.dayLow[nextday] + 1,
+                                cs[cid].minConsecutiveDayoffNum, cs[cid].maxConsecutiveDayoffNum);
+                        }
+                    }
+                }
+                // handle last consecutive block
+                int consecutiveDay = c.dayHigh[Weekdays.Sun] - c.dayLow[Weekdays.Sun] + 1;
+                if (!AssignTable[nurse, Weekdays.Sun].IsWorking) {
+                    if (c.IsSingleConsecutiveDay) {   // the entire week is one block
+                        if (H.consecutiveDayoffNums[nurse] > cs[cid].maxConsecutiveDayoffNum) {
+                            obj += penalty.ConsecutiveDayOff * Weekdays.Num;
+                        } else {
+                            obj += penalty.ConsecutiveDayOff * Util.exceedCount(
+                                consecutiveDay, cs[cid].maxConsecutiveDayoffNum);
+                        }
+                    } else {
+                        obj += penalty.ConsecutiveDayOff * Util.exceedCount(
+                            consecutiveDay, cs[cid].maxConsecutiveDayoffNum);
+                    }
+                } else if (c.IsSingleConsecutiveDay // the entire week is one block
+                    && (!ShiftIDs.isWorking(H.lastShifts[nurse]))) {
+                    obj += penalty.ConsecutiveDayOff * Util.absentCount(
+                    H.consecutiveDayoffNums[nurse], cs[cid].minConsecutiveDayoffNum);
+                }
+
+                return obj;
+            }
+            private ObjValue evaluatePreference(NurseID nurse) {
+                ObjValue obj = 0;
+
+                for (int weekday = Weekdays.Mon; weekday <= Weekdays.Sun; weekday++) {
+                    ShiftID shift = AssignTable[nurse, weekday].shift;
+                    if (problem.Weekdata.shiftOffs[weekday, shift, nurse]) {
+                        obj += penalty.Preference;
+                    }
+                }
+
+                return obj;
+            }
+            private ObjValue evaluateCompleteWeekend(NurseID nurse) {
+                ObjValue obj = 0;
+
+                if (problem.Scenario.contracts[problem.Scenario.nurses[nurse].contract].completeWeekend
+                    && (AssignTable[nurse, Weekdays.Sat].IsWorking != AssignTable[nurse, Weekdays.Sun].IsWorking)) {
+                    obj += penalty.CompleteWeekend;
+                }
+
+                return obj;
+            }
+            private ObjValue evaluateTotalAssign(NurseID nurse) {
+                ObjValue obj = 0;
+
+                obj += penalty.TotalAssign * Util.distanceToRange(
+                    totalAssignNums[nurse] * H.restWeekCount,
+                    solver.restMinShiftNum[nurse], solver.restMaxShiftNum[nurse])
+                    / H.restWeekCount;
+
+                return obj;
+            }
+            private ObjValue evaluateTotalWorkingWeekend(NurseID nurse) {
+                ObjValue obj = 0;
+
+                int workingWeekendNum = (AssignTable[nurse, Weekdays.Sat].IsWorking
+                    || AssignTable[nurse, Weekdays.Sun].IsWorking) ? 1 : 0;
+#if INRC2_AVERAGE_MAX_WORKING_WEEKEND
+                int maxWeekend = problem.Scenario.contracts[problem.Scenario.nurses[nurse].contract].maxWorkingWeekendNum;
+                int historyWeekend = H.totalWorkingWeekendNums[nurse] * problem.Scenario.totalWeekNum;
+                int exceedingWeekend = historyWeekend - (maxWeekend * H.currentWeek)
+                    + (workingWeekendNum * problem.Scenario.totalWeekNum);
+                if (exceedingWeekend > 0) {
+                    obj += penalty.TotalWorkingWeekend * exceedingWeekend / problem.Scenario.totalWeekNum;
+                }
+#else
+                obj += penalty.TotalWorkingWeekend * Util.exceedCount(
+                    workingWeekendNum * H.restWeekCount,
+                    solver.restMaxWorkingWeekendNum[nurse]) / H.restWeekCount;
+#endif
+
+                return obj;
             }
 
             // UNDONE[0]: parameter sequence has been changed!
@@ -1961,69 +2808,637 @@ namespace NurseRostering
                 return problem.Scenario.shifts[shift].legalNextShifts[AssignTable[nurse, weekday + 1].shift];
             }
 
-            // apply assigning a Assign to nurse without Assign in weekday
-            private void addAssign(Weekday weekday, NurseID nurse, Assign assign) { }
-            private void addAssign(Move move) { }
-            // apply assigning another Assign or skill to nurse already assigned in weekday
-            private void changeAssign(Weekday weekday, NurseID nurse, Assign assign) { }
-            private void changeAssign(Move move) { }
-            // apply removing a Assign to nurse in weekday
-            private void removeAssign(Weekday weekday, NurseID nurse) { }
-            private void removeAssign(Move move) { }
-            // apply swapping Assign of two nurses in the same day
-            private void swapNurse(Weekday weekday, NurseID nurse, NurseID nurse2) { }
-            private void swapNurse(Move move) { }
-            // apply swapping Assign of two nurses in consecutive days within [weekday, weekday2]
-            private void swapBlock(Weekday weekday, Weekday weekday2, NurseID nurse, NurseID nurse2) { }
-            private void swapBlock(Move move) { }
-            // apply exchanging Assign of a nurse on two days
-            private void exchangeDay(Weekday weekday, NurseID nurse, Weekday weekday2) { }
-            private void exchangeDay(Move move) { }
+            /// <summary> reset all cache valid flag of corresponding nurses to false. </summary>
+            private void invalidateCacheFlag(ref Move move) {
+                isBlockSwapCacheValid[move.nurse] = false;
+                if ((move.mode == MoveMode.BlockSwap)
+                    || (move.mode == MoveMode.Swap)) {
+                    isBlockSwapCacheValid[move.nurse2] = false;
+                }
+            }
 
+
+            /// <summary> return true if update succeed. </summary>
+            private bool updateOptima() {
+#if INRC2_SECONDARY_OBJ_VALUE
+                if (ObjValue <= Optima.ObjValue) {
+                    SecondaryObjValue = 0;
+                    for (NurseID n = 0; n < problem.Scenario.nurses.Length; n++) {
+                        SecondaryObjValue += ((SecondaryObjValue)(totalAssignNums[n])
+                            / (1 + Math.Abs(solver.restMaxShiftNum[n]
+                            + problem.Scenario.contracts[problem.Scenario.nurses[n].contract].maxShiftNum)));
+                    }
+                }
+#endif
+                if (ObjValue < Optima.ObjValue) {
+                    FindTime = solver.clock.ElapsedTicks;
+                    Optima = this;
+                    return true;
+                } else if (ObjValue == Optima.ObjValue) {
+#if INRC2_SECONDARY_OBJ_VALUE
+                    bool isSelected = (SecondaryObjValue < Optima.SecondaryObjValue);
+#else
+                    bool isSelected = (solver.rand.Next(2) == 0);
+#endif
+                    if (isSelected) {
+                        FindTime = solver.clock.ElapsedTicks;
+                        Optima = this;
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
+            /// <summary>
+            // apply the moves defined in MoveMode as BasicMove,
+            // update objective value and update cache valid flags.
+            /// </summary>
+            private void applyBasicMove(ref Move move) {
+                applyMove[move.ModeIndex](ref move);
+                ObjValue += move.delta;
+                invalidateCacheFlag(ref move);
+            }
+
+            // BlockBorder means the start or end day of a consecutive block
+            private void findBestAdd(ref Move bestMove) {
+                Util.RandSelect rs = new Util.RandSelect();
+#if INRC2_USE_TABU
+                Move bestMove_tabu = new Move(MoveMode.Add);
+                Util.RandSelect rs_tabu = new Util.RandSelect();
+#endif
+
+                Move move = new Move(MoveMode.Add);
+                for (move.nurse = 0; move.nurse < S.nurses.Length; move.nurse++) {
+                    for (move.weekday = Weekdays.Mon; move.weekday <= Weekdays.Sun; move.weekday++) {
+                        if (!AssignTable[move.nurse, move.weekday].IsWorking) {
+                            for (move.assign.shift = ShiftIDs.Begin;
+                                move.assign.shift < S.shifts.Length; move.assign.shift++) {
+                                for (move.assign.skill = SkillIDs.Begin;
+                                    move.assign.skill < S.SkillsLength; move.assign.skill++) {
+                                    move.delta = tryAddAssign(ref move);
+#if INRC2_USE_TABU
+                                    if (noAddTabu(ref move)) {
+#endif
+                                        if (rs.isMinimal(move.delta, bestMove.delta, solver.rand.Next())) {
+                                            bestMove = move;
+                                        }
+#if INRC2_USE_TABU
+                                    } else {    // tabu
+                                        if (rs_tabu.isMinimal(move.delta, bestMove_tabu.delta, solver.rand.Next())) {
+                                            bestMove_tabu = move;
+                                        }
+                                    }
+#endif
+                                }
+                            }
+                        }
+                    }
+                }
+
+#if INRC2_USE_TABU
+                if (aspirationCritiera(bestMove.delta, bestMove_tabu.delta)) {
+                    bestMove = bestMove_tabu;
+                }
+#endif
+            }
+            private void findBestRemove(ref Move bestMove) {
+                Util.RandSelect rs = new Util.RandSelect();
+#if INRC2_USE_TABU
+                Move bestMove_tabu = new Move(MoveMode.Remove);
+                Util.RandSelect rs_tabu = new Util.RandSelect();
+#endif
+
+                Move move = new Move(MoveMode.Remove);
+                for (move.nurse = 0; move.nurse < S.nurses.Length; move.nurse++) {
+                    for (move.weekday = Weekdays.Mon; move.weekday <= Weekdays.Sun; move.weekday++) {
+                        if (AssignTable[move.nurse, move.weekday].IsWorking) {
+                            move.delta = tryRemoveAssign(ref move);
+#if INRC2_USE_TABU
+                            if (noRemoveTabu(ref move)) {
+#endif
+                                if (rs.isMinimal(move.delta, bestMove.delta, solver.rand.Next())) {
+                                    bestMove = move;
+                                }
+#if INRC2_USE_TABU
+                            } else {    // tabu
+                                if (rs_tabu.isMinimal(move.delta, bestMove_tabu.delta, solver.rand.Next())) {
+                                    bestMove_tabu = move;
+                                }
+                            }
+#endif
+                        }
+                    }
+                }
+
+#if INRC2_USE_TABU
+                if (aspirationCritiera(bestMove.delta, bestMove_tabu.delta)) {
+                    bestMove = bestMove_tabu;
+                }
+#endif
+            }
+            private void findBestChange(ref Move bestMove) {
+                Util.RandSelect rs = new Util.RandSelect();
+#if INRC2_USE_TABU
+                Move bestMove_tabu = new Move(MoveMode.Change);
+                Util.RandSelect rs_tabu = new Util.RandSelect();
+#endif
+
+                Move move = new Move(MoveMode.Change);
+                for (move.nurse = 0; move.nurse < S.nurses.Length; move.nurse++) {
+                    for (move.weekday = Weekdays.Mon; move.weekday <= Weekdays.Sun; move.weekday++) {
+                        if (AssignTable[move.nurse, move.weekday].IsWorking) {
+                            for (move.assign.shift = ShiftIDs.Begin;
+                                move.assign.shift < S.shifts.Length; move.assign.shift++) {
+                                for (move.assign.skill = SkillIDs.Begin;
+                                    move.assign.skill < S.SkillsLength; move.assign.skill++) {
+                                    move.delta = tryChangeAssign(ref move);
+#if INRC2_USE_TABU
+                                    if (noChangeTabu(ref move)) {
+#endif
+                                        if (rs.isMinimal(move.delta, bestMove.delta, solver.rand.Next())) {
+                                            bestMove = move;
+                                        }
+#if INRC2_USE_TABU
+                                    } else {    // tabu
+                                        if (rs_tabu.isMinimal(move.delta, bestMove_tabu.delta, solver.rand.Next())) {
+                                            bestMove_tabu = move;
+                                        }
+                                    }
+#endif
+                                }
+                            }
+                        }
+                    }
+                }
+
+#if INRC2_USE_TABU
+                if (aspirationCritiera(bestMove.delta, bestMove_tabu.delta)) {
+                    bestMove = bestMove_tabu;
+                }
+#endif
+            }
+            private void findBestSwap(ref Move bestMove) {
+                penalty.setSwapMode();
+
+                Util.RandSelect rs = new Util.RandSelect();
+#if INRC2_USE_TABU
+                Move bestMove_tabu = new Move(MoveMode.Swap);
+                Util.RandSelect rs_tabu = new Util.RandSelect();
+#endif
+
+                Move move = new Move(MoveMode.Swap);
+                for (move.nurse = 0; move.nurse < S.nurses.Length; move.nurse++) {
+                    for (move.nurse2 = move.nurse + 1; move.nurse2 < S.nurses.Length; move.nurse2++) {
+                        if ((nurseWeights[move.nurse] == 0) && (nurseWeights[move.nurse2] == 0)) {
+                            continue;
+                        }
+                        for (move.weekday = Weekdays.Mon; move.weekday <= Weekdays.Sun; move.weekday++) {
+                            move.delta = trySwapNurse(move.weekday, move.nurse, move.nurse2);
+#if INRC2_USE_TABU
+                            if (noSwapTabu(ref move)) {
+#endif
+                                if (rs.isMinimal(move.delta, bestMove.delta, solver.rand.Next())) {
+                                    bestMove = move;
+                                }
+#if INRC2_USE_TABU
+                            } else {    // tabu
+                                if (rs_tabu.isMinimal(move.delta, bestMove_tabu.delta, solver.rand.Next())) {
+                                    bestMove_tabu = move;
+                                }
+                            }
+#endif
+                        }
+                    }
+                }
+
+#if INRC2_USE_TABU
+                if (aspirationCritiera(bestMove.delta, bestMove_tabu.delta)) {
+                    bestMove = bestMove_tabu;
+                }
+#endif
+
+                penalty.recoverLastMode();
+            }
+            private void findBestBlockSwap(ref Move bestMove) {         // try all nurses
+            }
+            private void findBestBlockSwap_Cached(ref Move bestMove) {  // try all nurses
+            }
+            private void findBestBlockSwap_Fast(ref Move bestMove) {    // try all nurses
+            }
+            private void findBestBlockSwap_Part(ref Move bestMove) {    // try some nurses following index
+            }
+            private void findBestBlockSwap_Rand(ref Move bestMove) {    // try randomly picked nurses 
+            }
+            private void findBestExchange(ref Move bestMove) { }
+            private void findBestBlockShift(ref Move bestMove) { }
+            private void findBestARLoop(ref Move bestMove) { }
+            private void findBestARRand(ref Move bestMove) { }
+            private void findBestARBoth(ref Move bestMove) { }
+            private void findBestAddOnBlockBorder(ref Move bestMove) { }
+            private void findBestChangeOnBlockBorder(ref Move bestMove) { }
+            private void findBestRemoveOnBlockBorder(ref Move bestMove) { }
+            private void findBestSwapOnBlockBorder(ref Move bestMove) { }
+            private void findBestExchangeOnBlockBorder(ref Move bestMove) { }
+            private void findBestARLoopOnBlockBorder(ref Move bestMove) { }
+            private void findBestARRandOnBlockBorder(ref Move bestMove) { }
+            private void findBestARBothOnBlockBorder(ref Move bestMove) { }
+
+            /// <summary> evaluate cost of adding a Assign to nurse without Assign in weekday. </summary>
+            private ObjValue tryAddAssign(int weekday, NurseID nurse, Assign a) { return 0; }
+            private ObjValue tryAddAssign(ref Move move) { return 0; }
+            /// <summary> evaluate cost of assigning another Assign or skill to nurse already assigned in weekday. </summary>
+            private ObjValue tryChangeAssign(int weekday, NurseID nurse, Assign a) { return 0; }
+            private ObjValue tryChangeAssign(ref Move move) { return 0; }
+            /// <summary> evaluate cost of removing the Assign from nurse already assigned in weekday. </summary>
+            private ObjValue tryRemoveAssign(int weekday, NurseID nurse) { return 0; }
+            private ObjValue tryRemoveAssign(ref Move move) { return 0; }
+            /// <summary> evaluate cost of swapping Assign of two nurses in the same day. </summary>
+            private ObjValue trySwapNurse(int weekday, NurseID nurse, NurseID nurse2) { return 0; }
+            private ObjValue trySwapNurse(ref Move move) { return 0; }
+            /// <summary>
+            // evaluate cost of swapping Assign of two nurses in consecutive days start from weekday
+            // and record the selected end of the block into weekday2
+            // the recorded move will always be no tabu move or meet aspiration criteria
+            /// </summary>
+            private ObjValue trySwapBlock(int weekday, int weekday2, NurseID nurse, NurseID nurse2) { return 0; }
+            private ObjValue trySwapBlock(ref Move move) { return 0; }
+            /// <summary>
+            // evaluate cost of swapping Assign of two nurses in consecutive days in a week
+            // and record the block information into weekday and weekday2
+            // the recorded move will always be no tabu move or meet aspiration criteria. 
+            /// </summary>
+            private ObjValue trySwapBlock_Fast(int weekday, int weekday2, NurseID nurse, NurseID nurse2) { return 0; }
+            private ObjValue trySwapBlock_Fast(ref Move move) { return 0; }
+            /// <summary> evaluate cost of exchanging Assign of a nurse on two days. </summary>
+            private ObjValue tryExchangeDay(int weekday, NurseID nurse, int weekday2) { return 0; }
+            private ObjValue tryExchangeDay(ref Move move) { return 0; }
+
+            /// <summary> apply assigning a Assign to nurse without Assign in weekday. </summary>
+            private void addAssign(Weekday weekday, NurseID nurse, Assign assign) { }
+            private void addAssign(ref Move move) { }
+            /// <summary> apply assigning another Assign or skill to nurse already assigned in weekday. </summary>
+            private void changeAssign(Weekday weekday, NurseID nurse, Assign assign) { }
+            private void changeAssign(ref Move move) { }
+            /// <summary> apply removing a Assign to nurse in weekday. </summary>
+            private void removeAssign(Weekday weekday, NurseID nurse) { }
+            private void removeAssign(ref Move move) { }
+            /// <summary> apply swapping Assign of two nurses in the same day. </summary>
+            private void swapNurse(Weekday weekday, NurseID nurse, NurseID nurse2) { }
+            private void swapNurse(ref Move move) { }
+            /// <summary> apply swapping Assign of two nurses in consecutive days within [weekday, weekday2]. </summary>
+            private void swapBlock(Weekday weekday, Weekday weekday2, NurseID nurse, NurseID nurse2) { }
+            private void swapBlock(ref Move move) { }
+            /// <summary> apply exchanging Assign of a nurse on two days. </summary>
+            private void exchangeDay(Weekday weekday, NurseID nurse, Weekday weekday2) { }
+            private void exchangeDay(ref Move move) { }
+
+            /// <summary> handle consecutive block change. </summary>
             private void updateConsecutive(Weekday weekday, NurseID nurse, ShiftID shift) { }
-            // the assignment is on the right side of a consecutive block
+            /// <summary> the assignment is on the right side of a consecutive block. </summary>
             private void assignHigh(Weekday weekday, Weekday[] high, Weekday[] low, bool affectRight) { }
-            // the assignment is on the left side of a consecutive block
+            /// <summary> the assignment is on the left side of a consecutive block. </summary>
             private void assignLow(Weekday weekday, Weekday[] high, Weekday[] low, bool affectLeft) { }
-            // the assignment is in the middle of a consecutive block
+            /// <summary> the assignment is in the middle of a consecutive block. </summary>
             private void assignMiddle(Weekday weekday, Weekday[] high, Weekday[] low) { }
-            // the assignment is on a consecutive block with single slot
+            /// <summary> the assignment is on a consecutive block with single slot. </summary>
             private void assignSingle(Weekday weekday, Weekday[] high, Weekday[] low, bool affectRight, bool affectLeft) { }
+
+#if INRC2_USE_TABU
+            bool noAddTabu(ref Move move) {
+                return (iterCount > shiftTabu[move.nurse, move.weekday, move.assign.shift, move.assign.skill]);
+            }
+            bool noChangeTabu(ref Move move) {
+                return (iterCount > shiftTabu[move.nurse, move.weekday, move.assign.shift, move.assign.skill]);
+            }
+            bool noRemoveTabu(ref Move move) {
+                return (iterCount > dayTabu[move.nurse, move.weekday]);
+            }
+            bool noSwapTabu(ref Move move) {
+                Assign a = AssignTable[move.nurse, move.weekday];
+                Assign a2 = AssignTable[move.nurse2, move.weekday];
+
+                if (a.IsWorking) {
+                    if (a2.IsWorking) {
+                        return ((iterCount > shiftTabu[move.nurse, move.weekday, a2.shift, a2.skill])
+                            || (iterCount > shiftTabu[move.nurse2, move.weekday, a.shift, a.skill]));
+                    } else {
+                        return ((iterCount > dayTabu[move.nurse, move.weekday])
+                            || (iterCount > shiftTabu[move.nurse2, move.weekday, a.shift, a.skill]));
+                    }
+                } else {
+                    if (a2.IsWorking) {
+                        return ((iterCount > shiftTabu[move.nurse, move.weekday, a2.shift, a2.skill])
+                            || (iterCount > dayTabu[move.nurse2, move.weekday]));
+                    } else {    // no change
+                        return true;
+                    }
+                }
+            }
+            bool noExchangeTabu(ref Move move) {
+                Assign a = AssignTable[move.nurse, move.weekday];
+                Assign a2 = AssignTable[move.nurse, move.weekday2];
+
+                if (a.IsWorking) {
+                    if (a2.IsWorking) {
+                        return ((iterCount > shiftTabu[move.nurse, move.weekday, a2.shift, a2.skill])
+                            || (iterCount > shiftTabu[move.nurse, move.weekday2, a.shift, a.skill]));
+                    } else {
+                        return ((iterCount > dayTabu[move.nurse, move.weekday])
+                            || (iterCount > shiftTabu[move.nurse, move.weekday2, a.shift, a.skill]));
+                    }
+                } else {
+                    if (a2.IsWorking) {
+                        return ((iterCount > shiftTabu[move.nurse, move.weekday, a2.shift, a2.skill])
+                            || (iterCount > dayTabu[move.nurse, move.weekday2]));
+                    } else {    // no change
+                        return true;
+                    }
+                }
+            }
+#if !INRC2_BLOCK_SWAP_NO_TABU
+            bool noBlockSwapTabu(int noTabuCount, int totalSwap) {
+#if INRC2_BLOCK_SWAP_AVERAGE_TABU
+                return (2 * noTabuCount > totalSwap);   // over half of swaps are no tabu
+#elif INRC2_BLOCK_SWAP_STRONG_TABU
+                return (noTabuCount == totalSwap);
+#elif INRC2_BLOCK_SWAP_WEAK_TABU
+                return (noTabuCount > 0);
+#endif
+            }
+#endif
+
+            bool aspirationCritiera(ObjValue bestMoveDelta, ObjValue bestMoveDelta_Tabu) {
+                return ((bestMoveDelta >= DefaultPenalty.MaxObjValue)
+                    || ((ObjValue + bestMoveDelta_Tabu < optima.ObjValue)
+                    && (bestMoveDelta_Tabu < bestMoveDelta)));
+            }
+
+            void updateDayTabu(NurseID nurse, int weekday) {
+                dayTabu[nurse, weekday] = iterCount
+                    + solver.DayTabuTenureBase + solver.rand.Next(solver.DayTabuTenureAmp);
+            }
+            void updateShiftTabu(NurseID nurse, int weekday, Assign a) {
+                shiftTabu[nurse, weekday, a.shift, a.skill] = iterCount
+                    + solver.ShiftTabuTenureBase + solver.rand.Next(solver.ShiftTabuTenureAmp);
+            }
+            void updateAddTabu(ref Move move) {
+                updateDayTabu(move.nurse, move.weekday);
+            }
+            void updateChangeTabu(ref Move move) {
+                updateShiftTabu(move.nurse, move.weekday, AssignTable[move.nurse, move.weekday]);
+            }
+            void updateRemoveTabu(ref Move move) {
+                updateShiftTabu(move.nurse, move.weekday, AssignTable[move.nurse, move.weekday]);
+            }
+            void updateSwapTabu(ref Move move) {
+                Assign a = AssignTable[move.nurse, move.weekday];
+                Assign a2 = AssignTable[move.nurse2, move.weekday];
+
+                if (a.IsWorking) {
+                    if (a2.IsWorking) {
+                        updateShiftTabu(move.nurse, move.weekday, a);
+                        updateShiftTabu(move.nurse2, move.weekday, a2);
+                    } else {
+                        updateShiftTabu(move.nurse, move.weekday, a);
+                        updateDayTabu(move.nurse2, move.weekday);
+                    }
+                } else {
+                    if (a2.IsWorking) {
+                        updateDayTabu(move.nurse, move.weekday);
+                        updateShiftTabu(move.nurse2, move.weekday, a2);
+                    }
+                }
+            }
+            void updateExchangeTabu(ref Move move) {
+                Assign a = AssignTable[move.nurse, move.weekday];
+                Assign a2 = AssignTable[move.nurse, move.weekday2];
+
+                if (a.IsWorking) {
+                    if (a2.IsWorking) {
+                        updateShiftTabu(move.nurse, move.weekday, a);
+                        updateShiftTabu(move.nurse, move.weekday2, a2);
+                    } else {
+                        updateShiftTabu(move.nurse, move.weekday, a);
+                        updateDayTabu(move.nurse, move.weekday2);
+                    }
+                } else {
+                    if (a2.IsWorking) {
+                        updateDayTabu(move.nurse, move.weekday);
+                        updateShiftTabu(move.nurse, move.weekday2, a2);
+                    }
+                }
+            }
+            void updateBlockSwapTabu(ref Move move) {
+                Weekday weekday = move.weekday;
+                Weekday weekday2 = move.weekday2;
+                for (; weekday <= weekday2; weekday++) {
+                    updateSwapTabu(ref move);
+                }
+            }
+#endif
+
+            /// <summary>
+            /// find day number to be punished for a single block.
+            /// (work for shift, day and day-off)
+            /// </summary>
+            private static ObjValue penaltyDayNum(int len, int end, int min, int max) {
+                return (end < Weekdays.Sun) ?
+                    Util.distanceToRange(len, min, max) :
+                    Util.exceedCount(len, max);
+            }
             #endregion Method
 
             #region Property
+            public Output Optima {
+                get { return optima; }
+                protected set { value.copyTo(optima); }
+            }
+
+            /// <summary> short hand for scenario. </summary>
+            protected Problem.ScenarioInfo S { get { return problem.Scenario; } }
+            /// <summary> short hand for weekdata. </summary>
+            protected Problem.WeekdataInfo W { get { return problem.Weekdata; } }
+            /// <summary> short hand for history. </summary>
+            protected Problem.HistoryInfo H { get { return problem.History; } }
             #endregion Property
 
             #region Type
             /// <summary> single move in neighborhood search. </summary>
-            protected class Move
+            public struct Move
             {
-                Move(ObjValue delta, int weekday, int weekday2, NurseID nurse, NurseID nurse2) {
+                public Move(MoveMode mode, ObjValue delta = DefaultPenalty.ForbiddenMove)
+                    : this() {
                     this.delta = delta;
-                    this.weekday = weekday;
-                    this.weekday2 = weekday2;
-                    this.nurse = nurse;
-                    this.nurse2 = nurse2;
+                    this.mode = mode;
                 }
 
-                ObjValue delta = DefaultPenalty.ForbiddenMove;
-                MoveMode mode;
-                int weekday;    // tryBlockSwap() will modify it
-                // weekday2 should always be greater than weekday in block swap
-                int weekday2;   // tryBlockSwap() will modify it
-                NurseID nurse;
-                NurseID nurse2;
-                Assign assign;
+                public int ModeIndex { get { return (int)mode; } }
+
+                public ObjValue delta;
+                public MoveMode mode;
+                public Weekday weekday;
+                /// <summary> weekday2 should always be greater than weekday in block swap. </summary> 
+                public Weekday weekday2;
+                public NurseID nurse;
+                public NurseID nurse2;
+                public Assign assign;
             }
+
+            /// <summary> consecutive information for a nurse. </summary>
+            /// <example>
+            /// this is an demo for switching consecutive working day and day off.
+            /// consecutive assignments use the same method.
+            /// besides, there is 1 slot for history and update towards left side 
+            /// should test if weekday is greater or equal to Weekdays.LastWeek which is 0.
+            /// 
+            ///    E L O L E E E
+            ///   +-+-+-+-+-+-+-+
+            ///   |0|1|2|3|4|4|4|  high
+            ///   |0|1|2|3|6|6|6|  low
+            ///   +-+-+-+-+-+-+-+        +-+-+-+-+-+-+-+
+            ///      |       |  E->O     |0|1|2|3|4|5|6|
+            ///      | L->O  +---------->|0|1|2|3|4|5|6|
+            ///      |                   +-+-+-+-+-+-+-+
+            ///      |  +-+-+-+-+-+-+-+
+            ///      +->|0|1|1|3|3|3|6|
+            ///         |0|2|2|5|5|5|6| 
+            ///         +-+-+-+-+-+-+-+
+            /// </example>
+            private class Consecutive : Util.ICopyable<Consecutive>
+            {
+                #region Constructor
+                public Consecutive() { }
+                public Consecutive(Problem p, NurseID nurse) {
+                    if (ShiftIDs.isWorking(p.History.lastShifts[nurse])) {
+                        dayLow.fill(Weekdays.Mon);
+                        dayHigh.fill(Weekdays.Sun);
+                        shiftLow.fill(Weekdays.Mon);
+                        shiftHigh.fill(Weekdays.Sun);
+                        dayHigh[Weekdays.LastWeek] = Weekdays.LastWeek;
+                        dayLow[Weekdays.LastWeek] = 1 - p.History.consecutiveDayNums[nurse];
+                        shiftHigh[Weekdays.LastWeek] = Weekdays.LastWeek;
+                        shiftLow[Weekdays.LastWeek] = 1 - p.History.consecutiveShiftNums[nurse];
+                    } else {    // day off
+                        dayLow.fill(1 - p.History.consecutiveDayoffNums[nurse]);
+                        dayHigh.fill(Weekdays.Sun);
+                        shiftLow.fill(1 - p.History.consecutiveDayoffNums[nurse]);
+                        shiftHigh.fill(Weekdays.Sun);
+                    }
+                }
+                #endregion Constructor
+
+                #region Method
+                public void copyTo(Consecutive consecutive) {
+                    dayLow.CopyTo(consecutive.dayLow, 0);
+                    dayHigh.CopyTo(consecutive.dayHigh, 0);
+                    shiftLow.CopyTo(consecutive.shiftLow, 0);
+                    shiftHigh.CopyTo(consecutive.shiftHigh, 0);
+                }
+                #endregion Method
+
+                #region Property
+                /// <summary> if a shift lasts whole week, return true, else false. </summary>
+                public bool IsSingleConsecutiveShift {
+                    // shiftLow may be LastWeek, so use less or equal
+                    get { return (shiftLow[Weekdays.Sun] <= Weekdays.Mon); }
+                }
+                /// <summary> if a day or day-off lasts whole week, return true, else false. </summary>
+                public bool IsSingleConsecutiveDay {
+                    // dayLow may be LastWeek, so use less or equal
+                    get { return (dayLow[Weekdays.Sun] <= Weekdays.Mon); }
+                }
+                #endregion Property
+
+                #region Type
+                #endregion Type
+
+                #region Constant
+                #endregion Constant
+
+                #region Field
+                public int[] dayLow = new int[Weekdays.Length];
+                public int[] dayHigh = new int[Weekdays.Length];
+                public int[] shiftLow = new int[Weekdays.Length];
+                public int[] shiftHigh = new int[Weekdays.Length];
+                #endregion Field
+            }
+
+            /// <summary> information for update delta and assignment. </summary>
+            struct BlockSwapCacheItem
+            {
+                public ObjValue delta;
+                public Weekday weekday;
+                public Weekday weekday2;
+            }
+
+            public delegate void FindBestMove(ref Move move);
+            public delegate ObjValue TryMove(ref Move move);
+            public delegate void ApplyMove(ref Move move);
+            public delegate void UpdateTabu(ref Move move);
             #endregion Type
 
             #region Constant
             private readonly TabuSolver solver;
             private readonly Problem problem;
+
+            private readonly FindBestMove[] findBestMove;
+            private readonly TryMove[] tryMove;
+            private readonly ApplyMove[] applyMove;
+            private readonly UpdateTabu[] updateTabu;
             #endregion Constant
 
             #region Field
+            /// <summary> local optima in the trajectory of current search() call. </summary>
+            /// <remarks> must set optima to $this before every search(). </remarks>
+            Output optima;
+
+            /// <summary> control penalty weight on each constraint. </summary>
+            private Penalty penalty;    // TODO[9]: rename to ConstraintWeights?
+            /// <summary> control penalty weight on each nurse. </summary>
+            private ObjValue[] nurseWeights;
+
             private IterCount iterCount;
+
+            /// <summary> total assignments for each nurse. </summary>
+            private int[] totalAssignNums;
+            /// <summary> 
+            /// problem.Weekdata.optNurseNums[day,shift,skill] =
+            /// (assignedNurseNums[day,shift,skill] + missingNurseNums[day,shift,skill]). 
+            /// </summary>
+            private int[, ,] assignedNurseNums;
+            /// <summary> 
+            /// problem.Weekdata.optNurseNums[day,shift,skill] =
+            /// (assignedNurseNums[day,shift,skill] + missingNurseNums[day,shift,skill]). 
+            /// </summary>
+            private int[, ,] missingNurseNums;
+            /// <summary> consecutive[nurse] is the consecutive assignments record for nurse. </summary>
+            private Consecutive[] consecutives;
+            /// <summary> default consecutive for resetAssistData(). </summary>
+            private Consecutive[] consecutives_Backup;
+
+            //// <summary>
+            ///	BlockSwapCache[nurse,nurse2] stores
+            /// delta of best block swap with nurse and nurse2.
+            /// </summary>
+            /// <remarks> rebuild() and weight adjustment will invalidate all items. </remarks>
+            private BlockSwapCacheItem[,] blockSwapCache;
+            // (blockSwapDeltaCacheValidFlag[nurse] == false) means 
+            // the delta related to nurse can not be reused
+            private bool[] isBlockSwapCacheValid;
+
+#if INRC2_USE_TABU
+            /// <summary>
+            /// fine-grained tabu list for add or remove on each shift
+            /// (iterCount <= ShiftTabu[nurse,weekday,shift,skill]) means forbid to be added
+            /// </summary>
+            private IterCount[, , ,] shiftTabu;
+            /// <summary>
+            /// coarse-grained tabu list for add or remove on each day
+            /// (iterCount <= DayTabu[nurse,weekday]) means forbid to be removed. 
+            /// </summary>
+            private IterCount[,] dayTabu;
+#endif // INRC2_USE_TABU
             #endregion Field
         }
 
@@ -2115,37 +3530,42 @@ namespace NurseRostering
         /// AR stands for "Add and Remove", "Rand" means select one to search randomly,
         /// "Both" means search both, "Loop" means switch to another when no improvement.
         /// </summary>
+        // TUNEUP[4]: make them int to avoid type conversion.
         public enum MoveMode
         {
             // atomic moves are not composed by other moves
             Add, Remove, Change, AtomicMovesLength,
             // basic moves are used in randomWalk()
             Exchange = AtomicMovesLength, Swap, BlockSwap, BasicMovesLength,
-            // compound moves which can not be used by a single tryXXX() and no apply()
+            // compound moves which can not be used by a single try() and no apply()
             // for them. apply them by calling apply() of corresponding basic move
+            // TODO[6]: BlockShift can be used by try() actually. 
             BlockShift = BasicMovesLength, ARLoop, ARRand, ARBoth, Length
         };
+
+        private const int InverseRatioOfRepairTimeInInit = 8;
 
         private readonly GenerateInitSolution[] generateInitSolution;
         private readonly SearchForOptima[] searchForOptima;
         #endregion Constant
 
         #region Field
+        public IterCount DayTabuTenureBase { get; private set; }
+        public IterCount DayTabuTenureAmp { get; private set; }
+        public IterCount ShiftTabuTenureBase { get; private set; }
+        public IterCount ShiftTabuTenureAmp { get; private set; }
+
+        public IterCount MaxNoImproveForSingleNeighborhood { get; private set; }
+        public IterCount MaxNoImproveForAllNeighborhood { get; private set; }
+        public IterCount MaxNoImproveForBiasTabuSearch { get; private set; }
+        public IterCount MaxNoImproveSwapChainLength { get; private set; }
+        public IterCount MaxSwapChainRestartCount { get; private set; }
+
         private Solution sln;
 
         private Configure config;
 
-        private IterCount dayTabuTenureBase;
-        private IterCount dayTabuTenureAmp;
-        private IterCount shiftTabuTenureBase;
-        private IterCount shiftTabuTenureAmp;
-
-        private IterCount MaxNoImproveForSingleNeighborhood;
-        private IterCount MaxNoImproveForAllNeighborhood;
-        private IterCount MaxNoImproveForBiasTabuSearch;
-        private IterCount MaxNoImproveSwapChainLength;
-        private IterCount MaxSwapChainRestartCount;
-
+        /// <summary> (nursesHasSameSkill[nurse,nurse2] == true) means they have same skill. </summary>
         private bool[,] nursesHasSameSkill;
 
         private int[] restMinShiftNum;          // assignments in the planning horizon
@@ -2157,6 +3577,3 @@ namespace NurseRostering
     }
     #endregion solver
 }
-
-
-// TODO[5]: record distance to optima after every move, analyze if it is circling around.
