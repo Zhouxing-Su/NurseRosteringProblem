@@ -12,7 +12,7 @@ NurseRostering::Solution::tryMove = {
     &NurseRostering::Solution::tryChangeAssign,
     &NurseRostering::Solution::tryExchangeDay,
     &NurseRostering::Solution::trySwapNurse,
-    &NurseRostering::Solution::trySwapBlock,
+    &NurseRostering::Solution::trySwapBlock
 };
 const NurseRostering::Solution::FindBestMoveTable
 NurseRostering::Solution::findBestMove = {
@@ -71,7 +71,7 @@ NurseRostering::Solution::applyMove = {
 };
 #ifdef INRC2_USE_TABU
 const NurseRostering::Solution::UpdateTabuTable
-NurseRostering::Solution::updateTabuTable = {
+NurseRostering::Solution::updateTabu = {
     &NurseRostering::Solution::updateAddTabu,
     &NurseRostering::Solution::updateRemoveTabu,
     &NurseRostering::Solution::updateChangeTabu,
@@ -187,7 +187,8 @@ void NurseRostering::Solution::rebuild( const Output &output )
 
 void NurseRostering::Solution::rebuild()
 {
-    rebuild( *this, NO_DIFF );
+    rebuild( *this );
+    evaluateObjValue();
 }
 
 bool NurseRostering::Solution::genInitAssign( int greedyRetryCount )
@@ -345,7 +346,7 @@ void NurseRostering::Solution::resetAssign()
 
 void NurseRostering::Solution::resetAssistData()
 {
-    // assist data structure
+    // incremental evaluation
     missingNurseNums = problem.weekData.optNurseNums;
     totalAssignNums = vector<int>( problem.scenario.nurseNum, 0 );
     consecutives = vector<Consecutive>( problem.scenario.nurseNum );
@@ -458,70 +459,65 @@ bool NurseRostering::Solution::repair( const Timer &timer )
         &NurseRostering::Solution::findBestChange
     };
 
-    penalty.setRepairMode();
     ObjValue violation = solver.checkFeasibility( assign );
 
-    bool feasible = (violation == 0);
-    if (!feasible) {
-        objValue = violation;
-        // reduced tabuSearch_Rand()
-        {
-            int modeNum = fbmt.size();
+    if (violation == 0) { return true; }
 
-            const int minWeight = 256;  // min weight
-            const int maxWeight = 1024; // max weight (less than (RAND_MAX / modeNum))
-            const int initWeight = (maxWeight + minWeight) / 2;
-            const int deltaIncRatio = 8;    // = weights[mode] / weightDelta
-            const int incError = deltaIncRatio - 1;
-            const int deltaDecRatio = 8;    // = weights[mode] / weightDelta
-            const int decError = -(deltaDecRatio - 1);
-            vector<int> weights( modeNum, initWeight );
-            int totalWeight = initWeight * modeNum;
+    // reduced tabuSearch_Rand()
+    penalty.setRepairMode();
+    objValue = violation;
+    int modeNum = fbmt.size();
 
-            for (; !timer.isTimeOut() && (objValue > 0)
-                && (iterCount != problem.maxIterCount); ++iterCount) {
-                int modeSelect = 0;
-                for (int w = solver.randGen() % totalWeight; (w -= weights[modeSelect]) >= 0; ++modeSelect) {}
+    const int minWeight = 256;  // min weight
+    const int maxWeight = 1024; // max weight (less than (RAND_MAX / modeNum))
+    const int initWeight = (maxWeight + minWeight) / 2;
+    const int deltaIncRatio = 8;    // = weights[mode] / weightDelta
+    const int incError = deltaIncRatio - 1;
+    const int deltaDecRatio = 8;    // = weights[mode] / weightDelta
+    const int decError = -(deltaDecRatio - 1);
+    vector<int> weights( modeNum, initWeight );
+    int totalWeight = initWeight * modeNum;
 
-                Move bestMove;
-                (this->*fbmt[modeSelect])(bestMove);
+    for (; !timer.isTimeOut() && (objValue > 0)
+        && (iterCount != problem.maxIterCount); ++iterCount) {
+        int modeSelect = 0;
+        for (int w = solver.randGen() % totalWeight; (w -= weights[modeSelect]) >= 0; ++modeSelect) {}
 
-                int weightDelta;
+        Move bestMove;
+        (this->*fbmt[modeSelect])(bestMove);
+
 #ifdef INRC2_USE_TABU
-                // update tabu list first because it requires original assignment
-                ( this->*updateTabuTable[bestMove.mode] )(bestMove);
+        // update tabu list first because it requires original assignment
+        ( this->*updateTabu[bestMove.mode] )(bestMove);
 #endif
-                if (bestMove.delta < DefaultPenalty::MAX_OBJ_VALUE) {
-                    applyBasicMove( bestMove );
+        int weightDelta;
+        if (bestMove.delta < DefaultPenalty::MAX_OBJ_VALUE) {
+            applyBasicMove( bestMove );
 
-                    if (bestMove.delta < 0) {    // improve current solution
-                        weightDelta = (incError + maxWeight - weights[modeSelect]) / deltaIncRatio;
-                    } else {    // no improve
-                        weightDelta = (decError + minWeight - weights[modeSelect]) / deltaDecRatio;
-                    }
-                } else {    // invalid
-                    weightDelta = (decError + minWeight - weights[modeSelect]) / deltaDecRatio;
-                }
-
-                weights[modeSelect] += weightDelta;
-                totalWeight += weightDelta;
+            if (bestMove.delta < 0) {    // improve current solution
+                weightDelta = (incError + maxWeight - weights[modeSelect]) / deltaIncRatio;
+            } else {    // no improve
+                weightDelta = (decError + minWeight - weights[modeSelect]) / deltaDecRatio;
             }
+        } else {    // invalid
+            weightDelta = (decError + minWeight - weights[modeSelect]) / deltaDecRatio;
         }
-        feasible = (objValue == 0);
+
+        weights[modeSelect] += weightDelta;
+        totalWeight += weightDelta;
     }
+    violation = objValue;
     penalty.recoverLastMode();
 
-    if (violation != 0) {   // the tabu search has been proceed
-        evaluateObjValue();
-    }
+    evaluateObjValue();
 
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t duration = clock() - startTime;
     cout << "[RP] iter: " << (iterCount - startIterCount) << ' '
         << "time: " << duration << ' '
-        << ((feasible) ? "(success)" : "(fail)") << endl;
+        << ((violation == 0) ? "(success)" : "(fail)") << endl;
 #endif
-    return feasible;
+    return (violation == 0);
 }
 
 void NurseRostering::Solution::adjustWeightToBiasNurseWithGreaterPenalty( int inverseTotalBiasRatio, int inversePenaltyBiasRatio )
@@ -541,6 +537,7 @@ void NurseRostering::Solution::adjustWeightToBiasNurseWithGreaterPenalty( int in
         nurseObj[nurse] += evaluateTotalWorkingWeekend( nurse );
     }
 
+#ifndef INRC2_USE_LAMBDA_IN_SORT
     class CmpNurseObj
     {
     public:
@@ -556,13 +553,19 @@ void NurseRostering::Solution::adjustWeightToBiasNurseWithGreaterPenalty( int in
 
     private:    // forbidden operators
         CmpNurseObj& operator=(const CmpNurseObj &) { return *this; }
-    };
+    } cmpNurseObj( nurseObj );
+#endif
 
-    CmpNurseObj cmpNurseObj( nurseObj );
     for (auto iter = problem.scenario.contracts.begin();
         iter != problem.scenario.contracts.end(); ++iter) {
         vector<NurseID> &nurses( const_cast<vector<NurseID>&>(iter->nurses) );
+#ifndef INRC2_USE_LAMBDA_IN_SORT
         sort( nurses.begin(), nurses.end(), cmpNurseObj );
+#else
+        sort( nurses.begin(), nurses.end(), [&nurseObj]( NurseID lhs, NurseID rhs ) {
+            return (nurseObj[lhs] > nurseObj[rhs]); }
+        );
+#endif
 
         int num = nurses.size() / inversePenaltyBiasRatio;
         unsigned remainder = nurses.size() % inversePenaltyBiasRatio;
@@ -877,7 +880,7 @@ void NurseRostering::Solution::tabuSearch_Rand( const Timer &timer, const FindBe
 
     IterCount noImprove = maxNoImproveCount;
     for (; !timer.isTimeOut() && (noImprove > 0)
-        && (iterCount != problem.maxIterCount); ++iterCount) {
+        && (iterCount < problem.maxIterCount); ++iterCount) {
         int modeSelect = 0;
         for (int w = solver.randGen() % totalWeight; (w -= weights[modeSelect]) >= 0; ++modeSelect) {}
 
@@ -888,7 +891,7 @@ void NurseRostering::Solution::tabuSearch_Rand( const Timer &timer, const FindBe
         if (bestMove.delta < DefaultPenalty::MAX_OBJ_VALUE) {
 #ifdef INRC2_USE_TABU
             // update tabu list first because it requires original assignment
-            ( this->*updateTabuTable[bestMove.mode] )(bestMove);
+            ( this->*updateTabu[bestMove.mode] )(bestMove);
 #endif
             applyBasicMove( bestMove );
 
@@ -937,23 +940,24 @@ void NurseRostering::Solution::tabuSearch_Loop( const Timer &timer, const FindBe
 
     int failCount = modeNum;
     int modeSelect = 0;
-    while (!timer.isTimeOut()) {
+    // since there is randomness on the search trajectory,
+    // there will be chance to make a difference on neighborhoods
+    // which have been searched. so search (modeNum + 1) times
+    while (!timer.isTimeOut() && (failCount >= 0)) {
         // reset current solution to best solution found in last neighborhood
         rebuild( optima );
 
         IterCount noImprove_Single = maxNoImproveCount;
         for (; !timer.isTimeOut() && (noImprove_Single > 0)
-            && (iterCount != problem.maxIterCount); ++iterCount) {
+            && (iterCount < problem.maxIterCount); ++iterCount) {
             Move bestMove;
             (this->*findBestMoveTable[modeSelect])(bestMove);
 
-            if (bestMove.delta >= DefaultPenalty::MAX_OBJ_VALUE) {
-                break;
-            }
+            if (bestMove.delta >= DefaultPenalty::MAX_OBJ_VALUE) { break; }
 
 #ifdef INRC2_USE_TABU
             // update tabu list first because it requires original assignment
-            ( this->*updateTabuTable[bestMove.mode] )(bestMove);
+            ( this->*updateTabu[bestMove.mode] )(bestMove);
 #endif
             applyBasicMove( bestMove );
 
@@ -965,15 +969,8 @@ void NurseRostering::Solution::tabuSearch_Loop( const Timer &timer, const FindBe
             }
         }
 
-        // since there is randomness on the search trajectory,
-        // there will be chance to make a difference on neighborhoods
-        // which have been searched. so search two more times
-        if (failCount >= 0) {   // repeat (modeNum + 2)
-            --failCount;
-            (++modeSelect) %= modeNum;
-        } else {
-            break;
-        }
+        --failCount;
+        (++modeSelect) %= modeNum;
     }
 #ifdef INRC2_PERFORMANCE_TEST
     clock_t duration = clock() - startTime;
@@ -1007,7 +1004,7 @@ void NurseRostering::Solution::tabuSearch_Possibility( const Timer &timer, const
 
     IterCount noImprove = maxNoImproveCount;
     for (; !timer.isTimeOut() && (noImprove > 0)
-        && (iterCount != problem.maxIterCount); ++iterCount) {
+        && (iterCount < problem.maxIterCount); ++iterCount) {
         int modeSelect = startMode;
         Move::Mode moveMode = Move::Mode::SIZE;
         Move bestMove;
@@ -1033,7 +1030,7 @@ void NurseRostering::Solution::tabuSearch_Possibility( const Timer &timer, const
 
 #ifdef INRC2_USE_TABU
         // update tabu list first because it requires original assignment
-        ( this->*updateTabuTable[bestMove.mode] )(bestMove);
+        ( this->*updateTabu[bestMove.mode] )(bestMove);
 #endif
         applyBasicMove( bestMove );
 
@@ -1101,7 +1098,7 @@ void NurseRostering::Solution::randomWalk( const Timer &timer, IterCount stepNum
 
     stepNum += iterCount;
     while ((iterCount < stepNum) && !timer.isTimeOut()
-        && (iterCount != problem.maxIterCount)) {
+        && (iterCount < problem.maxIterCount)) {
         Move move;
         move.mode = static_cast<Move::Mode>(solver.randGen() % Move::Mode::BASIC_MOVE_SIZE);
         move.weekday = (solver.randGen() % Weekday::NUM) + Weekday::Mon;
@@ -3581,7 +3578,7 @@ NurseRostering::ObjValue NurseRostering::Solution::evaluateTotalWorkingWeekend( 
     int workingWeekendNum = (assign.isWorking( nurse, Weekday::Sat ) || assign.isWorking( nurse, Weekday::Sun ));
     obj += penalty.TotalWorkingWeekend() * exceedCount(
         workingWeekendNum * problem.history.restWeekCount,
-        problem.scenario.nurses[nurse].restMaxWorkingWeekendNum ) / problem.history.restWeekCount;
+        problem.scenario.nurses[nurse].restMaxWorkingWeekendNum) / problem.history.restWeekCount;
 #endif
 
     return obj;

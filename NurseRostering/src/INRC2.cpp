@@ -322,10 +322,8 @@ namespace INRC2
                 >> lastShiftName >> history.consecutiveShiftNums[nurse]
                 >> history.consecutiveDayNums[nurse] >> history.consecutiveDayoffNums[nurse];
             history.lastShifts[nurse] = input.names.shiftMap[lastShiftName];
-            if (history.pastWeekCount == 0) {   // clear total assign if it is the first week
-                history.totalAssignNums[nurse] = 0;
-                history.totalWorkingWeekendNums[nurse] = 0;
-            }
+            history.totalAssignNums[nurse] = 0;
+            history.totalWorkingWeekendNums[nurse] = 0;
         }
 
         ifs.close();

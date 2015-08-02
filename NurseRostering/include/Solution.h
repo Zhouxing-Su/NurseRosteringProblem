@@ -134,7 +134,7 @@ public:
     static const FindBestMoveTable findBestMove;
     static const FindBestMoveTable findBestMoveOnBlockBorder;
     static const ApplyMoveTable applyMove;
-    static const UpdateTabuTable updateTabuTable;
+    static const UpdateTabuTable updateTabu;
 
     static const double NO_DIFF;    // for building same assign in rebuild()
 
@@ -147,39 +147,8 @@ public:
 
     // get local optima in the search trajectory
     const Output& getOptima() const { return optima; }
-    // return true if update succeed
-    bool updateOptima()
-    {
-#ifdef INRC2_SECONDARY_OBJ_VALUE
-        if (objValue <= optima.getObjValue()) {
-            secondaryObjValue = 0;
-            for (NurseID n = 0; n < problem.scenario.nurseNum; ++n) {
-                const NurseRostering::Scenario::Nurse &nurse( problem.scenario.nurses[n] );
-                secondaryObjValue += (static_cast<double>(totalAssignNums[n]) / (1 + abs(
-                    nurse.restMaxShiftNum + problem.scenario.contracts[nurse.contract].maxShiftNum )));
-            }
-        }
-#endif
-        if (objValue < optima.getObjValue()) {
-            findTime = Timer::Clock::now();
-            optima = *this;
-            return true;
-        } else if (objValue == optima.getObjValue()) {
-#ifdef INRC2_SECONDARY_OBJ_VALUE
-            bool isSelected = (secondaryObjValue < optima.getSecondaryObjValue());
-#else
-            bool isSelected = ((solver.randGen() % 2) == 0);
-#endif
-            if (isSelected) {
-                findTime = Timer::Clock::now();
-                optima = *this;
-                return true;
-            }
-        }
 
-        return false;
-    }
-    // set assign to at and rebuild assist data, at must be build from same problem
+    // set assign to output.assignTable and rebuild assist data, at must be build from same problem
     void rebuild( const Output &output, double diff );  // objValue will be recalculated
     void rebuild( const Output &output );   // objValue is copied from output
     void rebuild(); // must be called after direct access to AssignTable (objValue will be recalculated)
@@ -205,7 +174,7 @@ public:
     bool repair( const Timer &timer );  // make infeasible solution feasible
 
     // set weights of nurses with less penalty to 0
-    // attention that rebuild() with clear the effect of this method
+    // attention that rebuild() will clear the effect of this method
     void adjustWeightToBiasNurseWithGreaterPenalty( int inverseTotalBiasRatio, int inversePenaltyBiasRatio );
 
 
@@ -256,17 +225,6 @@ public:
 
     // change solution structure in certain complexity
     void perturb( double strength );
-
-    const AssignTable& getAssignTable() const { return assign; }
-    // shift must not be none shift
-    bool isValidSuccession( NurseID nurse, ShiftID shift, int weekday ) const
-    {
-        return problem.scenario.shifts[assign[nurse][weekday - 1].shift].legalNextShifts[shift];
-    }
-    bool isValidPrior( NurseID nurse, ShiftID shift, int weekday ) const
-    {
-        return problem.scenario.shifts[shift].legalNextShifts[assign[nurse][weekday + 1].shift];
-    }
 
     // check if the result of incremental update, evaluate and checkObjValue is the same
     bool checkIncrementalUpdate();
@@ -432,6 +390,15 @@ private:
     void resetAssign();
     void resetAssistData();
 
+    bool isValidSuccession( NurseID nurse, ShiftID shift, int weekday ) const
+    {
+        return problem.scenario.shifts[assign[nurse][weekday - 1].shift].legalNextShifts[shift];
+    }
+    bool isValidPrior( NurseID nurse, ShiftID shift, int weekday ) const
+    {
+        return problem.scenario.shifts[shift].legalNextShifts[assign[nurse][weekday + 1].shift];
+    }
+
     // reset all cache valid flag of corresponding nurses to false
     void invalidateCacheFlag( const Move &move )
     {
@@ -451,6 +418,38 @@ private:
         invalidateCacheFlag( move );
     }
 
+    // return true if update succeed
+    bool updateOptima()
+    {
+#ifdef INRC2_SECONDARY_OBJ_VALUE
+        if (objValue <= optima.getObjValue()) {
+            secondaryObjValue = 0;
+            for (NurseID n = 0; n < problem.scenario.nurseNum; ++n) {
+                const NurseRostering::Scenario::Nurse &nurse( problem.scenario.nurses[n] );
+                secondaryObjValue += (static_cast<double>(totalAssignNums[n]) / (1 + abs(
+                    nurse.restMaxShiftNum + problem.scenario.contracts[nurse.contract].maxShiftNum )));
+            }
+        }
+#endif
+        if (objValue < optima.getObjValue()) {
+            findTime = Timer::Clock::now();
+            optima = *this;
+            return true;
+        } else if (objValue == optima.getObjValue()) {
+#ifdef INRC2_SECONDARY_OBJ_VALUE
+            bool isSelected = (secondaryObjValue < optima.getSecondaryObjValue());
+#else
+            bool isSelected = ((solver.randGen() % 2) == 0);
+#endif
+            if (isSelected) {
+                findTime = Timer::Clock::now();
+                optima = *this;
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     // return true if the solution will be improved (delta < 0)
     // BlockBorder means the start or end day of a consecutive block
@@ -545,31 +544,27 @@ private:
     {
         return (iterCount > dayTabu[move.nurse][move.weekday]);
     }
-    bool noSwapTabu( int weekday, NurseID nurse, NurseID nurse2 ) const
+    bool noSwapTabu( const Move &move ) const
     {
-        const Assign &a( assign[nurse][weekday] );
-        const Assign &a2( assign[nurse2][weekday] );
+        const Assign &a( assign[move.nurse][move.weekday] );
+        const Assign &a2( assign[move.nurse2][move.weekday] );
 
         if (a.isWorking()) {
             if (a2.isWorking()) {
-                return ((iterCount > shiftTabu[nurse][weekday][a2.shift][a2.skill])
-                    || (iterCount > shiftTabu[nurse2][weekday][a.shift][a.skill]));
+                return ((iterCount > shiftTabu[move.nurse][move.weekday][a2.shift][a2.skill])
+                    || (iterCount > shiftTabu[move.nurse2][move.weekday][a.shift][a.skill]));
             } else {
-                return ((iterCount > dayTabu[nurse][weekday])
-                    || (iterCount > shiftTabu[nurse2][weekday][a.shift][a.skill]));
+                return ((iterCount > dayTabu[move.nurse][move.weekday])
+                    || (iterCount > shiftTabu[move.nurse2][move.weekday][a.shift][a.skill]));
             }
         } else {
             if (a2.isWorking()) {
-                return ((iterCount > shiftTabu[nurse][weekday][a2.shift][a2.skill])
-                    || (iterCount > dayTabu[nurse2][weekday]));
+                return ((iterCount > shiftTabu[move.nurse][move.weekday][a2.shift][a2.skill])
+                    || (iterCount > dayTabu[move.nurse2][move.weekday]));
             } else {    // no change
                 return true;
             }
         }
-    }
-    bool noSwapTabu( const Move &move ) const
-    {
-        return noSwapTabu( move.weekday, move.nurse, move.nurse2 );
     }
     bool noExchangeTabu( const Move &move ) const
     {
@@ -669,15 +664,19 @@ private:
     }
     void updateBlockSwapTabu( const Move &move )
     {
-        Move m( move );
-        for (; m.weekday <= m.weekday2; ++m.weekday) {
+        int weekday = move.weekday;
+        int weekday2 = move.weekday2;
+        for (; weekday <= weekday2; ++weekday) {
             updateSwapTabu( move );
         }
     }
 #endif
 
 
+    // control penalty calculation on each constraint
     mutable Penalty penalty;    // trySwapNurse() will modify it
+    // control penalty calculation on each nurse
+    std::vector<ObjValue> nurseWeights;
 
     // for switching between add and remove
     // 1 for no improvement which is opposite in localSearch
@@ -705,9 +704,6 @@ private:
     NurseNumsOnSingleAssign missingNurseNums;
     // consecutive[nurse] is the consecutive assignments record for nurse
     std::vector<Consecutive> consecutives;
-
-    // control penalty calculation on each nurse
-    std::vector<ObjValue> nurseWeights;
 
     // rebuild() and weight adjustment will invalidate all items
     mutable BlockSwapCache blockSwapCache;

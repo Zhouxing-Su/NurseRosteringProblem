@@ -409,6 +409,8 @@ void NurseRostering::TabuSolver::init( const Config &cfg, const std::string &id 
     setTabuTenure();
     setMaxNoImprove( config.maxNoImproveCoefficient );
 
+    discoverNurseSkillRelation();
+
     switch (config.initAlgorithm) {
         case InitAlgorithm::Exact:
             exactInit();
@@ -486,8 +488,6 @@ NurseRostering::History NurseRostering::TabuSolver::genHistory() const
 void NurseRostering::TabuSolver::greedyInit()
 {
     algorithmName += "[GreedyInit]";
-
-    discoverNurseSkillRelation();
 
     if (sln.genInitAssign( static_cast<int>(sqrt( problem.scenario.nurseNum )) + 1 ) == false) {
         errorLog( "fail to generate feasible init solution." );

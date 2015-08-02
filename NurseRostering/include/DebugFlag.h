@@ -85,8 +85,8 @@
 #define INRC2_BLOCK_SWAP_STRONG_TABU 1
 #define INRC2_BLOCK_SWAP_WEAK_TABU 2
 #define INRC2_BLOCK_SWAP_NO_TABU 3
-#ifndef INRC2_BLOCK_SWAP_TABU_STRENGTH
 
+#ifndef INRC2_BLOCK_SWAP_TABU_STRENGTH
 #ifdef INRC2_USE_TABU
 #define INRC2_BLOCK_SWAP_TABU_STRENGTH INRC2_BLOCK_SWAP_NO_TABU
 #else   // must be no tabu if global setting is no tabu
@@ -113,6 +113,10 @@
 // comment to keep searching after ACER improved the worsened nurse
 #ifndef INRC2_SWAP_CHAIN_MAKE_BAD_MOVE
 //#define INRC2_SWAP_CHAIN_MAKE_BAD_MOVE
+#endif
+
+#ifndef INRC2_USE_LAMBDA_IN_SORT
+#define INRC2_USE_LAMBDA_IN_SORT
 #endif
 
 
