@@ -2036,9 +2036,7 @@ NurseRostering::ObjValue NurseRostering::Solution::tryAddAssign( int weekday, Nu
     ObjValue delta = 0;
 
     // TODO : make sure they won't be the same and leave out this
-    if (!a.isWorking() || assign.isWorking( nurse, weekday )) {
-        return DefaultPenalty::FORBIDDEN_MOVE;
-    }
+    if (!a.isWorking() || assign.isWorking( nurse, weekday )) { return DefaultPenalty::FORBIDDEN_MOVE; }
 
     // hard constraint check
     delta += penalty.MissSkill() * (!problem.scenario.nurses[nurse].skills[a.skill]);
@@ -2046,9 +2044,7 @@ NurseRostering::ObjValue NurseRostering::Solution::tryAddAssign( int weekday, Nu
     delta += penalty.Succession() * (!isValidSuccession( nurse, a.shift, weekday ));
     delta += penalty.Succession() * (!isValidPrior( nurse, a.shift, weekday ));
 
-    if (delta >= DefaultPenalty::MAX_OBJ_VALUE) {
-        return delta;
-    }
+    if (delta >= DefaultPenalty::MAX_OBJ_VALUE) { return delta; }
 
     const WeekData &weekData( problem.weekData );
     delta -= penalty.UnderStaff() * (weekData.minNurseNums[weekday][a.shift][a.skill] >
@@ -2294,9 +2290,7 @@ NurseRostering::ObjValue NurseRostering::Solution::tryChangeAssign( int weekday,
     delta += penalty.UnderStaff() * (weekData.minNurseNums[weekday][oldShiftID][oldSkillID] >=
         (weekData.optNurseNums[weekday][oldShiftID][oldSkillID] - missingNurseNums[weekday][oldShiftID][oldSkillID]));
 
-    if (delta >= DefaultPenalty::MAX_OBJ_VALUE) {
-        return delta;
-    }
+    if (delta >= DefaultPenalty::MAX_OBJ_VALUE) { return delta; }
 
     delta -= penalty.Succession() * (!isValidSuccession( nurse, oldShiftID, weekday ));
     delta -= penalty.Succession() * (!isValidPrior( nurse, oldShiftID, weekday ));
@@ -2322,7 +2316,7 @@ NurseRostering::ObjValue NurseRostering::Solution::tryChangeAssign( int weekday,
         // consecutive shift
         const vector<Scenario::Shift> &shifts( problem.scenario.shifts );
         const Scenario::Shift &shift( shifts[a.shift] );
-        const Scenario::Shift &oldShift( problem.scenario.shifts[oldShiftID] );
+        const Scenario::Shift &oldShift( shifts[oldShiftID] );
         ShiftID prevShiftID = assign[nurse][prevDay].shift;
         if (weekday == Weekday::Sun) {  // there is no blocks on the right
             // shiftHigh[weekday] will always equal to Weekday::Sun
@@ -2450,17 +2444,13 @@ NurseRostering::ObjValue NurseRostering::Solution::tryRemoveAssign( int weekday,
     ShiftID oldShiftID = assign[nurse][weekday].shift;
     SkillID oldSkillID = assign[nurse][weekday].skill;
     // TODO : make sure they won't be the same and leave out this
-    if (!Assign::isWorking( oldShiftID )) {
-        return DefaultPenalty::FORBIDDEN_MOVE;
-    }
+    if (!Assign::isWorking( oldShiftID )) { return DefaultPenalty::FORBIDDEN_MOVE; }
 
     const WeekData &weekData( problem.weekData );
     delta += penalty.UnderStaff() * (weekData.minNurseNums[weekday][oldShiftID][oldSkillID] >=
         (weekData.optNurseNums[weekday][oldShiftID][oldSkillID] - missingNurseNums[weekday][oldShiftID][oldSkillID]));
 
-    if (delta >= DefaultPenalty::MAX_OBJ_VALUE) {
-        return delta;
-    }
+    if (delta >= DefaultPenalty::MAX_OBJ_VALUE) { return delta; }
 
     delta -= penalty.Succession() * (!isValidSuccession( nurse, oldShiftID, weekday ));
     delta -= penalty.Succession() * (!isValidPrior( nurse, oldShiftID, weekday ));
@@ -2660,9 +2650,7 @@ NurseRostering::ObjValue NurseRostering::Solution::tryRemoveAssign( const Move &
 NurseRostering::ObjValue NurseRostering::Solution::trySwapNurse( int weekday, NurseID nurse, NurseID nurse2 ) const
 {
     // TODO : make sure they won't be the same and leave out this
-    if (nurse == nurse2) {
-        return DefaultPenalty::FORBIDDEN_MOVE;
-    }
+    if (nurse == nurse2) { return DefaultPenalty::FORBIDDEN_MOVE; }
 
     if (assign.isWorking( nurse, weekday )) {
         if (assign.isWorking( nurse2, weekday )) {
@@ -2851,9 +2839,7 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock_fast( int &weekd
 #endif
 
     // try each block length
-    int w = Weekday::Mon;
-    int w2;
-    for (; w <= Weekday::Sun; ++w) {
+    for (int w = Weekday::Mon, w2; w <= Weekday::Sun; ++w) {
         if (!(isValidSuccession( nurse, assign[nurse2][w].shift, w )
             && isValidSuccession( nurse2, assign[nurse][w].shift, w ))) {
             continue;
@@ -2906,7 +2892,7 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock_fast( int &weekd
             if (delta < DefaultPenalty::MAX_OBJ_VALUE) {
                 (const_cast<Solution*>(this))->swapNurse( w, nurse, nurse2 );
             } else {    // two day off
-                (delta -= DefaultPenalty::FORBIDDEN_MOVE);
+                delta -= DefaultPenalty::FORBIDDEN_MOVE;
             }
             ++w;
         } while ((w < w2)
@@ -2967,7 +2953,7 @@ NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock_fast( int &weekd
 NurseRostering::ObjValue NurseRostering::Solution::trySwapBlock_fast( const Move &move ) const
 {
     penalty.setBlockSwapMode();
-    ObjValue delta = trySwapBlock( move.weekday, move.weekday2, move.nurse, move.nurse2 );
+    ObjValue delta = trySwapBlock_fast( move.weekday, move.weekday2, move.nurse, move.nurse2 );
     penalty.recoverLastMode();
 
     return delta;

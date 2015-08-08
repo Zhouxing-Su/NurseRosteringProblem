@@ -544,27 +544,31 @@ private:
     {
         return (iterCount > dayTabu[move.nurse][move.weekday]);
     }
-    bool noSwapTabu( const Move &move ) const
+    bool noSwapTabu( int weekday, NurseID nurse, NurseID nurse2 ) const
     {
-        const Assign &a( assign[move.nurse][move.weekday] );
-        const Assign &a2( assign[move.nurse2][move.weekday] );
+        const Assign &a( assign[nurse][weekday] );
+        const Assign &a2( assign[nurse2][weekday] );
 
         if (a.isWorking()) {
             if (a2.isWorking()) {
-                return ((iterCount > shiftTabu[move.nurse][move.weekday][a2.shift][a2.skill])
-                    || (iterCount > shiftTabu[move.nurse2][move.weekday][a.shift][a.skill]));
+                return ((iterCount > shiftTabu[nurse][weekday][a2.shift][a2.skill])
+                    || (iterCount > shiftTabu[nurse2][weekday][a.shift][a.skill]));
             } else {
-                return ((iterCount > dayTabu[move.nurse][move.weekday])
-                    || (iterCount > shiftTabu[move.nurse2][move.weekday][a.shift][a.skill]));
+                return ((iterCount > dayTabu[nurse][weekday])
+                    || (iterCount > shiftTabu[nurse2][weekday][a.shift][a.skill]));
             }
         } else {
             if (a2.isWorking()) {
-                return ((iterCount > shiftTabu[move.nurse][move.weekday][a2.shift][a2.skill])
-                    || (iterCount > dayTabu[move.nurse2][move.weekday]));
+                return ((iterCount > shiftTabu[nurse][weekday][a2.shift][a2.skill])
+                    || (iterCount > dayTabu[nurse2][weekday]));
             } else {    // no change
                 return true;
             }
         }
+    }
+    bool noSwapTabu( const Move &move ) const
+    {
+        return noSwapTabu( move.weekday, move.nurse, move.nurse2 );
     }
     bool noExchangeTabu( const Move &move ) const
     {
@@ -622,25 +626,29 @@ private:
     {
         updateShiftTabu( move.nurse, move.weekday, assign[move.nurse][move.weekday] );
     }
-    void updateSwapTabu( const Move &move )
+    void updateSwapTabu( int weekday, NurseID nurse, NurseID nurse2 )
     {
-        const Assign &a( assign[move.nurse][move.weekday] );
-        const Assign &a2( assign[move.nurse2][move.weekday] );
+        const Assign &a( assign[nurse][weekday] );
+        const Assign &a2( assign[nurse2][weekday] );
 
         if (a.isWorking()) {
             if (a2.isWorking()) {
-                updateShiftTabu( move.nurse, move.weekday, a );
-                updateShiftTabu( move.nurse2, move.weekday, a2 );
+                updateShiftTabu( nurse, weekday, a );
+                updateShiftTabu( nurse2, weekday, a2 );
             } else {
-                updateShiftTabu( move.nurse, move.weekday, a );
-                updateDayTabu( move.nurse2, move.weekday );
+                updateShiftTabu( nurse, weekday, a );
+                updateDayTabu( nurse2, weekday );
             }
         } else {
             if (a2.isWorking()) {
-                updateDayTabu( move.nurse, move.weekday );
-                updateShiftTabu( move.nurse2, move.weekday, a2 );
+                updateDayTabu( nurse, weekday );
+                updateShiftTabu( nurse2, weekday, a2 );
             }
         }
+    }
+    void updateSwapTabu( const Move &move )
+    {
+        updateSwapTabu( move.weekday, move.nurse, move.nurse2 );
     }
     void updateExchangeTabu( const Move &move )
     {
@@ -667,7 +675,7 @@ private:
         int weekday = move.weekday;
         int weekday2 = move.weekday2;
         for (; weekday <= weekday2; ++weekday) {
-            updateSwapTabu( move );
+            updateSwapTabu( weekday, move.nurse, move.nurse2 );
         }
     }
 #endif

@@ -105,7 +105,7 @@
 #define INRC2_BLOCK_SWAP_FIND_BEST INRC2_BLOCK_SWAP_CACHED
 #endif
 
-// comment to use double head version of swap chain 
+// uncomment to use double head version of swap chain 
 #ifndef INRC2_SWAP_CHAIN_DOUBLE_HEAD
 //#define INRC2_SWAP_CHAIN_DOUBLE_HEAD
 #endif
