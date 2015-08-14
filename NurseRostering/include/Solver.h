@@ -215,6 +215,13 @@ public:
     virtual bool updateOptima( const Output &localOptima );
     virtual History genHistory() const;
 
+    void checkDump( std::string assignString )
+    {
+        sln.rebuild( Output( 0, AssignTable( problem.scenario.nurseNum, Weekday::SIZE, assignString ) ) );
+        sln.evaluateObjValue( false );
+        ObjValue obj = checkObjValue( sln.getAssignTable() );
+    }
+
     IterCount DayTabuTenureBase() const { return dayTabuTenureBase; }
     IterCount DayTabuTenureAmp() const { return dayTabuTenureAmp; }
     IterCount ShiftTabuTenureBase() const { return shiftTabuTenureBase; }

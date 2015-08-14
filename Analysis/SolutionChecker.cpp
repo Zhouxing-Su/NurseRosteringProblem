@@ -29,7 +29,7 @@ NurseRostering::ObjValue rebuildSolution( const string &logFileName, const strin
     char buf[MaxLen::ALGORITHM_NAME];
     char c;
 
-    bool feasible;
+    int feasible;
     double checkObj;
     double obj;
     double accObj;

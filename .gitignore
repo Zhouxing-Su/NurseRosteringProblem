@@ -199,3 +199,8 @@ Validator-results.txt
 *.vsps
 RawLog
 OldSeq
+/Deploy/BTS_ACBR_RBNO_0
+/Deploy/BTS_ACBR_RBNO_1
+/Deploy/Instance
+/Deploy/simulator_src
+/Deploy/analyzer_src

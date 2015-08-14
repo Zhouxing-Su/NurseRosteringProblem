@@ -277,7 +277,6 @@ namespace INRC2
             nurse.contract = input.names.contractMap[contractName];
             scenario.contracts[nurse.contract].nurses.push_back( i );
             nurse.skills = vector<bool>( scenario.skillSize, false );
-            nurse.skills[NurseRostering::Scenario::Skill::ID_NONE] = true;
             for (int j = 0; j < nurse.skillNum; ++j) {
                 ifs >> skillName;
                 nurse.skills[input.names.skillMap[skillName]] = true;

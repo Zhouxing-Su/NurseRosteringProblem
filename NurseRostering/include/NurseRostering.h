@@ -94,7 +94,6 @@ public:
         class Skill
         {
         public:
-            static const SkillID ID_NONE;
             static const SkillID ID_BEGIN;
         };
 
@@ -181,7 +180,7 @@ public:
     {
     public:
         // the default constructor means there is no assignment
-        Assign( ShiftID sh = Scenario::Shift::ID_NONE, SkillID sk = Scenario::Skill::ID_NONE ) :shift( sh ), skill( sk ) {}
+        Assign( ShiftID sh = Scenario::Shift::ID_NONE, SkillID sk = Scenario::Skill::ID_BEGIN ) :shift( sh ), skill( sk ) {}
 
         static bool isWorking( ShiftID shift )
         {

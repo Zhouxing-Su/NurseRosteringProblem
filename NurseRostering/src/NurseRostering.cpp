@@ -16,8 +16,7 @@ const NurseRostering::ShiftID NurseRostering::Scenario::Shift::ID_NONE = 0;
 const std::string NurseRostering::Scenario::Shift::NAME_NONE( "None" );
 const NurseRostering::ShiftID NurseRostering::Scenario::Shift::ID_BEGIN = NurseRostering::Scenario::Shift::ID_NONE + 1;
 
-const NurseRostering::SkillID NurseRostering::Scenario::Skill::ID_NONE = 0;
-const NurseRostering::SkillID NurseRostering::Scenario::Skill::ID_BEGIN = NurseRostering::Scenario::Skill::ID_NONE + 1;
+const NurseRostering::SkillID NurseRostering::Scenario::Skill::ID_BEGIN = 0;
 
 
 

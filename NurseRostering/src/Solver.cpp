@@ -70,7 +70,8 @@ NurseRostering::ObjValue NurseRostering::Solver::checkFeasibility( const AssignT
     // check H4: Missing required skill
     for (NurseID nurse = 0; nurse < problem.scenario.nurseNum; ++nurse) {
         for (int weekday = Weekday::Mon; weekday <= Weekday::Sun; ++weekday) {
-            if (!problem.scenario.nurses[nurse].skills[assign[nurse][weekday].skill]) {
+            if (assign[nurse][weekday].isWorking() &&
+                !problem.scenario.nurses[nurse].skills[assign[nurse][weekday].skill]) {
                 return DefaultPenalty::FORBIDDEN_MOVE;
             }
         }
@@ -176,7 +177,8 @@ NurseRostering::ObjValue NurseRostering::Solver::checkObjValue( const AssignTabl
             int min = problem.scenario.contracts[problem.scenario.nurses[nurse].contract].minShiftNum;
             int max = problem.scenario.contracts[problem.scenario.nurses[nurse].contract].maxShiftNum;
             objValue += DefaultPenalty::TotalAssign * distanceToRange(
-                assignNum, min, max );
+                assignNum * problem.scenario.totalWeekNum, min * problem.history.currentWeek,
+                max * problem.history.currentWeek ) / problem.scenario.totalWeekNum;
 #else
             int min = problem.scenario.nurses[nurse].restMinShiftNum;
             int max = problem.scenario.nurses[nurse].restMaxShiftNum;
@@ -411,6 +413,8 @@ void NurseRostering::TabuSolver::init( const Config &cfg, const std::string &id 
 
     discoverNurseSkillRelation();
 
+    //checkDump( "1 0 1 0 2 1 0 1 1 1 1 1 2 0 3 1 3 0 0 0 3 0 3 1 3 1 3 1 2 0 2 1 0 1 0 0 0 1 1 0 1 0 2 1 3 1 3 1 0 1 0 1 0 1 1 1 1 1 1 1 1 1 0 1 2 1 2 1 2 1 " );
+
     switch (config.initAlgorithm) {
         case InitAlgorithm::Exact:
             exactInit();
@@ -530,16 +534,22 @@ void NurseRostering::TabuSolver::iterativeLocalSearch( Solution::ModeSeq modeSeq
     }
 
     double perturbStrength = INIT_PERTURB_STRENGTH;
+    double perturbStrengthDelta = PERTURB_STRENGTH_DELTA;
     while (!timer.isTimeOut() && (iterationCount < problem.maxIterCount)) {
-        ObjValue lastObj = optima.getObjValue();
-
         sln.localSearch( timer, ((randGen() % 2) ? fbmt : fbmtobb) );
         ++generationCount;
 
-        updateOptima( sln.getOptima() );
-        (optima.getObjValue() == lastObj)
-            ? (perturbStrength += PERTURB_STRENGTH_DELTA)
-            : (perturbStrength = INIT_PERTURB_STRENGTH);
+        if (updateOptima( sln.getOptima() )) {
+#ifdef INRC2_INC_PERTURB_STRENGTH_DELTA
+            perturbStrengthDelta = PERTURB_STRENGTH_DELTA;
+#endif
+            perturbStrength = INIT_PERTURB_STRENGTH;
+        } else if (perturbStrength < MAX_PERTURB_STRENGTH) {
+#ifdef INRC2_INC_PERTURB_STRENGTH_DELTA
+            perturbStrengthDelta += PERTURB_STRENGTH_DELTA;
+#endif
+            perturbStrength += perturbStrengthDelta;
+        }
         sln.perturb( perturbStrength );
     }
 
