@@ -1,6 +1,6 @@
 {
   "week" : 0,
-  "scenario" : "n021w4_2",
+  "scenario" : "n021w4",
   "nurseHistory" : [ {
     "nurse" : "HN_0",
     "numberOfAssignments" : 0,

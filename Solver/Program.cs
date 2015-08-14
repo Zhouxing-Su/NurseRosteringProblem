@@ -1,38 +1,48 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.Serialization.Json;
 using System.IO;
 
 
 namespace NurseRostering
 {
-    class Program
+    internal class Program
     {
-        static void Main(string[] args) {
-            string instName = Input_INRC2Json.Instance.n005w4.ToString();
+        public static void Main(string[] args) {
+            string instName = INRC2JsonData.Instance.n030w4.ToString();
             char weekdataIndex = '4';
             char initHistoryIndex = '1';
-            Input_INRC2Json i = new Input_INRC2Json();
+            INRC2JsonData input = new INRC2JsonData();
 
-            i.scenario = Input_INRC2Json.readFile<Input_INRC2Json.ScenarioInfo>(
-                Input_INRC2Json.getScenarioFilePath(instName));
-            i.weekdata = Input_INRC2Json.readFile<Input_INRC2Json.WeekdataInfo>(
-                Input_INRC2Json.getWeekdataFilePath(instName, weekdataIndex));
-            i.history = Input_INRC2Json.readFile<Input_INRC2Json.HistoryInfo>(
-                Input_INRC2Json.getInitHistoryFilePath(instName, initHistoryIndex));
+            input.scenario = Util.readJsonFile<INRC2JsonData.ScenarioInfo>(
+                INRC2JsonData.getScenarioFilePath(instName));
+            input.weekdata = Util.readJsonFile<INRC2JsonData.WeekdataInfo>(
+                INRC2JsonData.getWeekdataFilePath(instName, weekdataIndex));
+            input.history = Util.readJsonFile<INRC2JsonData.HistoryInfo>(
+                INRC2JsonData.getInitHistoryFilePath(instName, initHistoryIndex));
 
-            Problem d = new Problem();
-            d.loadScenario(i);
-            d.loadWeekdata(i);
-            d.loadHistory(i);
+            Problem problem = new Problem();
+            problem.importScenario(input);
+            problem.importWeekdata(input);
+            problem.importHistory(input);
 
-            //System.Console.WriteLine(Stopwatch.Frequency);
-            //Stopwatch sw = new Stopwatch();
-            //sw.Start();
+            //TabuSolver.Configure config = new TabuSolver.Configure(0);
+            string configPath = "config.json";
+            //File.WriteAllText(configPath, TabuSolver.Configure.getDefaultConfigString());
+            TabuSolver.Configure config = Util.readJsonFile<TabuSolver.Configure>(configPath);
+            config.instanceName = instName + "[W" + weekdataIndex + "][H0[" + initHistoryIndex + "]]";
 
-            //sw.Stop();
-            //Console.WriteLine(sw.ElapsedTicks);
+            string logPath = "log.csv";
+            string outputDir = "Output/";
+            string slnPath = outputDir + "sln0.json";
+            Directory.CreateDirectory(outputDir);
+            for (int i = 0; i < 1000; i++) {
+                TabuSolver solver = new TabuSolver(problem, config);
+                solver.solve();
+                solver.print();
+                solver.record(logPath);
+                Util.writeJsonFile(slnPath, problem.exportSolution(solver.Optima));
+            }
         }
     }
 }

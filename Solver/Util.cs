@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
+using System.IO;
+using System.Runtime.Serialization.Json;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 
 namespace NurseRostering
@@ -17,13 +16,45 @@ namespace NurseRostering
             void copyTo(T destination);
         }
 
+        public static int genRandSeed() {
+            return (Environment.TickCount + Environment.CurrentManagedThreadId);
+        }
+
+        public static void writeJsonFile<T>(string path, T obj) {
+            using (FileStream fs = File.Open(path,
+                FileMode.Create, FileAccess.Write, FileShare.Read)) {
+                serializeJsonStream<T>(fs, obj);
+            }
+        }
+
+        public static void serializeJsonStream<T>(Stream stream, T obj) {
+            DataContractJsonSerializer js = new DataContractJsonSerializer(typeof(T));
+            js.WriteObject(stream, obj);
+        }
+
+        public static T readJsonFile<T>(string path) {
+            using (FileStream fs = File.Open(path,
+                FileMode.Open, FileAccess.Read, FileShare.Read)) {
+                return deserializeJsonStream<T>(fs);
+            }
+        }
+
+        public static T deserializeJsonStream<T>(Stream stream) {
+            DataContractJsonSerializer js = new DataContractJsonSerializer(typeof(T));
+            return (T)js.ReadObject(stream);
+        }
+
         public static class Worker
         {
-            /// <summary> run method in synchronized way with a timeout. </summary>
+            /// <summary> run method in synchronized way with a non-negative timeout. </summary>
             /// <returns> true if the work is finished within timeout. </returns>
-            public static bool WorkUntilTimeout(
-                ThreadStart work,
-                int millisecondsTimeout = Timeout.Infinite) {
+            /// <remarks> 
+            /// Timeout.Infinite is not supported (you should call your method directly). <para />
+            /// use lambda expression to wrap the parameterized methods. 
+            /// </remarks>
+            public static bool WorkUntilTimeout(ThreadStart work,
+                int millisecondsTimeout) {
+                if (millisecondsTimeout < 0) { return false; }
                 Thread thread = new Thread(work);
                 thread.Start();
                 if (!thread.Join(millisecondsTimeout)) {
@@ -33,22 +64,12 @@ namespace NurseRostering
                 return true;
             }
 
-            public static bool WorkUntilTimeout(
-                ParameterizedThreadStart work, object workArg,
-                int millisecondsTimeout = Timeout.Infinite) {
-                Thread thread = new Thread(work);
-                thread.Start(workArg);
-                if (!thread.Join(millisecondsTimeout)) {
-                    thread.Abort();
+            public static bool WorkUntilTimeout(Action work, Action onAbort,
+                int millisecondsTimeout) {
+                if (millisecondsTimeout < 0) {
+                    onAbort();
                     return false;
                 }
-                return true;
-            }
-
-            public static bool WorkUntilTimeout(
-                Action work,
-                Action onAbort,
-                int millisecondsTimeout = Timeout.Infinite) {
                 Thread thread = new Thread(() => {
                     try {
                         work();
@@ -65,17 +86,23 @@ namespace NurseRostering
             }
 
             public static bool WorkUntilTimeout(
-                Action<object> work, object workArg,
-                Action onAbort,
-                int millisecondsTimeout = Timeout.Infinite) {
-                Thread thread = new Thread((object obj) => {
+                Action work, Action onAbort, Action onExit,
+                int millisecondsTimeout) {
+                if (millisecondsTimeout < 0) {
+                    onAbort();
+                    onExit();
+                    return false;
+                }
+                Thread thread = new Thread(() => {
                     try {
-                        work(obj);
+                        work();
                     } catch (ThreadAbortException) {
                         onAbort();
+                    } finally {
+                        onExit();
                     }
                 });
-                thread.Start(workArg);
+                thread.Start();
                 if (!thread.Join(millisecondsTimeout)) {
                     thread.Abort();
                     return false;
