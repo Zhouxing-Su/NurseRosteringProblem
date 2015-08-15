@@ -16,6 +16,13 @@ namespace NurseRostering
             void copyTo(T destination);
         }
 
+        public static class IntID
+        {
+            public static int generate() { return Interlocked.Increment(ref id); }
+
+            private static int id = 0;
+        }
+
         public static int genRandSeed() {
             return (Environment.TickCount + Environment.CurrentManagedThreadId);
         }
@@ -42,6 +49,16 @@ namespace NurseRostering
         public static T deserializeJsonStream<T>(Stream stream) {
             DataContractJsonSerializer js = new DataContractJsonSerializer(typeof(T));
             return (T)js.ReadObject(stream);
+        }
+
+        public static string toJsonString<T>(this T obj) {
+            using (MemoryStream ms = new MemoryStream()) {
+                serializeJsonStream(ms, obj);
+                ms.Position = 0;
+                using (StreamReader sr = new StreamReader(ms)) {
+                    return sr.ReadToEnd();
+                }
+            }
         }
 
         public static class Worker

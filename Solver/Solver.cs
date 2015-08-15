@@ -15,7 +15,7 @@
 //#define INRC2_DEBUG
 
 // comment to reduce console output
-#define INRC2_PERFORMANCE_TEST
+//#define INRC2_PERFORMANCE_TEST
 #endregion performance switch
 
 #region input switch
@@ -1068,73 +1068,29 @@ namespace NurseRostering
         #endregion Field
     }
 
-    /// <summary> a solver must have a specific config derived from it. </summary>
-    [DataContract]
-    public abstract class SolverConfigure
-    {
-        #region Constructor
-        /// <summary> create with default settings. </summary>
-        public SolverConfigure(int id) {
-            this.id = id;
-        }
-        #endregion Constructor
-
-        #region Method
-        #endregion Method
-
-        #region Property
-        /// <summary> information about solver parameters. </summary>
-        public abstract string ParamInfo { get; }
-        #endregion Property
-
-        #region Type
-        #endregion Type
-
-        #region Constant
-        #endregion Constant
-
-        #region Field
-        [DataMember]
-        public int id;
-
-        /// <summary> information including scenario, weekdata and history. </summary>
-        [DataMember]
-        public string instanceName;
-
-        // TODO[0]: update default configuration.
-        [DataMember]
-        public int randSeed = Util.genRandSeed();
-
-        [DataMember]
-        public double timeoutInSeconds = Durations.Min;
-        [DataMember]
-        public IterCount maxIterCount = IterCounts.Max;
-        #endregion Field
-    }
-
-    public abstract class Solver<TConfig> where TConfig : SolverConfigure
+    public abstract class Solver
     {
         #region Constructor
         /// <summary> 
         /// if you don't want outside modification affect the solver, 
-        /// you should pass a copy of problem and config into it.
+        /// you should pass a copy of problem and environment into it.
         /// </summary>
-        public Solver(Problem problem, TConfig config) {
+        public Solver(Problem problem, Environment environment) {
             this.problem = problem;
-            this.config = config;
-            this.rand = new Random(config.randSeed);
+            this.environment = environment;
+            this.rand = new Random(environment.randSeed);
             this.clock = new Stopwatch();
             this.iterationCount = 0;
             this.generationCount = 0;
             this.optima = new Output(problem);
-            this.endTimeInTicks = (TimePoint)((config.timeoutInSeconds - SaveSolutionTimeInSeconds) * Durations.Frequency);
-            this.endTimeInMilliseconds = (TimePoint)((config.timeoutInSeconds - SaveSolutionTimeInSeconds) * Durations.MillisecondsInSecond);
+            this.endTimeInTicks = (TimePoint)((environment.timeoutInSeconds - SaveSolutionTimeInSeconds) * Durations.Frequency);
+            this.endTimeInMilliseconds = (TimePoint)((environment.timeoutInSeconds - SaveSolutionTimeInSeconds) * Durations.MillisecondsInSecond);
         }
         #endregion Constructor
 
         #region Method
         /// <summary> search for output. </summary>        
-        /// <remarks> return before timeout in config is reached. </remarks>
+        /// <remarks> return before timeout in environment is reached. </remarks>
         public abstract void solve();
 
         #region checkers
@@ -1422,12 +1378,12 @@ namespace NurseRostering
             }
 
             ObjValue checkObj = checkObjValue();
-            StringBuilder log = new StringBuilder(Environment.NewLine);
+            StringBuilder log = new StringBuilder(System.Environment.NewLine);
             log.Append(DateTime.Now.ToString(Durations.TimeFormat_Readable)).Append(",")
-                .Append(config.id).Append(",")
-                .Append(config.instanceName).Append(",")
-                .Append(config.ParamInfo).Append(",")
-                .Append(config.randSeed).Append(",")
+                .Append(environment.id).Append(",")
+                .Append(environment.instanceInfo).Append(",")
+                .Append(ConfigInfo).Append(",")
+                .Append(environment.randSeed).Append(",")
                 .Append(generationCount).Append(",")
                 .Append(iterationCount).Append(",")
                 .Append(Optima.FindTime / Durations.Frequency).Append("s,")
@@ -1445,7 +1401,7 @@ namespace NurseRostering
         public void errorLog(string msg) {
 #if INRC2_LOG
             Console.Error.Write(DateTime.Now.ToString(Durations.TimeFormat_Readable));
-            Console.Error.Write("," + config.id + ",");
+            Console.Error.Write("," + environment.id + ",");
             Console.Error.WriteLine(msg);
 #endif
         }
@@ -1463,6 +1419,8 @@ namespace NurseRostering
             protected set { value.copyTo(optima); }
         }
 
+        public virtual string ConfigInfo { get { return "NULL"; } }
+
         public bool IsTimeout { get { return (clock.ElapsedTicks > endTimeInTicks); } }
         public Duration TimeLeft { get { return (Duration)(endTimeInMilliseconds - clock.ElapsedMilliseconds); } }
 
@@ -1475,6 +1433,69 @@ namespace NurseRostering
         #endregion Property
 
         #region Type
+        /// <summary> 
+        /// specify identifier, input/output path, termination conditions 
+        /// and random seed for a solver. 
+        /// </summary>
+        [DataContract]
+        public class Environment
+        {
+            #region Constructor
+            public Environment() { setDefault(); }
+
+            [OnDeserializing]
+            private void OnDeserializing(StreamingContext sc) { setDefault(); }
+            #endregion Constructor
+
+            #region Method
+            public void setDefault() {
+                id = Util.IntID.generate();
+                randSeed = Util.genRandSeed();
+                timeoutInSeconds = Durations.Min;
+                maxIterCount = IterCounts.Max;
+            }
+            #endregion Method
+
+            #region Property
+            #endregion Property
+
+            #region Type
+            #endregion Type
+
+            #region Constant
+            #endregion Constant
+
+            #region Field
+            [DataMember(Order = 1)]
+            public string scenarioPath;
+            [DataMember(Order = 2)]
+            public string weekdataPath;
+            [DataMember(Order = 3)]
+            public string historyPath;
+            [DataMember(Order = 4)]
+            public string solutionPath;
+            [DataMember(Order = 5)]
+            public string customInputPath;
+            [DataMember(Order = 6)]
+            public string customOutputPath;
+
+            [DataMember(Order = 7)]
+            public int randSeed;
+            [DataMember(Order = 8)]
+            public double timeoutInSeconds;
+            [DataMember(Order = 9)]
+            public IterCount maxIterCount;
+
+            /// <summary> brief information including scenario, weekdata and history. </summary>
+            /// <remarks> just for logging which has no in. </remarks>
+            [DataMember(Order = 10)]
+            public string instanceInfo;
+
+            /// <summary> identify output generated by different solvers running concurrently. </summary>
+            public int id;
+            #endregion Field
+        }
+
         protected struct PenaltyMode
         {
             #region hard constraints
@@ -1616,7 +1637,7 @@ namespace NurseRostering
 
         #region Field
         public readonly Problem problem;
-        protected TConfig config;
+        protected Environment environment;
 
         protected readonly Random rand;
         protected readonly Stopwatch clock;
@@ -1637,17 +1658,19 @@ namespace NurseRostering
         #endregion Field
     }
 
-    public class TabuSolver : Solver<TabuSolver.Configure>
+    public class TabuSolver : Solver
     {
         #region Constructor
-        public TabuSolver(Problem problem, Configure config)
-            : base(problem, config) {
+        public TabuSolver(Problem problem, Environment environment, Configure config)
+            : base(problem, environment) {
+            this.config = config;
+
             // TUNEUP[3]: make them static method with $this as first parameter
             //          to avoid maintaining the table for every solution object.
-            generateInitSolution = new GenerateInitSolution[] {
+            this.generateInitSolution = new GenerateInitSolution[] {
                 randomInit, greedyInit, exactInit
             };
-            searchForOptima = new SearchForOptima[]{
+            this.searchForOptima = new SearchForOptima[]{
                 randomWalk, iterativeLocalSearch, 
                 () => tabuSearch(sln.tabuSearch_LoopSelect),
                 () => tabuSearch(sln.tabuSearch_MultiSelect),
@@ -1693,7 +1716,7 @@ namespace NurseRostering
 
         #region init module
         /// <summary> set parameters and methods, generate initial solution. </summary>
-        /// <remarks> must return before timeout in config is reached. </remarks>
+        /// <remarks> must return before timeout in environment is reached. </remarks>
         protected void init() {
             clock.Restart();
 
@@ -1706,7 +1729,7 @@ namespace NurseRostering
 
             sln = new Solution(this);
 
-            //checkAssignString("1 0 1 0 2 1 0 0 1 1 1 1 2 0 3 1 3 0 0 0 3 0 3 1 3 1 3 1 2 0 2 1 0 0 0 0 0 1 1 0 1 0 2 1 3 1 3 1 0 1 0 1 0 1 1 1 1 1 1 1 1 1 0 1 2 1 2 1 2 1 ");
+            //checkAssignString("");
 
             generateInitSolution[(int)config.initAlgorithm]();
             Optima = sln;
@@ -1857,7 +1880,7 @@ namespace NurseRostering
         private void biasTabuSearch() {
             Solution.FindBestMove[] fbmt = sln.generateFindBestMoveTable(config.modeSequence);
 
-            while ((!IsTimeout) && (sln.IterCount < config.maxIterCount)) {
+            while ((!IsTimeout) && (sln.IterCount < environment.maxIterCount)) {
                 sln.tabuSearch_SingleSelect(fbmt, MaxNoImproveForAllNeighborhood, (int)TimeLeft);
 
                 updateOptima(sln.Optima);
@@ -1882,7 +1905,7 @@ namespace NurseRostering
 
             double perturbStrength = config.initPerturbStrength;
             double perturbStrengthDelta = config.perturbStrengthDelta;
-            while ((!IsTimeout) && (sln.IterCount < config.maxIterCount)) {
+            while ((!IsTimeout) && (sln.IterCount < environment.maxIterCount)) {
                 search(fbmt, MaxNoImproveForAllNeighborhood, (int)TimeLeft);
                 generationCount++;
 
@@ -1916,7 +1939,7 @@ namespace NurseRostering
 
             double perturbStrength = config.initPerturbStrength;
             double perturbStrengthDelta = config.perturbStrengthDelta;
-            while ((!IsTimeout) && (sln.IterCount < config.maxIterCount)) {
+            while ((!IsTimeout) && (sln.IterCount < environment.maxIterCount)) {
                 ObjValue lastObj = Optima.ObjValue;
 
                 sln.localSearch(fbmt, (int)TimeLeft);
@@ -1941,7 +1964,7 @@ namespace NurseRostering
 
         /// <summary> random walk until timeout. </summary>
         private void randomWalk() {
-            sln.randomWalk(config.maxIterCount, (int)TimeLeft);
+            sln.randomWalk(environment.maxIterCount, (int)TimeLeft);
             updateOptima(sln.Optima);
 
             iterationCount += sln.IterCount;
@@ -1954,11 +1977,18 @@ namespace NurseRostering
             sss.rebuild(new Output(S.nurses.Length, Weekdays.Length_Full, 0, 0, 0, assignString));
 
             sss.evaluateObjValue();
-            ObjValue obj = checkObjValue(sss);
+            checkFeasibility(sss);
+            checkObjValue(sss);
         }
         #endregion Method
 
         #region Property
+        //public override string ConfigInfo {
+        //    get {
+        //        // UNDONE[0]: config info for log.
+        //        return "NULL";
+        //    }
+        //}
         #endregion Property
 
         #region Type
@@ -2724,7 +2754,7 @@ namespace NurseRostering
                 int totalWeight = initWeight * findBestMove_Repair.Length;
 
                 Move bestMove = new Move();
-                for (; (ObjValue > 0) && (iterCount < solver.config.maxIterCount); iterCount++) {
+                for (; (ObjValue > 0) && (iterCount < solver.environment.maxIterCount); iterCount++) {
                     int modeSelect = 0;
                     for (int w = solver.rand.Next(totalWeight); (w -= weights[modeSelect]) >= 0; modeSelect++) { }
 
@@ -2796,7 +2826,7 @@ namespace NurseRostering
 
                 IterCount noImprove = maxNoImproveCount;
                 Move bestMove = new Move();
-                for (; (noImprove > 0) && (iterCount < solver.config.maxIterCount); iterCount++) {
+                for (; (noImprove > 0) && (iterCount < solver.environment.maxIterCount); iterCount++) {
                     int modeSelect = 0;
                     for (int w = solver.rand.Next(totalWeight); (w -= weights[modeSelect]) >= 0; modeSelect++) { }
 
@@ -2884,7 +2914,7 @@ namespace NurseRostering
 
                 IterCount noImprove = maxNoImproveCount;
                 Move bestMove = new Move();
-                for (; (noImprove > 0) && (iterCount < solver.config.maxIterCount); iterCount++) {
+                for (; (noImprove > 0) && (iterCount < solver.environment.maxIterCount); iterCount++) {
                     int modeSelect = startMode;
                     MoveMode bestMoveMode = MoveMode.Length;
                     bool isBlockSwapSelected = false;
@@ -2966,7 +2996,7 @@ namespace NurseRostering
 
                     IterCount noImprove_Single = maxNoImproveCount;
                     Move bestMove = new Move();
-                    for (; (noImprove_Single > 0) && (iterCount < solver.config.maxIterCount); iterCount++) {
+                    for (; (noImprove_Single > 0) && (iterCount < solver.environment.maxIterCount); iterCount++) {
                         bestMove.delta = DefaultPenalty.ForbiddenMove;
                         findBestMove_Search[modeSelect](ref bestMove);
 
@@ -3018,7 +3048,7 @@ namespace NurseRostering
                 int failCount = findBestMove_Search.Length;
                 int modeSelect = 0;
                 Move bestMove = new Move();
-                while ((failCount > 0) && (iterCount != solver.config.maxIterCount)) {
+                while ((failCount > 0) && (iterCount != solver.environment.maxIterCount)) {
                     bestMove.delta = DefaultPenalty.ForbiddenMove;
                     findBestMove_Search[modeSelect](ref bestMove);
                     if (bestMove.delta < 0) {
@@ -3056,7 +3086,7 @@ namespace NurseRostering
 
                 stepNum += iterCount;
                 Move move = new Move();
-                while ((iterCount < stepNum) && (iterCount < solver.config.maxIterCount)) {
+                while ((iterCount < stepNum) && (iterCount < solver.environment.maxIterCount)) {
                     move.mode = (MoveMode)solver.rand.Next((int)MoveMode.BasicMovesLength);
                     move.weekday = Weekdays.Mon + solver.rand.Next(Weekdays.Num);
                     move.weekday2 = Weekdays.Mon + solver.rand.Next(Weekdays.Num);
@@ -5128,57 +5158,67 @@ RecordAndRecover:
             #endregion Field
         }
 
+        /// <summary> specify parameters of the solving algorithm. </summary>
         [DataContract]
-        public class Configure : SolverConfigure
+        public class Configure
         {
             #region Constructor
-            public Configure(int id) : base(id) { }
+            public Configure() { setDefault(); }
+
+            [OnDeserializing]
+            private void OnDeserializing(StreamingContext sc) { setDefault(); }
             #endregion Constructor
 
             #region Method
-            public static string getDefaultConfigString() {
-                using (MemoryStream ms = new MemoryStream()) {
-                    Util.serializeJsonStream(ms, new Configure(0));
-                    ms.Position = 0;
-                    using (StreamReader sr = new StreamReader(ms)) {
-                        return sr.ReadToEnd();
-                    }
-                }
+            public void setDefault() {
+                // TODO[0]: update default configuration to output.
+                initAlgorithm = InitAlgorithm.Random;
+                solveAlgorithm = SolveAlgorithm.BiasTabuSearch;
+
+                maxNoImproveFactor = 1;
+                dayTabuFactors = new TabuTenureFactor { tableSize = 0, nurseNum = 0, dayNum = 1, shiftNum = 0 };
+                shiftTabuFactors = new TabuTenureFactor { tableSize = 0, nurseNum = 0, dayNum = 1, shiftNum = 0 };
+
+                initPerturbStrength = 0.2;
+                perturbStrengthDelta = 0.01;
+                maxPerturbStrength = 0.6;
+                perturbOriginSelectRatio = 4;
+                biasTabuSearchOriginSelectRatio = 2;
+
+                minTabuBase = 6;
+                inverseTabuAmpRatio = 4;
+                inverseTotalBiasRatio = 4;
+                inversePenaltyBiasRatio = 5;
+
+                modeSequence = new MoveMode[] { MoveMode.Add, MoveMode.Change, MoveMode.BlockSwap, MoveMode.Remove };
             }
             #endregion Method
 
             #region Property
-            public override string ParamInfo {
-                get {
-                    // UNDONE[2]: config name for log.
-                    return " ";
-                }
-            }
             #endregion Property
 
             #region Type
+            /// <summary> default values are 0 which is the same as the language specification. </summary>
             [DataContract]
-            public class TabuTenureFactor
+            public struct TabuTenureFactor
             {
-                [DataMember]
-                public double tableSize = 0;
-                [DataMember]
-                public double nurseNum = 0;
-                [DataMember]
-                public double dayNum = 1;
-                [DataMember]
-                public double shiftNum = 0;
+                [DataMember(Order = 1)]
+                public double tableSize;
+                [DataMember(Order = 2)]
+                public double nurseNum;
+                [DataMember(Order = 3)]
+                public double dayNum;
+                [DataMember(Order = 4)]
+                public double shiftNum;
             };
             #endregion Type
 
             #region Constant
-            // TODO[9]: new algorithm should register to it
             public enum InitAlgorithm
             {
                 Random, Greedy, Exact, Length
             };
 
-            // TODO[9]: new algorithm should register to it
             public enum SolveAlgorithm
             {
                 RandomWalk, IterativeLocalSearch,
@@ -5188,49 +5228,48 @@ RecordAndRecover:
             #endregion Constant
 
             #region Field
-            // TODO[0]: update default configuration to output.
-            [DataMember]
-            public InitAlgorithm initAlgorithm = InitAlgorithm.Random;
-            [DataMember]
-            public SolveAlgorithm solveAlgorithm = SolveAlgorithm.BiasTabuSearch;
+            [DataMember(Order = 1)]
+            public InitAlgorithm initAlgorithm;
+            [DataMember(Order = 2)]
+            public SolveAlgorithm solveAlgorithm;
 
-            [DataMember]
+            [DataMember(Order = 3)]
             public double maxNoImproveFactor = 1;
-            [DataMember]
-            public TabuTenureFactor dayTabuFactors = new TabuTenureFactor();
-            [DataMember]
-            public TabuTenureFactor shiftTabuFactors = new TabuTenureFactor();
+            [DataMember(Order = 4)]
+            public TabuTenureFactor dayTabuFactors;
+            [DataMember(Order = 5)]
+            public TabuTenureFactor shiftTabuFactors;
 
-            [DataMember]
-            public double initPerturbStrength = 0.2;
-            [DataMember]
-            public double perturbStrengthDelta = 0.01;
-            [DataMember]
-            public double maxPerturbStrength = 0.6;
+            [DataMember(Order = 6)]
+            public double initPerturbStrength;
+            [DataMember(Order = 7)]
+            public double perturbStrengthDelta;
+            [DataMember(Order = 8)]
+            public double maxPerturbStrength;
 
             /// <summary> inverse possibility of starting perturb from output in last search. </summary> 
-            [DataMember]
-            public int perturbOriginSelectRatio = 4;
+            [DataMember(Order = 9)]
+            public int perturbOriginSelectRatio;
             /// <summary> inverse possibility of starting bias tabu search from output in last search. </summary> 
-            [DataMember]
-            public int biasTabuSearchOriginSelectRatio = 2;
+            [DataMember(Order = 10)]
+            public int biasTabuSearchOriginSelectRatio;
 
             /// <summary> minimal tabu tenure base. </summary>
-            [DataMember]
-            public int minTabuBase = 6;
+            [DataMember(Order = 11)]
+            public int minTabuBase;
             /// <summary> equals to (tabuTenureBase / tabuTenureAmp). </summary>
-            [DataMember]
-            public int inverseTabuAmpRatio = 4;
+            [DataMember(Order = 12)]
+            public int inverseTabuAmpRatio;
 
             /// <summary> ratio of biased nurse number in total nurse number. </summary>
-            [DataMember]
-            public int inverseTotalBiasRatio = 4;
+            [DataMember(Order = 13)]
+            public int inverseTotalBiasRatio;
             /// <summary> ratio of biased nurse selected by penalty of each nurse. </summary>
-            [DataMember]
-            public int inversePenaltyBiasRatio = 5;
+            [DataMember(Order = 14)]
+            public int inversePenaltyBiasRatio;
 
-            [DataMember]
-            public MoveMode[] modeSequence = new MoveMode[] { MoveMode.Add, MoveMode.Change, MoveMode.BlockSwap, MoveMode.Remove };
+            [DataMember(Order = 15)]
+            public MoveMode[] modeSequence;
             #endregion Field
         }
 
@@ -5263,6 +5302,8 @@ RecordAndRecover:
         #endregion Constant
 
         #region Field
+        protected Configure config;
+
         private IterCount DayTabuTenureBase { get; set; }
         private IterCount DayTabuTenureAmp { get; set; }
         private IterCount ShiftTabuTenureBase { get; set; }

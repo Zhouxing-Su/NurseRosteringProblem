@@ -7,7 +7,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Solver", "Solver\Solver.csp
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Deploy", "Deploy", "{8605BE1B-FA05-4A5F-8321-805710DB62EF}"
 	ProjectSection(SolutionItems) = preProject
-		Deploy\config.json = Deploy\config.json
+		Deploy\configure.json = Deploy\configure.json
+		Deploy\environment.json = Deploy\environment.json
+		Deploy\example_configure.json = Deploy\example_configure.json
+		Deploy\example_environment.json = Deploy\example_environment.json
 		Deploy\log.csv = Deploy\log.csv
 	EndProjectSection
 EndProject

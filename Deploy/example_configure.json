@@ -1,0 +1,32 @@
+{
+    "initAlgorithm": 0,
+    "solveAlgorithm": 5,
+    "maxNoImproveFactor": 1,
+    "dayTabuFactors": {
+        "tableSize": 0,
+        "nurseNum": 0,
+        "dayNum": 1,
+        "shiftNum": 0
+    },
+    "shiftTabuFactors": {
+        "tableSize": 0,
+        "nurseNum": 0,
+        "dayNum": 1,
+        "shiftNum": 0
+    },
+    "initPerturbStrength": 0.2,
+    "perturbStrengthDelta": 0.01,
+    "maxPerturbStrength": 0.6,
+    "perturbOriginSelectRatio": 4,
+    "biasTabuSearchOriginSelectRatio": 2,
+    "minTabuBase": 6,
+    "inverseTabuAmpRatio": 4,
+    "inverseTotalBiasRatio": 4,
+    "inversePenaltyBiasRatio": 5,
+    "modeSequence": [
+        0,
+        2,
+        5,
+        1
+    ]
+}
