@@ -406,6 +406,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "n120w8", "n120w8", "{9F3420
 		Deploy\Instance\n120w8\WD-n120w8-9.json = Deploy\Instance\n120w8\WD-n120w8-9.json
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Simulator", "Simulator\Simulator.csproj", "{4CD1D89B-A796-4E1A-B2AE-FBDC587765CC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -416,6 +418,10 @@ Global
 		{3A16F665-ECE2-4E3C-A7EB-2FF694D8AB71}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3A16F665-ECE2-4E3C-A7EB-2FF694D8AB71}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3A16F665-ECE2-4E3C-A7EB-2FF694D8AB71}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4CD1D89B-A796-4E1A-B2AE-FBDC587765CC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4CD1D89B-A796-4E1A-B2AE-FBDC587765CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4CD1D89B-A796-4E1A-B2AE-FBDC587765CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4CD1D89B-A796-4E1A-B2AE-FBDC587765CC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

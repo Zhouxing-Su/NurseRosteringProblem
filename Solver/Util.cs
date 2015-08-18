@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization.Json;
@@ -14,6 +15,71 @@ namespace NurseRostering
         public interface ICopyable<T>
         {
             void copyTo(T destination);
+        }
+
+        /// <summary>
+        /// it can handles 3 types of arguments.                               <para />
+        /// the first one is plain arguments, which come by themselves.        <para />
+        /// the second one is map arguments, which come as key value pairs.
+        ///     (the keys are predefined)                                      <para />
+        /// the third one is switch arguments, which come by themselves.
+        ///     (the values are predefined)
+        /// </summary>
+        public class ArgsProcessor
+        {
+            #region Constructor
+            #endregion Constructor
+
+            #region Method
+            public void process(string[] args, string[] options, string[] switches) {
+                foreach (string item in options) { mapArgs.Add(item, null); }
+                HashSet<string> switchSet = new HashSet<string>(switches);
+
+                for (int i = 0; i < args.Length; i++) {
+                    if (mapArgs.ContainsKey(args[i])) {
+                        mapArgs[args[i]] = args[i + 1];
+                        i++;
+                    } else if (switchSet.Contains(args[i])) {
+                        switchArgs.Add(args[i]);
+                    } else {
+                        plainArgs.Add(args[i]);
+                    }
+                }
+            }
+
+            /// <summary> get a plain argument by order of appeared plain args. </summary>
+            public string getPlainArg(int argIndex) {
+                return plainArgs[argIndex];
+            }
+
+            /// <summary> get a map argument by key. </summary>
+            public string getMappedArg(string optionName) {
+                return mapArgs[optionName];
+            }
+
+            /// <summary> if the switch is specified, return true. </summary>
+            public bool getSwitchArg(string switchName) {
+                return switchArgs.Contains(switchName);
+            }
+            #endregion Method
+
+            #region Property
+            #endregion Property
+
+            #region Type
+            #endregion Type
+
+            #region Constant
+            #endregion Constant
+
+            #region Field
+            /// <summary> if the arg does not exist, the value will be null. </summary>
+            private Dictionary<string, string> mapArgs = new Dictionary<string, string>();
+            /// <summary> stores arguments by order of appeared plain args. </summary>
+            private List<string> plainArgs = new List<string>();
+            /// <summary> if there is a certain switch, the related item exists in switchArgs. </summary>
+            private HashSet<string> switchArgs = new HashSet<string>();
+            #endregion Field
         }
 
         public static class IntID

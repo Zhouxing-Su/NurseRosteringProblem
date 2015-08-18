@@ -106,7 +106,7 @@ namespace NurseRostering
     public static class Durations
     {
         /// <summary> minimum timeout to go through all core function of the solver. </summary>
-        public const Duration Min = 10;
+        public const Duration Min = 5;
         public const Duration Max = (1 << 30);
 
         /// <summary> time in a second. </summary>
@@ -239,249 +239,7 @@ namespace NurseRostering
     }
     #endregion constants
 
-    #region input
-    /// <summary> original data from instance files. </summary>
-    [DataContract]
-    public class INRC2JsonData
-    {
-        #region Constructor
-        #endregion Constructor
-
-        #region Method
-        public static string getScenarioFilePath(string instanceName) {
-            return InstanceDir + instanceName + "/Sc-" + instanceName + FileExtension;
-        }
-
-        public static string getWeekdataFilePath(string instanceName, char index) {
-            return InstanceDir + instanceName + "/WD-" + instanceName + "-" + index + FileExtension;
-        }
-
-        public static string getInitHistoryFilePath(string instanceName, char index) {
-            return InstanceDir + instanceName + "/H0-" + instanceName + "-" + index + FileExtension;
-        }
-
-        public static string getHistoryFilePath(string outputDir, char index) {
-            return outputDir + "history-week-" + index + FileExtension;
-        }
-        #endregion Method
-
-        #region Property
-        #endregion Property
-
-        #region Type
-        [DataContract]
-        public class ScenarioInfo
-        {
-            [DataContract]
-            public class ShiftType
-            {
-                [DataMember]
-                public string id;
-                [DataMember]
-                public int minimumNumberOfConsecutiveAssignments;
-                [DataMember]
-                public int maximumNumberOfConsecutiveAssignments;
-            }
-
-            [DataContract]
-            public class ForbiddenShiftTypeSuccession
-            {
-                [DataMember]
-                public string precedingShiftType;
-                [DataMember]
-                public string[] succeedingShiftTypes;
-            }
-
-            [DataContract]
-            public class Contract
-            {
-                [DataMember]
-                public string id;
-                [DataMember]
-                public int minimumNumberOfAssignments;
-                [DataMember]
-                public int maximumNumberOfAssignments;
-                [DataMember]
-                public int minimumNumberOfConsecutiveWorkingDays;
-                [DataMember]
-                public int maximumNumberOfConsecutiveWorkingDays;
-                [DataMember]
-                public int minimumNumberOfConsecutiveDaysOff;
-                [DataMember]
-                public int maximumNumberOfConsecutiveDaysOff;
-                [DataMember]
-                public int maximumNumberOfWorkingWeekends;
-                [DataMember]
-                public int completeWeekends;
-            };
-
-            [DataContract]
-            public class Nurse
-            {
-                [DataMember]
-                public string id;
-                [DataMember]
-                public string contract;
-                [DataMember]
-                public string[] skills;
-            };
-
-
-            [DataMember]
-            public string id;
-            [DataMember]
-            public int numberOfWeeks;
-            [DataMember]
-            public string[] skills;
-            [DataMember]
-            public ShiftType[] shiftTypes;
-            [DataMember]
-            public ForbiddenShiftTypeSuccession[] forbiddenShiftTypeSuccessions;
-            [DataMember]
-            public Contract[] contracts;
-            [DataMember]
-            public Nurse[] nurses;
-        }
-
-        [DataContract]
-        public class WeekdataInfo
-        {
-            [DataContract]
-            public class Requirement
-            {
-                [DataContract]
-                public class DailyRequirement
-                {
-                    [DataMember]
-                    public int minimum;
-                    [DataMember]
-                    public int optimal;
-                }
-
-
-                [DataMember]
-                public string shiftType;
-                [DataMember]
-                public string skill;
-                [DataMember]
-                public DailyRequirement requirementOnMonday;
-                [DataMember]
-                public DailyRequirement requirementOnTuesday;
-                [DataMember]
-                public DailyRequirement requirementOnWednesday;
-                [DataMember]
-                public DailyRequirement requirementOnThursday;
-                [DataMember]
-                public DailyRequirement requirementOnFriday;
-                [DataMember]
-                public DailyRequirement requirementOnSaturday;
-                [DataMember]
-                public DailyRequirement requirementOnSunday;
-            }
-
-            [DataContract]
-            public class ShiftOffRequest
-            {
-                [DataMember]
-                public string nurse;
-                [DataMember]
-                public string shiftType;
-                [DataMember]
-                public string day;
-            }
-
-
-            [DataMember]
-            public string scenario;
-            [DataMember]
-            public Requirement[] requirements;
-            [DataMember]
-            public ShiftOffRequest[] shiftOffRequests;
-        }
-
-        [DataContract]
-        public class HistoryInfo
-        {
-            [DataContract]
-            public class NurseHistoryInfo
-            {
-                [DataMember]
-                public string nurse;
-                [DataMember]
-                public int numberOfAssignments;
-                [DataMember]
-                public int numberOfWorkingWeekends;
-                [DataMember]
-                public string lastAssignedShiftType;
-                [DataMember]
-                public int numberOfConsecutiveAssignments;
-                [DataMember]
-                public int numberOfConsecutiveWorkingDays;
-                [DataMember]
-                public int numberOfConsecutiveDaysOff;
-            }
-
-
-            [DataMember]
-            public int week;
-            [DataMember]
-            public string scenario;
-            [DataMember]
-            public NurseHistoryInfo[] nurseHistory;
-        }
-
-        [DataContract]
-        public class SolutionInfo
-        {
-            [DataContract]
-            public class Assignment
-            {
-                [DataMember]
-                public string nurse;
-                [DataMember]
-                public string day;
-                [DataMember]
-                public string shiftType;
-                [DataMember]
-                public string skill;
-            }
-
-            [DataMember]
-            public string scenario;
-            [DataMember]
-            public int week;
-            [DataMember]
-            public List<Assignment> assignments = new List<Assignment>();
-        }
-        #endregion Type
-
-        #region Constant
-        public enum Instance
-        {
-            n005w4, n012w8, n021w4,
-            n030w4, n030w8,
-            n040w4, n040w8,
-            n050w4, n050w8,
-            n060w4, n060w8,
-            n080w4, n080w8,
-            n100w4, n100w8,
-            n120w4, n120w8
-        }
-
-        public const string FileExtension = @".json";
-        public const string InstanceDir = @"Instance/";
-        #endregion Constant
-
-        #region Field
-        [DataMember]
-        public ScenarioInfo scenario;
-        [DataMember]
-        public WeekdataInfo weekdata;
-        [DataMember]
-        public HistoryInfo history;
-        #endregion Field
-    }
-
+    #region input and output
     /// <summary> formatted structural input data. </summary>
     [DataContract]
     public class Problem
@@ -491,7 +249,7 @@ namespace NurseRostering
 
         #region Method
         /// <summary> scenario must be loaded first. </summary>
-        public void importScenario(INRC2JsonData input) {
+        public void importScenario(INRC2.JsonData input) {
             int i;
             int length;
 
@@ -531,7 +289,7 @@ namespace NurseRostering
                 scenario.shifts[sh].legalNextShifts = Util.CreateArray(length, true);
             }
             for (i = 0; i < input.scenario.forbiddenShiftTypeSuccessions.Length; i++) {
-                INRC2JsonData.ScenarioInfo.ForbiddenShiftTypeSuccession succession = input.scenario.forbiddenShiftTypeSuccessions[i];
+                INRC2.JsonData.ScenarioInfo.ForbiddenShiftTypeSuccession succession = input.scenario.forbiddenShiftTypeSuccessions[i];
                 ShiftID priorShift = names.shiftMap[succession.precedingShiftType];
                 bool[] legalNextShift = scenario.shifts[priorShift].legalNextShifts;
                 for (int j = 0; j < succession.succeedingShiftTypes.Length; j++) {
@@ -549,7 +307,7 @@ namespace NurseRostering
                 string name = input.scenario.contracts[i].id;
                 names.contractNames[c] = name;
                 names.contractMap[name] = c;
-                INRC2JsonData.ScenarioInfo.Contract inContract = input.scenario.contracts[i];
+                INRC2.JsonData.ScenarioInfo.Contract inContract = input.scenario.contracts[i];
                 scenario.contracts[c].minShiftNum = inContract.minimumNumberOfAssignments;
                 scenario.contracts[c].maxShiftNum = inContract.maximumNumberOfAssignments;
                 scenario.contracts[c].maxWorkingWeekendNum = inContract.maximumNumberOfWorkingWeekends;
@@ -571,7 +329,7 @@ namespace NurseRostering
                 string name = input.scenario.nurses[i].id;
                 names.nurseNames[n] = name;
                 names.nurseMap[name] = n;
-                INRC2JsonData.ScenarioInfo.Nurse inNurse = input.scenario.nurses[i];
+                INRC2.JsonData.ScenarioInfo.Nurse inNurse = input.scenario.nurses[i];
                 scenario.nurses[n].contract = names.contractMap[inNurse.contract];
                 scenario.contracts[scenario.nurses[n].contract].nurses.Add(n);
                 scenario.nurses[n].skillNum = inNurse.skills.Length;
@@ -583,10 +341,10 @@ namespace NurseRostering
         }
 
         /// <summary> weekdata must be loaded after scenario. </summary>
-        public void importWeekdata(INRC2JsonData input) {
+        public void importWeekdata(INRC2.JsonData input) {
             weekdata.minNurseNums = new int[Weekdays.Length, scenario.shifts.Length, scenario.SkillsLength];
             weekdata.optNurseNums = new int[Weekdays.Length, scenario.shifts.Length, scenario.SkillsLength];
-            foreach (INRC2JsonData.WeekdataInfo.Requirement require in input.weekdata.requirements) {
+            foreach (INRC2.JsonData.WeekdataInfo.Requirement require in input.weekdata.requirements) {
                 ShiftID shift = names.shiftMap[require.shiftType];
                 SkillID skill = names.skillMap[require.skill];
                 weekdata.minNurseNums[Weekdays.Mon, shift, skill] = require.requirementOnMonday.minimum;
@@ -607,7 +365,7 @@ namespace NurseRostering
 
             // default value is false which means no shift off request
             weekdata.shiftOffs = new bool[scenario.nurses.Length, Weekdays.Length, scenario.shifts.Length];
-            foreach (INRC2JsonData.WeekdataInfo.ShiftOffRequest request in input.weekdata.shiftOffRequests) {
+            foreach (INRC2.JsonData.WeekdataInfo.ShiftOffRequest request in input.weekdata.shiftOffRequests) {
                 NurseID nurse = names.nurseMap[request.nurse];
                 Weekday weekday = Weekdays.FullNameMap[request.day];
                 ShiftID shift = names.shiftMap[request.shiftType];
@@ -622,7 +380,7 @@ namespace NurseRostering
         }
 
         /// <summary> history must be loaded after scenario. </summary>
-        public void importHistory(INRC2JsonData input) {
+        public void importHistory(INRC2.JsonData input) {
             history.accObjValue = 0;
             history.pastWeekCount = input.history.week;
             history.currentWeek = history.pastWeekCount + 1;
@@ -634,7 +392,7 @@ namespace NurseRostering
             history.consecutiveShiftNums = new int[scenario.nurses.Length];
             history.consecutiveDayNums = new int[scenario.nurses.Length];
             history.consecutiveDayoffNums = new int[scenario.nurses.Length];
-            foreach (INRC2JsonData.HistoryInfo.NurseHistoryInfo h in input.history.nurseHistory) {
+            foreach (INRC2.JsonData.HistoryInfo.NurseHistoryInfo h in input.history.nurseHistory) {
                 NurseID nurse = names.nurseMap[h.nurse];
                 history.totalAssignNums[nurse] = h.numberOfAssignments;
                 history.totalWorkingWeekendNums[nurse] = h.numberOfWorkingWeekends;
@@ -645,15 +403,15 @@ namespace NurseRostering
             }
         }
 
-        public INRC2JsonData.SolutionInfo exportSolution(Output output) {
-            INRC2JsonData.SolutionInfo sln = new INRC2JsonData.SolutionInfo();
+        public INRC2.JsonData.SolutionInfo exportSolution(Output output) {
+            INRC2.JsonData.SolutionInfo sln = new INRC2.JsonData.SolutionInfo();
 
             sln.scenario = names.scenarioName;
             sln.week = history.pastWeekCount;
             for (NurseID nurse = NurseIDs.Begin; nurse < scenario.nurses.Length; nurse++) {
                 for (Weekday weekday = Weekdays.Mon; weekday <= Weekdays.Sun; weekday++) {
                     if (output[nurse, weekday].IsWorking) {
-                        INRC2JsonData.SolutionInfo.Assignment assign = new INRC2JsonData.SolutionInfo.Assignment();
+                        INRC2.JsonData.SolutionInfo.Assignment assign = new INRC2.JsonData.SolutionInfo.Assignment();
                         assign.nurse = names.nurseNames[nurse];
                         assign.day = Weekdays.Names[weekday];
                         assign.shiftType = names.shiftNames[output[nurse, weekday].shift];
@@ -880,9 +638,7 @@ namespace NurseRostering
         private NameInfo names;
         #endregion Field
     }
-    #endregion input
 
-    #region solver
     // TUNEUP[2]: consider class rather than struct?
     /// <summary> (shift == ShiftIDs.None) stands for empty assignment. </summary>
     [DataContract]
@@ -1003,7 +759,6 @@ namespace NurseRostering
             }
         }
 
-        [Conditional("INRC2_LOG")]
         public void appendAssignString(StringBuilder sb) {
             for (NurseID nurse = NurseIDs.Begin; nurse < assignTable.GetLength(0); nurse++) {
                 for (Weekday weekday = Weekdays.Mon; weekday <= Weekdays.Sun; weekday++) {
@@ -1067,7 +822,9 @@ namespace NurseRostering
         private TimePoint findTime;
         #endregion Field
     }
+    #endregion input and output
 
+    #region solver
     public abstract class Solver
     {
         #region Constructor
@@ -1357,8 +1114,7 @@ namespace NurseRostering
         #endregion checkers
 
         /// <summary> print simple information of the solution to console. </summary>
-        public void print() {
-#if INRC2_LOG
+        public virtual void print() {
             if (checkFeasibility() != 0) {
                 errorLog("infeasible output solution.");
             }
@@ -1366,12 +1122,10 @@ namespace NurseRostering
                 errorLog("objValue does not match in output solution.");
             }
             Console.WriteLine("optima.ObjValue: " + (optima.ObjValue / (double)DefaultPenalty.Amp));
-#endif
         }
 
         /// <summary> record output to specified log file. </summary>
-        public void record(string logFileName) {
-#if INRC2_LOG
+        public virtual void record(string logFileName) {
             if (!File.Exists(logFileName)) {
                 File.WriteAllText(logFileName,
                     "Time,ID,Instance,Config,RandSeed,GenCount,IterCount,Duration,Feasible,Check-Obj,ObjValue,AccObjValue,Solution");
@@ -1394,16 +1148,14 @@ namespace NurseRostering
             Optima.appendAssignString(log);
 
             File.AppendAllText(logFileName, log.ToString());
-#endif
         }
 
         /// <summary> log to console with time and runID. </summary>
-        public void errorLog(string msg) {
-#if INRC2_LOG
+        [Conditional("INRC2_LOG")]
+        protected void errorLog(string msg) {
             Console.Error.Write(DateTime.Now.ToString(Durations.TimeFormat_Readable));
             Console.Error.Write("," + environment.id + ",");
             Console.Error.WriteLine(msg);
-#endif
         }
 
         /// <summary> generate history for next week from output. </summary>
@@ -1434,7 +1186,7 @@ namespace NurseRostering
 
         #region Type
         /// <summary> 
-        /// specify identifier, input/output path, termination conditions 
+        /// specify identifier, input/output str, termination conditions 
         /// and random seed for a solver. 
         /// </summary>
         [DataContract]
@@ -1449,9 +1201,9 @@ namespace NurseRostering
 
             #region Method
             public void setDefault() {
-                id = Util.IntID.generate();
+                id = Util.IntID.generate().ToString();
                 randSeed = Util.genRandSeed();
-                timeoutInSeconds = Durations.Min;
+                timeoutInSeconds = Durations.Max;
                 maxIterCount = IterCounts.Max;
             }
             #endregion Method
@@ -1491,8 +1243,10 @@ namespace NurseRostering
             [DataMember(Order = 10)]
             public string instanceInfo;
 
+            // TODO[9]: record id or not?
             /// <summary> identify output generated by different solvers running concurrently. </summary>
-            public int id;
+            [DataMember(Order = 11)]
+            public string id;
             #endregion Field
         }
 
@@ -1684,10 +1438,6 @@ namespace NurseRostering
         public override void generateHistory(out Problem.HistoryInfo newHistory) {
             Solution s = new Solution(this);
             s.rebuild(Optima);
-#if INRC2_LOG
-            // only count and record spanning constraints in last week.
-            s.evaluateObjValue_IgnoreSpanningConstraint();
-#endif // INRC2_LOG
             s.generateHistory(out newHistory);
         }
 
@@ -1712,6 +1462,14 @@ namespace NurseRostering
             }
 
             return false;
+        }
+
+        public override void record(string logFileName) {
+            sln.rebuildExactly(Optima);
+            sln.evaluateObjValue_IgnoreSpanningConstraint();
+            Optima = sln;
+
+            base.record(logFileName);
         }
 
         #region init module
@@ -1868,12 +1626,6 @@ namespace NurseRostering
             // for example, if it is in repair() in rebuild() in tabuSearch(),
             // the objective may be 0, the output will get a wrong update.
             searchForOptima[(int)config.solveAlgorithm]();
-
-#if INRC2_LOG
-            sln.rebuildExactly(Optima);
-            sln.evaluateObjValue_IgnoreSpanningConstraint();
-            Optima = sln;
-#endif // INRC2_LOG
         }
 
         /// <summary> turn the objective to optimize a subset of nurses when no improvement. </summary>
@@ -1970,6 +1722,7 @@ namespace NurseRostering
             iterationCount += sln.IterCount;
         }
         #endregion solve module
+
         [Conditional("INRC2_DEBUG")]
         public void checkAssignString(string assignString) {
             Solution sss;
@@ -1983,17 +1736,132 @@ namespace NurseRostering
         #endregion Method
 
         #region Property
-        //public override string ConfigInfo {
-        //    get {
-        //        // UNDONE[0]: config info for log.
-        //        return "NULL";
-        //    }
-        //}
+        public override string ConfigInfo {
+            get {
+                // UNDONE[0]: config info for log.
+                return "NULL";
+            }
+        }
         #endregion Property
 
         #region Type
+        /// <summary> specify parameters of the solving algorithm. </summary>
         [DataContract]
-        public class Solution : Output
+        public class Configure
+        {
+            #region Constructor
+            public Configure() { setDefault(); }
+
+            [OnDeserializing]
+            private void OnDeserializing(StreamingContext sc) { setDefault(); }
+            #endregion Constructor
+
+            #region Method
+            public void setDefault() {
+                // TODO[0]: update default configuration to output.
+                initAlgorithm = InitAlgorithm.Random;
+                solveAlgorithm = SolveAlgorithm.BiasTabuSearch;
+
+                maxNoImproveFactor = 1;
+                dayTabuFactors = new TabuTenureFactor { tableSize = 0, nurseNum = 0, dayNum = 1, shiftNum = 0 };
+                shiftTabuFactors = new TabuTenureFactor { tableSize = 0, nurseNum = 0, dayNum = 1, shiftNum = 0 };
+
+                initPerturbStrength = 0.2;
+                perturbStrengthDelta = 0.01;
+                maxPerturbStrength = 0.6;
+                perturbOriginSelectRatio = 4;
+                biasTabuSearchOriginSelectRatio = 2;
+
+                minTabuBase = 6;
+                inverseTabuAmpRatio = 4;
+                inverseTotalBiasRatio = 4;
+                inversePenaltyBiasRatio = 5;
+
+                modeSequence = new MoveMode[] { MoveMode.Add, MoveMode.Change, MoveMode.BlockSwap, MoveMode.Remove };
+            }
+            #endregion Method
+
+            #region Property
+            #endregion Property
+
+            #region Type
+            /// <summary> default values are 0 which is the same as the language specification. </summary>
+            [DataContract]
+            public struct TabuTenureFactor
+            {
+                [DataMember(Order = 1)]
+                public double tableSize;
+                [DataMember(Order = 2)]
+                public double nurseNum;
+                [DataMember(Order = 3)]
+                public double dayNum;
+                [DataMember(Order = 4)]
+                public double shiftNum;
+            };
+            #endregion Type
+
+            #region Constant
+            public enum InitAlgorithm
+            {
+                Random, Greedy, Exact, Length
+            };
+
+            public enum SolveAlgorithm
+            {
+                RandomWalk, IterativeLocalSearch,
+                tabuSearch_LoopSelect, TabuSearch_MultiSelect, TabuSearch_SingleSelect,
+                BiasTabuSearch, Length
+            };
+            #endregion Constant
+
+            #region Field
+            [DataMember(Order = 1)]
+            public InitAlgorithm initAlgorithm;
+            [DataMember(Order = 2)]
+            public SolveAlgorithm solveAlgorithm;
+
+            [DataMember(Order = 3)]
+            public double maxNoImproveFactor = 1;
+            [DataMember(Order = 4)]
+            public TabuTenureFactor dayTabuFactors;
+            [DataMember(Order = 5)]
+            public TabuTenureFactor shiftTabuFactors;
+
+            [DataMember(Order = 6)]
+            public double initPerturbStrength;
+            [DataMember(Order = 7)]
+            public double perturbStrengthDelta;
+            [DataMember(Order = 8)]
+            public double maxPerturbStrength;
+
+            /// <summary> inverse possibility of starting perturb from output in last search. </summary> 
+            [DataMember(Order = 9)]
+            public int perturbOriginSelectRatio;
+            /// <summary> inverse possibility of starting bias tabu search from output in last search. </summary> 
+            [DataMember(Order = 10)]
+            public int biasTabuSearchOriginSelectRatio;
+
+            /// <summary> minimal tabu tenure base. </summary>
+            [DataMember(Order = 11)]
+            public int minTabuBase;
+            /// <summary> equals to (tabuTenureBase / tabuTenureAmp). </summary>
+            [DataMember(Order = 12)]
+            public int inverseTabuAmpRatio;
+
+            /// <summary> ratio of biased nurse number in total nurse number. </summary>
+            [DataMember(Order = 13)]
+            public int inverseTotalBiasRatio;
+            /// <summary> ratio of biased nurse selected by penalty of each nurse. </summary>
+            [DataMember(Order = 14)]
+            public int inversePenaltyBiasRatio;
+
+            [DataMember(Order = 15)]
+            public MoveMode[] modeSequence;
+            #endregion Field
+        }
+
+        [DataContract]
+        protected class Solution : Output
         {
             #region Constructor
             public Solution(TabuSolver solver)
@@ -5155,121 +5023,6 @@ RecordAndRecover:
 #if !INRC2_BLOCK_SWAP_CACHED
             private NurseID findBestBlockSwap_StartNurse;
 #endif // !INRC2_BLOCK_SWAP_CACHED
-            #endregion Field
-        }
-
-        /// <summary> specify parameters of the solving algorithm. </summary>
-        [DataContract]
-        public class Configure
-        {
-            #region Constructor
-            public Configure() { setDefault(); }
-
-            [OnDeserializing]
-            private void OnDeserializing(StreamingContext sc) { setDefault(); }
-            #endregion Constructor
-
-            #region Method
-            public void setDefault() {
-                // TODO[0]: update default configuration to output.
-                initAlgorithm = InitAlgorithm.Random;
-                solveAlgorithm = SolveAlgorithm.BiasTabuSearch;
-
-                maxNoImproveFactor = 1;
-                dayTabuFactors = new TabuTenureFactor { tableSize = 0, nurseNum = 0, dayNum = 1, shiftNum = 0 };
-                shiftTabuFactors = new TabuTenureFactor { tableSize = 0, nurseNum = 0, dayNum = 1, shiftNum = 0 };
-
-                initPerturbStrength = 0.2;
-                perturbStrengthDelta = 0.01;
-                maxPerturbStrength = 0.6;
-                perturbOriginSelectRatio = 4;
-                biasTabuSearchOriginSelectRatio = 2;
-
-                minTabuBase = 6;
-                inverseTabuAmpRatio = 4;
-                inverseTotalBiasRatio = 4;
-                inversePenaltyBiasRatio = 5;
-
-                modeSequence = new MoveMode[] { MoveMode.Add, MoveMode.Change, MoveMode.BlockSwap, MoveMode.Remove };
-            }
-            #endregion Method
-
-            #region Property
-            #endregion Property
-
-            #region Type
-            /// <summary> default values are 0 which is the same as the language specification. </summary>
-            [DataContract]
-            public struct TabuTenureFactor
-            {
-                [DataMember(Order = 1)]
-                public double tableSize;
-                [DataMember(Order = 2)]
-                public double nurseNum;
-                [DataMember(Order = 3)]
-                public double dayNum;
-                [DataMember(Order = 4)]
-                public double shiftNum;
-            };
-            #endregion Type
-
-            #region Constant
-            public enum InitAlgorithm
-            {
-                Random, Greedy, Exact, Length
-            };
-
-            public enum SolveAlgorithm
-            {
-                RandomWalk, IterativeLocalSearch,
-                tabuSearch_LoopSelect, TabuSearch_MultiSelect, TabuSearch_SingleSelect,
-                BiasTabuSearch, Length
-            };
-            #endregion Constant
-
-            #region Field
-            [DataMember(Order = 1)]
-            public InitAlgorithm initAlgorithm;
-            [DataMember(Order = 2)]
-            public SolveAlgorithm solveAlgorithm;
-
-            [DataMember(Order = 3)]
-            public double maxNoImproveFactor = 1;
-            [DataMember(Order = 4)]
-            public TabuTenureFactor dayTabuFactors;
-            [DataMember(Order = 5)]
-            public TabuTenureFactor shiftTabuFactors;
-
-            [DataMember(Order = 6)]
-            public double initPerturbStrength;
-            [DataMember(Order = 7)]
-            public double perturbStrengthDelta;
-            [DataMember(Order = 8)]
-            public double maxPerturbStrength;
-
-            /// <summary> inverse possibility of starting perturb from output in last search. </summary> 
-            [DataMember(Order = 9)]
-            public int perturbOriginSelectRatio;
-            /// <summary> inverse possibility of starting bias tabu search from output in last search. </summary> 
-            [DataMember(Order = 10)]
-            public int biasTabuSearchOriginSelectRatio;
-
-            /// <summary> minimal tabu tenure base. </summary>
-            [DataMember(Order = 11)]
-            public int minTabuBase;
-            /// <summary> equals to (tabuTenureBase / tabuTenureAmp). </summary>
-            [DataMember(Order = 12)]
-            public int inverseTabuAmpRatio;
-
-            /// <summary> ratio of biased nurse number in total nurse number. </summary>
-            [DataMember(Order = 13)]
-            public int inverseTotalBiasRatio;
-            /// <summary> ratio of biased nurse selected by penalty of each nurse. </summary>
-            [DataMember(Order = 14)]
-            public int inversePenaltyBiasRatio;
-
-            [DataMember(Order = 15)]
-            public MoveMode[] modeSequence;
             #endregion Field
         }
 
