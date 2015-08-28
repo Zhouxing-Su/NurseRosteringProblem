@@ -23,10 +23,5 @@
     "inverseTabuAmpRatio": 4,
     "inverseTotalBiasRatio": 4,
     "inversePenaltyBiasRatio": 5,
-    "modeSequence": [
-        0,
-        2,
-        5,
-        1
-    ]
+    "modeSequence": [ 0, 2, 5, 1 ]
 }

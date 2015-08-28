@@ -8,10 +8,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Deploy", "Deploy", "{8605BE1B-FA05-4A5F-8321-805710DB62EF}"
 	ProjectSection(SolutionItems) = preProject
 		Deploy\configure.json = Deploy\configure.json
-		Deploy\environment.json = Deploy\environment.json
-		Deploy\example_configure.json = Deploy\example_configure.json
-		Deploy\example_environment.json = Deploy\example_environment.json
 		Deploy\log.csv = Deploy\log.csv
+		Deploy\mission.json = Deploy\mission.json
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Instance", "Instance", "{3A638F13-864D-4514-82C5-430B18470B63}"
@@ -408,6 +406,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "n120w8", "n120w8", "{9F3420
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Simulator", "Simulator\Simulator.csproj", "{4CD1D89B-A796-4E1A-B2AE-FBDC587765CC}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ConfigureFileExample", "ConfigureFileExample", "{EC47A3A9-8598-44C5-9897-F3BB0A2D20ED}"
+	ProjectSection(SolutionItems) = preProject
+		Deploy\ConfigureFileExample\configure.json = Deploy\ConfigureFileExample\configure.json
+		Deploy\ConfigureFileExample\environment.json = Deploy\ConfigureFileExample\environment.json
+		Deploy\ConfigureFileExample\mission.json = Deploy\ConfigureFileExample\mission.json
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -454,5 +459,6 @@ Global
 		{DBAD2559-3B84-4945-9AB1-C5FDAA27CA5D} = {3A638F13-864D-4514-82C5-430B18470B63}
 		{CB3B16E2-583E-4EC7-A28F-42F661D3C2DD} = {3A638F13-864D-4514-82C5-430B18470B63}
 		{9F342024-212E-4F07-A0AC-331607CB9EDF} = {3A638F13-864D-4514-82C5-430B18470B63}
+		{EC47A3A9-8598-44C5-9897-F3BB0A2D20ED} = {8605BE1B-FA05-4A5F-8321-805710DB62EF}
 	EndGlobalSection
 EndGlobal

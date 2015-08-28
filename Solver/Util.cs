@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization.Json;
@@ -15,6 +14,26 @@ namespace NurseRostering
         public interface ICopyable<T>
         {
             void copyTo(T destination);
+        }
+
+        public static void printLog(string msg) {
+            Console.Error.Write(DateTime.Now.ToString(Durations.TimeFormat_Readable));
+            Console.Error.WriteLine("," + msg);
+        }
+
+        public static void waitTerminationCodeAsync(string code) {
+            Thread waitTermination = new Thread(() => {
+                while (Console.ReadLine() != code) { }
+                Environment.Exit(0);
+            });
+            waitTermination.IsBackground = true;
+            waitTermination.Start();
+        }
+
+        public static void waitTerminationCode(string code) {
+            Thread.CurrentThread.IsBackground = true;
+            while (Console.ReadLine() != code) { }
+            Environment.Exit(0);
         }
 
         /// <summary>

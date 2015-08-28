@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 
 
 namespace NurseRostering
@@ -48,20 +45,23 @@ namespace NurseRostering
             solver.solve();
 
             Util.writeJsonFile(env.solutionPath, problem.exportSolution(solver.Optima));
-            if (env.customOutputPath != null) {
-                Problem.HistoryInfo newHistory;
-                solver.generateHistory(out newHistory);
-                problem.writeCustomFile(env.customOutputPath, ref newHistory);
-            }
 
             path = argsProcessor.getMappedArg(Parameters.LogPathOption);
-            if (path != null) {
-                solver.print();
-                solver.record(path);
+            if ((env.customOutputPath != null) || (path != null)) {
+                solver.adjustObjValueForLog();
+
+                if (env.customOutputPath != null) {
+                    problem.writeCustomFile(env.customOutputPath, solver);
+                }
+
+                if (path != null) {
+                    solver.print();
+                    solver.record(path);
+                }
             }
         }
 
-        public static Solver.Environment loadEnvironment(Util.ArgsProcessor argsProcessor) {
+        private static Solver.Environment loadEnvironment(Util.ArgsProcessor argsProcessor) {
             string str;
 
             str = argsProcessor.getMappedArg(Parameters.EnvironmentPathOption);
@@ -89,7 +89,7 @@ namespace NurseRostering
             str = argsProcessor.getMappedArg(Parameters.MaxIterationOption);
             if (str != null) { env.maxIterCount = Convert.ToInt32(str); }
 
-            str = argsProcessor.getMappedArg(Parameters.IndstanceInfoOption);
+            str = argsProcessor.getMappedArg(Parameters.InstanceInfoOption);
             if (str != null) { env.instanceInfo = str; }
 
             str = argsProcessor.getMappedArg(Parameters.IdOption);
@@ -111,7 +111,7 @@ namespace NurseRostering
             public const string TimeoutOption = "-timeout";
             public const string MaxIterationOption = "-iter";
             public const string IdOption = "-id";
-            public const string IndstanceInfoOption = "-inst";
+            public const string InstanceInfoOption = "-inst";
             public const string EnvironmentPathOption = "-env";
             public const string ConfigurePathOption = "-cfg";
             public const string LogPathOption = "-log";
@@ -127,7 +127,7 @@ namespace NurseRostering
                 TimeoutOption,
                 MaxIterationOption,
                 IdOption,
-                IndstanceInfoOption,
+                InstanceInfoOption,
                 EnvironmentPathOption,
                 ConfigurePathOption,
                 LogPathOption

@@ -1,10 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Runtime.Serialization;
 
 
 namespace INRC2
 {
-    /// <summary> original data from instance files. </summary>
+    /// <summary> original data from INRC2 instance files. </summary>
+    /// <seealso cref="http://mobiz.vives.be/inrc2/"/>
     [DataContract]
     public class JsonData
     {
@@ -12,20 +14,28 @@ namespace INRC2
         #endregion Constructor
 
         #region Method
-        public static string getScenarioFilePath(string instanceName) {
-            return InstanceDir + instanceName + "/Sc-" + instanceName + FileExtension;
+        public static string getScenarioFilePath(string scenarioName) {
+            return InstanceDir + scenarioName + "/Sc-" + scenarioName + FileExtension;
         }
 
-        public static string getWeekdataFilePath(string instanceName, char index) {
-            return InstanceDir + instanceName + "/WD-" + instanceName + "-" + index + FileExtension;
+        public static string getWeekdataFilePath(string scenarioName, char index) {
+            return InstanceDir + scenarioName + "/WD-" + scenarioName + "-" + index + FileExtension;
         }
 
-        public static string getInitHistoryFilePath(string instanceName, char index) {
-            return InstanceDir + instanceName + "/H0-" + instanceName + "-" + index + FileExtension;
+        public static string getInitHistoryFilePath(string scenarioName, char index) {
+            return InstanceDir + scenarioName + "/H0-" + scenarioName + "-" + index + FileExtension;
         }
 
         public static string getHistoryFilePath(string outputDir, char index) {
             return outputDir + "history-week-" + index + FileExtension;
+        }
+
+        public static int getNurseNumber(string scenario) {
+            return Convert.ToInt32(scenario.Substring(1, 3));
+        }
+
+        public static int getWeekCount(string scenario) {
+            return (scenario[5] - '0');
         }
         #endregion Method
 
@@ -232,8 +242,8 @@ namespace INRC2
             n120w4, n120w8
         }
 
-        public const string FileExtension = @".json";
-        public const string InstanceDir = @"Instance/";
+        private const string FileExtension = @".json";
+        private const string InstanceDir = @"Instance/";
         #endregion Constant
 
         #region Field
