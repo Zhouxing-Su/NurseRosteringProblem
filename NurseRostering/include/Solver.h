@@ -219,7 +219,9 @@ public:
     {
         sln.rebuild( Output( 0, AssignTable( problem.scenario.nurseNum, Weekday::SIZE, assignString ) ) );
         sln.evaluateObjValue( false );
-        ObjValue obj = checkObjValue( sln.getAssignTable() );
+        sln.evaluateObjValue();
+        checkFeasibility( sln.getAssignTable() );
+        checkObjValue( sln.getAssignTable() );
     }
 
     IterCount DayTabuTenureBase() const { return dayTabuTenureBase; }

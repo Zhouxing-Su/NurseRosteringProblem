@@ -4,7 +4,7 @@
 using namespace std;
 
 
-const Timer::Duration NurseRostering::Solver::SAVE_SOLUTION_TIME = Timer::Duration( 500 );
+const Timer::Duration NurseRostering::Solver::SAVE_SOLUTION_TIME = Timer::Duration( 250 );
 const double NurseRostering::Solver::INIT_PERTURB_STRENGTH = 0.2;
 const double NurseRostering::Solver::PERTURB_STRENGTH_DELTA = 0.01;
 const double NurseRostering::Solver::MAX_PERTURB_STRENGTH = 0.6;
@@ -413,7 +413,7 @@ void NurseRostering::TabuSolver::init( const Config &cfg, const std::string &id 
 
     discoverNurseSkillRelation();
 
-    //checkDump( "1 0 1 0 2 1 0 1 1 1 1 1 2 0 3 1 3 0 0 0 3 0 3 1 3 1 3 1 2 0 2 1 0 1 0 0 0 1 1 0 1 0 2 1 3 1 3 1 0 1 0 1 0 1 1 1 1 1 1 1 1 1 0 1 2 1 2 1 2 1 " );
+    //checkDump( "" );
 
     switch (config.initAlgorithm) {
         case InitAlgorithm::Exact:

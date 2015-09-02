@@ -21,12 +21,12 @@ void debugRun()
 {
     ostringstream id( "0" );
 
-    int instIndex = InstIndex::n005w4;
+    int instIndex = InstIndex::n030w4;
     char initHis = '1';
-    char weekdata[WEEKDATA_SEQ_SIZE] = "4321";
+    char weekdata[WEEKDATA_SEQ_SIZE] = "6291";
     int randSeed = 8787;
     //int randSeed = static_cast<int>(time( NULL ));
-    double runningTime = 10;
+    double runningTime = 70;
     //double runningTime = instTimeout[getNurseNum( instIndex )];
     test_customIO_r( id.str(), outputDirPrefix + id.str(), instIndex, initHis, weekdata, runningTime, randSeed );
 }
