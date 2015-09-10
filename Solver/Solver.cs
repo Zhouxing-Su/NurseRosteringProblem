@@ -1188,14 +1188,18 @@ namespace NurseRostering
 
         #region Type
         /// <summary> 
-        /// specify identifier, input/output str, termination conditions 
+        /// specify identifier, input/output path, termination conditions 
         /// and random seed for a solver. 
         /// </summary>
         [DataContract]
         public class Environment
         {
             #region Constructor
-            public Environment() { setDefault(); }
+            public Environment() {
+                // assume the deserializer will not call constructor.
+                id = Util.IntID.generate().ToString();
+                setDefault();
+            }
 
             [OnDeserializing]
             private void OnDeserializing(StreamingContext sc) { setDefault(); }
@@ -1203,7 +1207,6 @@ namespace NurseRostering
 
             #region Method
             public void setDefault() {
-                id = Util.IntID.generate().ToString();
                 randSeed = Util.genRandSeed();
                 timeoutInSeconds = Durations.Max;
                 maxIterCount = IterCounts.Max;
@@ -1694,8 +1697,6 @@ namespace NurseRostering
             double perturbStrength = config.initPerturbStrength;
             double perturbStrengthDelta = config.perturbStrengthDelta;
             while ((!IsTimeout) && (sln.IterCount < environment.maxIterCount)) {
-                ObjValue lastObj = Optima.ObjValue;
-
                 sln.localSearch(fbmt, (int)TimeLeft);
                 generationCount++;
 
@@ -2017,7 +2018,7 @@ namespace NurseRostering
             }
 
             /// <summary> return true if update succeed. </summary>
-            public bool updateOptima() {
+            private bool updateOptima() {
 #if INRC2_SECONDARY_OBJ_VALUE
                 if (ObjValue <= Optima.ObjValue) {
                     SecondaryObjValue = 0;
@@ -4970,7 +4971,7 @@ RecordAndRecover:
             #region Field
             /// <summary> local output in the trajectory of current search() call. </summary>
             /// <remarks> must set output to $this before every search(). </remarks>
-            Output optima;
+            private Output optima;
 
             /// <summary> control penalty weight on each constraint. </summary>
             private Penalty penalty;    // TODO[9]: rename to ConstraintWeights?
