@@ -62,7 +62,7 @@ void benchmarkRun()
 
     int runCount = 512;
     int threadBeginInterval = 3;
-    int threadNum = 4;
+    int threadNum = 1;
     vector<thread> vt;
     for (int i = 0; i < threadNum; ++i) {
         id.str( string() );
@@ -114,9 +114,9 @@ int main()
 
     thread( waitTerminateCode, "szx" ).detach();
 
-    debugRun();
+    //debugRun();
     //realRun();
-    //benchmarkRun();
+    benchmarkRun();
     //sprintRun();
     //parallelRun();
 

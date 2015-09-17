@@ -416,6 +416,11 @@ private:
         (this->*applyMove[move.mode])(move);
         objValue += move.delta;
         invalidateCacheFlag( move );
+
+#ifdef INRC2_TRAJECTORY_REPORT
+        std::cerr << objValue << ","
+            << AssignTable::distance( this->getAssignTable(), optima.getAssignTable() ) << std::endl;
+#endif // INRC2_TRAJECTORY_REPORT
     }
 
     // return true if update succeed

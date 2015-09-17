@@ -174,6 +174,9 @@ namespace INRC2
             << '[' << argvMap[ARGV_WEEKDATA].substr( weekdataFileNameIndex ) << ']';
         solver.record( LOG_FILE_NAME, oss.str() );
 #endif
+#ifdef INRC2_TRAJECTORY_REPORT
+        cerr << endl;
+#endif // INRC2_TRAJECTORY_REPORT
 
         return 0;
     }

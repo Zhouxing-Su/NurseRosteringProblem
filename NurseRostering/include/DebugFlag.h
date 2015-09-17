@@ -26,6 +26,11 @@
 //#define INRC2_PERFORMANCE_TEST
 #endif
 
+// comment to turn off distance of solutions and objective
+#ifndef INRC2_TRAJECTORY_REPORT
+#define INRC2_TRAJECTORY_REPORT
+#endif // INRC2_TRAJECTORY_REPORT
+
 
 // input switch
 // uncomment to check the feasibility of the instance from the online feasible checker
@@ -52,7 +57,7 @@
 
 // comment to use rest max shift number
 #ifndef INRC2_AVERAGE_TOTAL_SHIFT_NUM
-#define INRC2_AVERAGE_TOTAL_SHIFT_NUM
+//#define INRC2_AVERAGE_TOTAL_SHIFT_NUM
 #endif
 
 // [fix] comment to use random pick

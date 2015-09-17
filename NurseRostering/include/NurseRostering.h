@@ -217,6 +217,20 @@ public:
             }
         }
 
+        static int distance( const AssignTable &l, const AssignTable &r )
+        {
+            int dist = 0;
+            int nurseNum = l.size();
+
+            for (int n = 0; n < nurseNum; ++n) {
+                for (int w = Weekday::Mon; w <= Weekday::Sun; ++w) {
+                    dist += ((l[n][w].shift != r[n][w].shift) || (l[n][w].skill != r[n][w].skill));
+                }
+            }
+
+            return dist;
+        }
+
         bool isWorking( NurseID nurse, int weekday ) const
         {
             return Assign::isWorking( at( nurse ).at( weekday ).shift );
