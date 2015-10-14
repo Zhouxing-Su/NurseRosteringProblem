@@ -93,12 +93,12 @@
 
 %%% 中文摘要
 \abstract{
-	本文提出了一种用于求解第二届国际护士排班竞赛中提出的多阶段护士排班问题的带权禁忌搜索算法。该算法使用了~$3$~种互斥的简单邻域结构与~$1$~种复合邻域结构，并根据其适应性动态调整搜索各邻域的概率，同时通过调整各护士的惩罚权重来实现搜索过程中集中性与疏散性的平衡。    为了应对多阶段问题中各个独立的阶段缺乏全局信息，算法提出了一种对全局约束的近似评估策略。算法还以平衡各邻域的优化效果与计算开销为目标设计了邻域评估的缓存策略，进一步提升了算法的执行效率。算法在竞赛使用的~$60$~个算例上的计算结果表明，本算法生成合法解的频率为~$100\%$~，具有极高的可用性，同时在绝大多数算例上求得的最优值与所有参赛者求得的最优值的差距不超过~$15\%$~，具有较高的求解质量。最后，本文对算法中的关键要素进行了对比分析，证明了这些组成部分的方案选择和参数设置的合理性。
+	本文提出了一种用于求解第二届国际护士排班竞赛中提出的多阶段护士排班问题的带权禁忌搜索算法。该算法使用了~$3$~种互斥的简单邻域结构与~$1$~种复合邻域结构，并根据其适应性动态调整搜索各邻域的概率，同时通过调整各护士的惩罚权重来实现搜索过程中集中性与疏散性的平衡。为了应对各个独立的阶段缺乏全局信息的问题，提出了一种对全局约束的近似评估策略。算法还针对自适应的邻域选择策略，以减少多种邻域的整体计算开销为目标设计了邻域评估的缓存策略，进一步提升了算法的执行效率。算法在竞赛使用的~$60$~个算例上的计算结果表明，本算法生成合法解的频率为~$100\%$~，具有极高的可用性，同时在绝大多数算例上求得的最优值与所有参赛者求得的最优值的差距低于~$15\%$~，具有较高的求解质量。此外，本文对算法中的关键要素进行了对比分析，证明了这些组成部分的方案选择和参数设置的合理性。
 }
 
 %%% 英文摘要
 \enabstract{
-	This paper proposes a weighted tabu search algorithm for solving multistage nurse rostering problem given by the Second International Nurse Rostering Competition. The algorithm employs $3$ simple neighborhood structure which are exclusive to each other and $1$ compound one. The possibilities of selecting each neighborhood to search are adjusted by their adaptiveness dynamically, as well as the weight of penalty on each nurse, which leads to the balance between intensification and diversification during the search procedure.    To
+	This paper proposes a weighted tabu search algorithm for solving multistage nurse rostering problem given by the Second International Nurse Rostering Competition. The algorithm employs $3$ simple neighborhood structure which are exclusive to each other and $1$ compound one. The possibilities of selecting each neighborhood to search are adjusted by their adaptiveness dynamically, as well as the weight of penalty on each nurse, which leads to the balance between intensification and diversification during the search procedure. To tackle the problem of lacking global information within each independent stages, we proposed an approximate evaluation strategy for spanning constraints. The algorithm employs cache for neighborhood move with the purpose of reducing overall cost of evaluation on every neighborhood aimming at the adaptive neighborhood selection strategy, which improves the efficiency of the algorithm even more. The benchmark result on $60$ instances of the algorithm from the competition indicates that, the frequency of generating feasible solution is $100\%$ which means high availability. Also, from the view of optima found, the gap between the best result of all participants and ours on almost all instances is less than $15\%$, which shows good solving quality. Furthermore, we compares and analyzes some key factors in the algorithm and proves their rationality.
 }
 
 
@@ -123,7 +123,7 @@
 
 由于每天每班次每岗位上班的护士可以从拥有该岗位所需技能的护士中任意挑选，排班表中最小的时间单位的人员选择已经具有组合数级别的复杂度，将各个岗位排满又需要指数级别的复杂度来完成。与此同时，众多的软约束之间相互作用，此消彼涨。因此，护士排班问题无论是对医院的管理人员还是大学的研究者来说，都是一个极其复杂的问题，对其进行优化是一项艰巨的挑战。
 
-护士排班问题在近几十年来得到了广泛的研究，而最近十年研究尤为深入。在众多求解算法中，主要有精确算法和近似算法两大类别。由于护士排班问题的复杂性，纯粹的精确算法往往有诸多局限，因此文献数量相对较少。其中有~isken~等、~Glass~等和~Santos~等分别在文献~\cite{isken2004implicit}~、~\cite{glass2010nurse}~和~\cite{santos2014integer}~中使用的整数规划方法对护士排班问题进行了建模与求解。与之相对地，以启发式算法为核心的近似算法则得到了更多研究者的关注。
+护士排班问题在近几十年来得到了广泛的研究，而最近十年研究尤为深入。在众多求解算法中，主要有精确算法和近似算法两大类别。由于护士排班问题的复杂性，纯粹的精确算法往往有诸多局限，因此文献数量相对较少。其中有~isken~等和~Glass~等分别在文献~\cite{isken2004implicit}~和~\cite{glass2010nurse}~中使用的整数规划方法对护士排班问题进行了建模与求解。与之相对地，以启发式算法为核心的近似算法则得到了更多研究者的关注。
 
 Burke~等在~\cite{burke1999hybrid}~中提出了针对护士排班问题的混合禁忌搜索，之后又相继提出了模因算法~\upcite{burke2001memetic}~、变领域搜索~\upcite{burke2004variable,burke2008hybrid}~、分散搜索~\upcite{burke2010scatter}~和变深度搜索~\upcite{burke2013time}~来求解护士排班问题。
 此外，针对护士排班问题还有众多解决方案，例如
@@ -913,19 +913,19 @@ f'(X) = \sum_{n=1}^{N} \frac{\sum_{d=1}^{D} \textrm{C}(X^H\phantom{}_{d,n} \ne \
 
 虽然~$M_4$~理论上可以多个由~$M_1$~至~$M_3$~组合而成，但是其在本算法中仍起到了至关重要的作用。图~\ref{fig1}~分别从迭代次数和运行时间两个角度展示了有无~$M_4$~时算法的收敛速度，所用数据来自于随机挑选的一个小规模算例（n035w4\_2\_8-8-7-5）一个中等规模算例（n070w4\_0\_3-6-5-1）和一个大规模算例（n110w4\_0\_1-4-2-8）的~$32$~次独立运行中对应时间刻度位置取样所得的平均值。三种规模的算例在图例中从小到大分别用~S~、~M~和~L~表示，而是否使用~$M_4$~邻域用~$+$~和~$-$~表示。其横坐标为时间刻度，纵坐标表示截止当前时间点算法所求得的第~$1$~阶段的最优目标函数值。由于每次运行分为多个阶段，所以无法对整个排班周期的目标函数值的收敛情况进行分析。因此图~\ref{fig1}~中的目标函数值均为第一阶段的近似目标函数值（见~\ref{subsec:global}~节）。另外，因为算法初期收敛速度非常快，而后期目标函数值变化幅度较小，导致等间隔取样的结果不便于观察比较。故图中横坐标为对时间刻度取对数的结果，即~$x= \log_at$~，其中~$a=1.08$~，~$t$~为取样的时间点。
 
-从图~\ref{fig1}~中可以看出，以迭代次数为取样间隔时，块交换对收敛速度的加速效果尤为明显。但是由于其时间复杂度较高，故以秒为取样间隔时加速效果没有那么显著，但仍有较大优势，且收敛的极限优于没有块交换的情况。由此可见，块交换邻域无论从短期的收敛速度来考虑，还是从长期的目标函数值下限来考虑，都发挥了重要的积极作用。
+从图~\ref{fig1}~中可以看出，以迭代次数为取样间隔时，块交换对收敛速度的加速效果尤为明显。但是由于其时间复杂度较高，故以秒为取样间隔时加速效果没有那么显著，但在搜索初期的快速改进阶段和后期的深度搜索阶段仍有较大优势，且收敛的极限优于没有块交换的情况。由此可见，块交换邻域无论从短期的收敛速度来考虑，还是从长期的目标函数值下限来考虑，都发挥了重要的积极作用。
 
 \subsection{疏散性搜索策略对比分析}
 
 \begin{table}[!t]
 	\footnotesize
-	\cnentablecaption{疏散性过程的计算结果对比}{Comparison of computational results between diversification procedures}
+	\cnentablecaption{疏散性策略的计算结果对比}{Comparison of computational results between diversification strategies}
 	\label{tab4}
-	\tabcolsep 6pt %space between two columns. 用于调整列间距
+	\tabcolsep 3.4pt %space between two columns. 用于调整列间距
 	\begin{tabular*}{\textwidth}{c|ccc|ccc}
 		\toprule
 		\multirow{2}{*}{Instance} & \multicolumn{3}{c|}{Best} & \multicolumn{3}{c}{Average} \\\cline{2-7}
-		 & Pure TS & Partial rebuild & Adjust Weight & Pure TS & Partial rebuild & Adjust Weight \\\hline
+		 & Random walk & Partial rebuild & Adjust weight & Random walk & Partial rebuild & Adjust weight \\\hline
 		n035w4\_0\_1-7-1-8         & 1695 & 1705 & 1685 & 1763.13 & 1778.28 & 1747.19 \\
 		n035w4\_1\_0-6-9-2         & 1655 & 1650 & 1655 & 1775.31 & 1774.38 & 1747.03 \\
 		n035w4\_2\_8-6-7-1         & 1510 & 1575 & 1555 & 1600.47 & 1656.25 & 1635.47 \\
@@ -948,16 +948,9 @@ f'(X) = \sum_{n=1}^{N} \frac{\sum_{d=1}^{D} \textrm{C}(X^H\phantom{}_{d,n} \ne \
 	\end{tabular*}
 \end{table}
 
-观察目标函数值的组成可以发现，不同护士的惩罚差异很大，因此~\ref{subsec:weight}~节所述权重调整策略应该能改善单纯的禁忌搜索集中性太强的不足，为算法提供一个有导向而非盲目的疏散性搜索过程。为了验证这个猜想，对单纯的禁忌搜索（Pure TS）、使用了保留解向量的部分元素然后对其贪心构造和修复直至重新产生合法解的扰动策略的禁忌搜索（Partial rebuild）和使用了权重调整策略的禁忌搜索（Adjust Weight）进行了对比测试。测试对决赛使用的三种规模的算例和两种排班周期的长度各随机选择了~$3$~个算例分别进行了~$32$~次独立的重复计算。
+观察目标函数值的组成可以发现，不同护士的惩罚有一定的差异。然而由于众多约束相互制约，可能一旦找到了一个相对合理的排班就很难再进行结构性的调整，因此~\ref{subsec:weight}~节所述权重调整策略很有可能可以打破既定的排班格局，为算法提供一个有导向而非盲目的疏散性搜索过程。为了验证这个猜想，对随机游走（Random Walk）、使用了保留解向量的部分元素然后对其贪心构造和修复直至重新产生合法解的扰动策略的禁忌搜索（Partial rebuild）和使用了权重调整策略的禁忌搜索（Adjust Weight）三种扰动方式进行了对比测试。测试对决赛使用的三种规模的算例和两种排班周期的长度各随机选择了~$3$~个算例分别进行了~$32$~次独立的重复计算，并统计了多次计算得到的目标函数值中的最优值和平均值。
 
-从表~\ref{tab4}~可以看出，
-
-
-
-
-
-
-
+疏散性搜索与集中性搜索不同，其作用在于提升算法的稳定性而不是提升算法搜索能力的上限。从表~\ref{tab4}~可以看出，比较~$32$~次计算求得的最优值，不同疏散性搜索策略没有显著差异。而对比平均值却可以发现使用了权重调整策略之后有比较明显的提升，几乎所有算例的平均求解质量都超过了另外两种扰动策略，离算法所能求到的下限更加接近。这说明本算法使用的权重调整策略是一种有效的疏散性搜索策略。
 
 \subsection{全局约束近似评估策略对比分析}
 
@@ -965,7 +958,7 @@ f'(X) = \sum_{n=1}^{N} \frac{\sum_{d=1}^{D} \textrm{C}(X^H\phantom{}_{d,n} \ne \
 	\footnotesize
 	\cnentablecaption{全局近似评估策略的计算结果对比}{Comparison of computational results between approximate global constraints evaluation strategies}
 	\label{tab5}
-	\tabcolsep 5pt %space between two columns. 用于调整列间距
+	\tabcolsep 4.9pt %space between two columns. 用于调整列间距
 	\begin{tabular*}{\textwidth}{c|ccc|ccc}
 		\toprule
 		\multirow{2}{*}{Instance} & \multicolumn{3}{c|}{Best} & \multicolumn{3}{c}{Average} \\\cline{2-7}
@@ -1098,193 +1091,3 @@ f'(X) = \sum_{n=1}^{N} \frac{\sum_{d=1}^{D} \textrm{C}(X^H\phantom{}_{d,n} \ne \
 %\end{supplement}
 
 \end{document}
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% 本模板使用的latex排版示例
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%%% 章节
-\section{}
-\subsection{}
-\subsubsection{}
-
-
-%%% 列表
-\begin{itemize}
-\item Aaa aaa.
-\item Bbb bbb.
-\item Ccc ccc.
-\end{itemize}
-
-
-%%% 定义、定理、引理、推论
-%%% []中的名称可以省略
-\definition[定义名]{定义内容.}
-\theorem[定理名]{定理内容.}
-\lemma[引理名]{引理内容.}
-\corollary[推论名]{推论内容.}
-
-%%% 若使用定理样式的其他前缀
-%%% 在 "作者附加的定义" 处加入\newtheorem命令, 例如
-%%% "定理" 是由以下命令定义的
-\newtheorem{theorem}{定理}
-
-
-%%% 单图
-%%% 可在文中使用图\ref{fig1}引用图编号
-\begin{figure}[!t]
-\centering
-\includegraphics{fig1.eps}
-\cnenfigcaption{中文图题}{Caption}
-\label{fig1}
-\end{figure}
-
-%%% 并排图
-%%% 可在文中使用图\ref{fig1}、图\ref{fig2}引用图编号
-\begin{figure}[!t]
-\centering
-\begin{minipage}[c]{0.48\textwidth}
-\centering
-\includegraphics{fig1.eps}
-\end{minipage}
-\hspace{0.02\textwidth}
-\begin{minipage}[c]{0.48\textwidth}
-\centering
-\includegraphics{fig2.eps}
-\end{minipage}\\[3mm]
-\begin{minipage}[t]{0.48\textwidth}
-\centering
-\cnenfigcaption{中文图题1}{Caption1}
-\label{fig1}
-\end{minipage}
-\hspace{0.02\textwidth}
-\begin{minipage}[t]{0.48\textwidth}
-\centering
-\cnenfigcaption{中文图题2}{Caption2}
-\label{fig2}
-\end{minipage}
-\end{figure}
-
-%%% 并排子图
-%%% 需要英文分图题 (a)...; (b)...
-\begin{figure}[!t]
-\centering
-\begin{minipage}[c]{0.48\textwidth}
-\centering
-\includegraphics{subfig1.eps}
-\end{minipage}
-\hspace{0.02\textwidth}
-\begin{minipage}[c]{0.48\textwidth}
-\centering
-\includegraphics{subfig2.eps}
-\end{minipage}
-\cnenfigcaption{中文图题}{Caption. (a) Subfig1 caption; (b) subfig2 caption}
-\label{fig1}
-\end{figure}
-
-%%% 算法
-%%% 可在文中使用 算法\ref{alg1} 引用算法编号
-\begin{algorithm}
-\footnotesize
-\caption{算法标题}
-\label{alg1}
-\begin{algorithmic}
-    \REQUIRE $n \geq 0 \vee x \neq 0$;
-    \ENSURE $y = x^n$;
-    \STATE $y \Leftarrow 1$;
-    \IF{$n < 0$}
-        \STATE $X \Leftarrow 1 / x$;
-        \STATE $N \Leftarrow -n$;
-    \ELSE
-        \STATE $X \Leftarrow x$;
-        \STATE $N \Leftarrow n$;
-    \ENDIF
-    \WHILE{$N \neq 0$}
-        \IF{$N$ is even}
-            \STATE $X \Leftarrow X \times X$;
-            \STATE $N \Leftarrow N / 2$;
-        \ELSE[$N$ is odd]
-            \STATE $y \Leftarrow y \times X$;
-            \STATE $N \Leftarrow N - 1$;
-        \ENDIF
-    \ENDWHILE
-\end{algorithmic}
-\end{algorithm}
-
-%%% 简单表格
-%%% 可在文中使用 表\ref{tab1} 引用表编号
-\begin{table}[!t]
-\footnotesize
-\cnentablecaption{表题}{Caption}
-\label{tab1}
-\tabcolsep 10pt %space between two columns. 用于调整列间距
-\begin{tabular*}{\textwidth}{cccc}
-\toprule
-  Title a & Title b & Title c & Title d \\\hline
-  Aaa & Bbb & Ccc & Ddd\\
-  Aaa & Bbb & Ccc & Ddd\\
-  Aaa & Bbb & Ccc & Ddd\\
-\bottomrule
-\end{tabular*}
-\end{table}
-
-%%% 换行表格
-\begin{table}[!t]
-\footnotesize
-\cnentablecaption{表题}{Caption}
-\label{tab1}
-\def\tabblank{\hspace*{10mm}} %blank leaving of both side of the table. 左右两边的留白
-\begin{tabularx}{\textwidth} %using p{?mm} to define the width of a column. 用p{?mm}控制列宽
-{@{\tabblank}@{\extracolsep{\fill}}cccp{100mm}@{\tabblank}}
-\toprule
-  Title a & Title b & Title c & Title d \\\hline
-  Aaa & Bbb & Ccc & Ddd ddd ddd ddd.
-
-  Ddd ddd ddd ddd ddd ddd ddd ddd ddd ddd ddd ddd ddd ddd ddd ddd ddd ddd ddd ddd ddd ddd ddd ddd ddd ddd ddd ddd ddd ddd ddd.\\
-  Aaa & Bbb & Ccc & Ddd ddd ddd ddd.\\
-  Aaa & Bbb & Ccc & Ddd ddd ddd ddd.\\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-%%% 单行公式
-%%% 可在文中使用 (\ref{eq1})式 引用公式编号
-%%% 如果是句子开头, 使用 公式(\ref{eq1}) 引用
-\begin{equation}
-A(d,f)=d^{l}a^{d}(f),
-\label{eq1}
-\end{equation}
-
-%%% 不编号的单行公式
-\begin{equation}
-\nonumber
-A(d,f)=d^{l}a^{d}(f),
-\end{equation}
-
-%%% 公式组
-\begin{eqnarray}
-\nonumber
-&X=[x_{11},x_{12},\ldots,x_{ij},\ldots ,x_{n-1,n}]^{\rm T},\\
-\nonumber
-&\varepsilon=[e_{11},e_{12},\ldots ,e_{ij},\ldots ,e_{n-1,n}],\\
-\nonumber
-&T=[t_{11},t_{12},\ldots ,t_{ij},\ldots ,t_{n-1,n}].
-\end{eqnarray}
-
-%%% 条件公式
-\begin{eqnarray}
-\sum_{j=1}^{n}x_{ij}-\sum_{k=1}^{n}x_{ki}=
-\left\{
-\begin{aligned}
-1,&\quad i=1,\\
-0,&\quad i=2,\ldots ,n-1,\\
--1,&\quad i=n.
-\end{aligned}
-\right.
-\label{eq1}
-\end{eqnarray}
-
-%%% 其他格式
-\footnote{Comments.} %footnote. 脚注
-\raisebox{-1pt}[0mm][0mm]{xxxx} %put xxxx upper or lower. 控制xxxx的垂直位置
