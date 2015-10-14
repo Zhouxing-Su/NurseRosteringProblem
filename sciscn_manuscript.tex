@@ -123,13 +123,12 @@
 
 由于每天每班次每岗位上班的护士可以从拥有该岗位所需技能的护士中任意挑选，排班表中最小的时间单位的人员选择已经具有组合数级别的复杂度，将各个岗位排满又需要指数级别的复杂度来完成。与此同时，众多的软约束之间相互作用，此消彼涨。因此，护士排班问题无论是对医院的管理人员还是大学的研究者来说，都是一个极其复杂的问题，对其进行优化是一项艰巨的挑战。
 
-护士排班问题在近几十年来得到了广泛的研究，而最近十年研究尤为深入。在众多求解算法中，主要有精确算法和近似算法两大类别。由于护士排班问题的复杂性，纯粹的精确算法往往有诸多局限，因此文献数量相对较少。其中有~isken~等和~Glass~等分别在文献~\cite{isken2004implicit}~和~\cite{glass2010nurse}~中使用的整数规划方法对护士排班问题进行了建模与求解。与之相对地，以启发式算法为核心的近似算法则得到了更多研究者的关注。
+护士排班问题在近几十年来得到了广泛的研究，而最近十年研究尤为深入。在众多求解算法中，主要有精确算法和启发式算法两大类别。由于护士排班问题的复杂性，纯粹的精确算法往往有诸多局限，文献数量相对较少。其中有~isken~等和~Glass~等分别在文献~\cite{isken2004implicit}~和~\cite{glass2010nurse}~中使用的整数规划方法，以及~Beli{\"e}n~等在文献~\cite{belien2008branch}~中提出的分支定价方法。此外，~He~等在~\cite{he2012constraint}~中使用列生成算法对护士排班问题进行了建模与求解。
 
-Burke~等在~\cite{burke1999hybrid}~中提出了针对护士排班问题的混合禁忌搜索，之后又相继提出了模因算法~\upcite{burke2001memetic}~、变领域搜索~\upcite{burke2004variable,burke2008hybrid}~、分散搜索~\upcite{burke2010scatter}~和变深度搜索~\upcite{burke2013time}~来求解护士排班问题。
+另一方面，启发式算法也得到了众多研究者的关注。
+Burke~等在~\cite{burke1999hybrid}~中提出了针对护士排班问题的混合禁忌搜索，之后又相继提出了模因算法~\upcite{burke2001memetic}~、变邻域搜索~\upcite{burke2004variable,burke2008hybrid}~、分散搜索~\upcite{burke2010scatter}~和变深度搜索~\upcite{burke2013time}~来求解护士排班问题。
 此外，针对护士排班问题还有众多解决方案，例如
-~Beli{\"e}n~等在文献~\cite{belien2008branch}~中提出的分支定价方法、
 ~Bai~等在~\cite{bai2010hybrid}~中提出的混合进化算法、
-~He~等在~\cite{he2012constraint}~中提出的列生成算法、
 ~Anwar~等在~\cite{anwar2014hyper}~中提出的超启发式算法以及
 ~Huang~等在~\cite{huang2014evolutionary}~中提出的进化算法。
 
@@ -1007,9 +1006,135 @@ f'(X) = \sum_{n=1}^{N} \frac{\sum_{d=1}^{D} \textrm{C}(X^H\phantom{}_{d,n} \ne \
 %%% 文中上标引用: \upcite{1,2}
 %%% 文中正常引用: \cite{1,2}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\bibliography{bib}{}
-\bibliographystyle{plain}
-%\begin{thebibliography}{99}
+%\bibliography{bib}{}
+%\bibliographystyle{plain}
+\begin{thebibliography}{99}
+	\bibitem{anwar2014hyper}
+	Khairul Anwar, Mohammed Awadallah, Ahamad~Tajudin Khader, Mohammed~Azmi
+	Al-Betar, et~al.
+	\newblock Hyper-heuristic approach for solving nurse rostering problem.
+	\newblock In {\em Computational Intelligence in Ensemble Learning (CIEL), 2014
+		IEEE Symposium on}, pages 1--6. IEEE, 2014.
+	
+	\bibitem{bai2010hybrid}
+	Ruibin Bai, Edmund~K Burke, Graham Kendall, Jingpeng Li, and Barry McCollum.
+	\newblock A hybrid evolutionary approach to the nurse rostering problem.
+	\newblock {\em Evolutionary Computation, IEEE Transactions on}, 14(4):580--590,
+	2010.
+	
+	\bibitem{belien2008branch}
+	Jeroen Beli{\"e}n and Erik Demeulemeester.
+	\newblock A branch-and-price approach for integrating nurse and surgery
+	scheduling.
+	\newblock {\em European journal of operational research}, 189(3):652--668,
+	2008.
+	
+	\bibitem{burke2001memetic}
+	Edmund Burke, Peter Cowling, Patrick De~Causmaecker, and Greet~Vanden Berghe.
+	\newblock A memetic approach to the nurse rostering problem.
+	\newblock {\em Applied intelligence}, 15(3):199--214, 2001.
+	
+	\bibitem{burke1999hybrid}
+	Edmund Burke, Patrick De~Causmaecker, and Greet~Vanden Berghe.
+	\newblock A hybrid tabu search algorithm for the nurse rostering problem.
+	\newblock In {\em Simulated evolution and learning}, pages 187--194. Springer,
+	1999.
+	
+	\bibitem{burke2004variable}
+	Edmund Burke, Patrick De~Causmaecker, Sanja Petrovic, and Greet~Vanden Berghe.
+	\newblock Variable neighborhood search for nurse rostering problems.
+	\newblock In {\em Metaheuristics: computer decision-making}, pages 153--172.
+	Springer, 2004.
+	
+	\bibitem{burke2014new}
+	Edmund~K Burke and Tim Curtois.
+	\newblock New approaches to nurse rostering benchmark instances.
+	\newblock {\em European Journal of Operational Research}, 237(1):71--81, 2014.
+	
+	\bibitem{burke2008hybrid}
+	Edmund~K Burke, Timothy Curtois, Gerhard Post, Rong Qu, and Bart Veltman.
+	\newblock A hybrid heuristic ordering and variable neighbourhood search for the
+	nurse rostering problem.
+	\newblock {\em European Journal of Operational Research}, 188(2):330--341,
+	2008.
+	
+	\bibitem{burke2010scatter}
+	Edmund~K Burke, Timothy Curtois, Rong Qu, and G~Vanden Berghe.
+	\newblock A scatter search methodology for the nurse rostering problem.
+	\newblock {\em Journal of the Operational Research Society}, 61(11):1667--1679,
+	2010.
+	
+	\bibitem{burke2013time}
+	Edmund~K Burke, Timothy Curtois, Rong Qu, and Greet Vanden~Berghe.
+	\newblock A time predefined variable depth search for nurse rostering.
+	\newblock {\em INFORMS Journal on Computing}, 25(3):411--419, 2013.
+	
+	\bibitem{burke2004state}
+	Edmund~K Burke, Patrick De~Causmaecker, Greet~Vanden Berghe, and Hendrik
+	Van~Landeghem.
+	\newblock The state of the art of nurse rostering.
+	\newblock {\em Journal of scheduling}, 7(6):441--499, 2004.
+	
+	\bibitem{ceschia2015second}
+	Sara Ceschia, Nguyen Thi~Thanh Dang, Patrick De~Causmaecker, Stefaan
+	Haspeslagh, and Andrea Schaerf.
+	\newblock Second international nurse rostering competition (inrc-ii)---problem
+	description and rules---.
+	\newblock {\em arXiv preprint arXiv:1501.04177}, 2015.
+	
+	\bibitem{cheang2003nurse}
+	Brenda Cheang, Haibing Li, Andrew Lim, and Brian Rodrigues.
+	\newblock Nurse rostering problems----a bibliographic survey.
+	\newblock {\em European Journal of Operational Research}, 151(3):447--460,
+	2003.
+	
+	\bibitem{de2011categorisation}
+	Patrick De~Causmaecker and Greet~Vanden Berghe.
+	\newblock A categorisation of nurse rostering problems.
+	\newblock {\em Journal of Scheduling}, 14(1):3--16, 2011.
+	
+	\bibitem{glass2010nurse}
+	Celia~A Glass and Roger~A Knight.
+	\newblock The nurse rostering problem: A critical appraisal of the problem
+	structure.
+	\newblock {\em European Journal of Operational Research}, 202(2):379--389,
+	2010.
+	
+	\bibitem{haspeslagh2014first}
+	Stefaan Haspeslagh, Patrick De~Causmaecker, Andrea Schaerf, and Martin
+	St{\o}levik.
+	\newblock The first gerrnational nurse rostering competition 2010.
+	\newblock {\em Annals of Operations Research}, 218(1):221--236, 2014.
+	
+	\bibitem{he2012constraint}
+	Fang He and Rong Qu.
+	\newblock A constraint programming based column generation approach to nurse
+	rostering problems.
+	\newblock {\em Computers \& Operations Research}, 39(12):3331--3343, 2012.
+	
+	\bibitem{huang2014evolutionary}
+	Han Huang, Weijia Lin, Zhiyong Lin, Zhifeng Hao, and Andrew Lim.
+	\newblock An evolutionary algorithm based on constraint set partitioning for
+	nurse rostering problems.
+	\newblock {\em Neural Computing and Applications}, 25(3-4):703--715, 2014.
+	
+	\bibitem{isken2004implicit}
+	Mark~W Isken.
+	\newblock An implicit tour scheduling model with applications in healthcare.
+	\newblock {\em Annals of Operations Research}, 128(1-4):91--109, 2004.
+	
+	\bibitem{lu2012adaptive}
+	Zhipeng L{\"u} and Jin-Kao Hao.
+	\newblock Adaptive neighborhood search for nurse rostering.
+	\newblock {\em European Journal of Operational Research}, 218(3):865--876,
+	2012.
+	
+	\bibitem{valouxis2012systematic}
+	Christos Valouxis, Christos Gogos, George Goulas, Panayiotis Alefragis, and
+	Efthymios Housos.
+	\newblock A systematic two phase approach for the nurse rostering problem.
+	\newblock {\em European Journal of Operational Research}, 219(2):425--433,
+	2012.
 %
 %% 专著
 %% 作者名. 书名. 版次(第一版不用列出). 出版社所在城市名: 出版社名, 出版年份. 起止页码
@@ -1046,7 +1171,7 @@ f'(X) = \sum_{n=1}^{N} \frac{\sum_{d=1}^{D} \textrm{C}(X^H\phantom{}_{d,n} \ne \
 %% 作者名. 手册名及版本号, 年份
 %\bibitem{10}Wang D L, Zhu J, Li Z K, et al. User Manual for QTKMapper Version 1.6, 1999
 %
-%\end{thebibliography}
+\end{thebibliography}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
