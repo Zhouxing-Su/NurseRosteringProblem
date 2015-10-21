@@ -123,7 +123,7 @@
 
 由于每天每班次每岗位上班的护士可以从拥有该岗位所需技能的护士中任意挑选, 其人员选择已经具有组合数级别的复杂度, 同时对整个排班周期进行排班又需要指数级别的复杂度来完成. 此外, 众多的软约束之间相互作用, 此消彼涨. 因此, 护士排班问题无论是对医院的管理人员还是学者来说, 都是一个极其复杂的问题, 对其进行求解优化是一项艰巨的挑战.
 
-护士排班问题在近几十年来得到了广泛的研究, 而最近十年研究尤为深入. 在众多求解算法中, 主要有精确算法和启发式算法两大类别. 精确算法有~isken~等和~Glass~等分别在文献~\cite{isken2004implicit}~和~\cite{glass2010nurse}~中使用的整数规划方法, 以及~Beli{\"e}n~等在文献~\cite{belien2008branch}~中提出的分支定价方法. 此外, ~He~等在~\cite{he2012constraint}~中使用列生成算法对护士排班问题进行了建模与求解.
+护士排班问题在近几十年来得到了广泛的研究, 而最近十年研究尤为深入. 在众多求解算法中, 主要有精确算法和启发式算法两大类别. 精确算法有~Isken~等和~Glass~等分别在文献~\cite{isken2004implicit}~和~\cite{glass2010nurse}~中使用的整数规划方法, 以及~Beli{\"e}n~等在文献~\cite{belien2008branch}~中提出的分支定价方法. 此外, ~He~等在~\cite{he2012constraint}~中使用列生成算法对护士排班问题进行了建模与求解.
 
 另一方面, 启发式算法也得到了众多研究者的关注.
 Burke~等在~\cite{burke1999hybrid}~中提出了针对护士排班问题的混合禁忌搜索, 之后又相继提出了模因算法~\upcite{burke2001memetic}~、变邻域搜索~\upcite{burke2004variable,burke2008hybrid}~、分散搜索~\upcite{burke2010scatter}~和变深度搜索~\upcite{burke2013time}~来求解护士排班问题.
@@ -162,13 +162,13 @@ Burke~等在~\cite{burke1999hybrid}~中提出了针对护士排班问题的混合禁忌搜索, 之后又
 该问题一共有4个硬约束：
 
 \begin{itemize}
-	\item $\mathbf{H_1.}$ \textbf{单一指派约束. } 每个护士每天只能被安排到一个时间槽. 在本文提出的解向量的表示方式下, 该硬约束将自动满足.
+	\item $\mathbf{H_1.}$ \textbf{单一指派约束. } 每个护士每天最多只能被安排到一个时间槽. 在本文提出的解向量的表示方式下, 该硬约束将自动满足.
 	
 	\item $\mathbf{H_2.}$ \textbf{人数下限约束. } 每天每个时间槽的排班人数不能小于其人数需求的最小值.
 	
 	\item $\mathbf{H_3.}$ \textbf{后继约束. } 同一个护士连续两天的排班不能出现禁止的模式. 例如, 一个护士在某天上了夜班, 则第二天不能再安排上早班.
 	
-	\item $\mathbf{H_4.}$ \textbf{技能约束. } 安排到某个时间槽的护士必须具备对应的技能. 例如, 安排在（早班, 护士长）的护士必须具备护士长的技能.
+	\item $\mathbf{H_4.}$ \textbf{技能约束. } 安排到某个时间槽的护士必须具备对应的技能. 例如, 安排在~(早班, 护士长)~的护士必须具备护士长的技能.
 \end{itemize}
 
 此外, 还有8个软约束：
@@ -188,7 +188,7 @@ Burke~等在~\cite{burke1999hybrid}~中提出了针对护士排班问题的混合禁忌搜索, 之后又
 	
 	\item $\mathbf{S_7.}$ \textbf{总排班数约束. } 每个护士在整个排班周期中的总工作天数必须在给定的区间内, 每个超出或不足的工作日都要受到~1~个单位的惩罚.
 	
-	\item $\mathbf{S_8.}$ \textbf{总周末排班数约束. } 每个护士在整个排班周期中被排班了的周末总数不得大于给定的最大值, 每超出一个周末都要受到~1~个单位的惩罚.
+	\item $\mathbf{S_8.}$ \textbf{总周末排班数约束. } 每个护士在整个排班周期中被排班了的周末总数不得大于给定的最大值, 每超出一个周末都要受到~1~个单位的惩罚. 其中周六或周日任意一天被排班则本周周末排班数记为~$1$~, 否则为~$0$~.
 \end{itemize}
 
 其中~$\mathbf{S_7}$~与~$\mathbf{S_8}$~为横跨整个排班周期的约束, 而其他约束可以在各阶段完成计算. 另外, 除了~$\mathbf{H_2}$~与~$\mathbf{S_1}$~是与时间槽相关的约束, 其它约束只针对单个护士, 不同护士之间没有影响.
@@ -199,10 +199,10 @@ f(X) = \sum_{i=1}^{8} c_i \times f_i(X)
 \label{eq1}
 \end{equation}
 
-已知数据主要包括场景、阶段和历史~3~类.
-场景信息给出了应用于所有阶段的共同数据, 其中规定了排班周期的长度, 即阶段数, 可能出现的班次和技能, ~$\mathbf{H_3}$~中涉及的非法后继班次的模式, 不同种类的合同的内容, 以及有哪些可供调度的护士与他们签订的合同类型. 其中合同规定了~$\mathbf{S_2}$~到~$\mathbf{S_4}$~中涉及的连续天数的上下限、~$\mathbf{S_6}$~中涉及的是否要求有完整周末、~$\mathbf{S_7}$~中涉及的总排班数区间以及~$\mathbf{S_8}$~中涉及的总周末排班数上限.
-阶段信息给出了单个阶段的数据, 其中包括用于判断~$\mathbf{H_2}$~和~$\mathbf{S_1}$~的违反程度的人数需求, 即一阶段中每天每个时间槽的最优和最低护士数量, 以及~$\mathbf{S_5}$~中描述的护士请假要求.
-历史信息给出了从前一阶段传递给后一阶段的数据, 用于评估约束违反情况. 典型的历史信息包含各护士的累计排班数、累计周末排班数、上阶段最后一天的排班、上阶段最后的连续排班天数与连续休息天数等.
+已知数据主要包括场景、需求和历史~3~类.
+场景信息为应用于所有阶段的共同数据, 其规定了排班周期的长度, 即阶段数, 可能出现的班次和技能, ~$\mathbf{H_3}$~中涉及的非法后继班次的模式, 不同种类的合同的内容, 以及有哪些可供调度的护士与他们签订的合同类型. 其中合同规定了~$\mathbf{S_2}$~到~$\mathbf{S_4}$~中涉及的连续天数的上下限、~$\mathbf{S_6}$~中涉及的是否要求有完整周末、~$\mathbf{S_7}$~中涉及的总排班数区间以及~$\mathbf{S_8}$~中涉及的总周末排班数上限.
+需求信息仅作用于单个阶段, 其中包括用于判断~$\mathbf{H_2}$~和~$\mathbf{S_1}$~的违反程度的人数需求, 即一阶段中每天每个时间槽的最优和最低护士数量, 以及~$\mathbf{S_5}$~中描述的护士请假要求.
+历史信息即从前一阶段传递给后一阶段的数据, 用于评估跨阶段约束的违反情况. 典型的历史信息包含各护士的累计排班数、累计周末排班数、上阶段最后一天的排班、上阶段最后的连续排班天数与连续休息天数等. 求解器的实现者也可以将任意可获取的数据以自定义格式保存供后续阶段使用.
 具体内容请参考竞赛的问题描述文档~\upcite{ceschia2015second}~.
 
 
@@ -212,8 +212,6 @@ f(X) = \sum_{i=1}^{8} c_i \times f_i(X)
 \subsection{算法流程概览}
 
 护士排班问题的求解过程将按阶段依次执行, 直到覆盖整个排班周期. 如算法~\ref{alg1}~所示, 每个阶段以场景信息~$Scenario$~、上阶段的历史信息~$h_i$~与本阶段的需求信息~$Weekdata_i$~为输入, 调用带权禁忌搜索算法, 输出本阶段的解向量~$X_i$~与供下阶段使用的历史信息~$h_{i+1}$~. 在本次竞赛中, 排班周期以周为单位划分阶段, 总阶段数~$T$~在场景信息中给出（通常为~4~周或~8~周）, 且参赛者只需设计实现一周排班的求解算法, 由竞赛组织者重复调用该算法来完成整个周期所有阶段的排班.
-
-求解过程的核心是带权禁忌搜索算法, 其伪代码如算法~\ref{alg2}~所示. 其中~$w$~为对某个护士计算软约束违反情况时惩罚的权重系数. 算法首先产生一个合法的初始解作为当前解, 然后交替使用相同的权重和根据惩罚分布情况进行调整后的权重对当前解进行改进, 改进的过程使用了一种多邻域禁忌搜索. 接下来将详细介绍用于单个阶段求解的算法实现细节.
 
 \begin{algorithm}
 	\footnotesize
@@ -225,12 +223,14 @@ f(X) = \sum_{i=1}^{8} c_i \times f_i(X)
 		\STATE $h_0 \Leftarrow InitialHistory$;
 		\STATE $i \Leftarrow 0$;
 		\WHILE{$i < T$}
-			\STATE $X_i \Leftarrow \textrm{WeightedTabuSearch}(Scenario, h_i, Weekdata_i)$;  // 见算法~\ref{alg2}
-            \STATE $h_{i+1} \Leftarrow \textrm{GenerateHistory}(Scenario, h_i, X_i)$;
-			\STATE $i \Leftarrow i+1$;
+		\STATE $X_i \Leftarrow \textrm{WeightedTabuSearch}(Scenario, h_i, Weekdata_i)$;  // 见算法~\ref{alg2}
+		\STATE $h_{i+1} \Leftarrow \textrm{GenerateHistory}(Scenario, h_i, X_i)$;
+		\STATE $i \Leftarrow i+1$;
 		\ENDWHILE
 	\end{algorithmic}
 \end{algorithm}
+
+求解过程的核心是带权禁忌搜索算法, 其伪代码如算法~\ref{alg2}~所示. 其中~$w$~为对某个护士计算软约束违反情况时惩罚的权重系数. 算法首先产生一个合法的初始解作为当前解, 然后交替使用相同的权重和根据惩罚分布情况进行调整后的权重对当前解进行改进, 改进的过程使用了一种多邻域禁忌搜索. 接下来将详细介绍用于单个阶段求解的算法实现细节.
 
 \begin{algorithm}
 	\footnotesize
@@ -242,31 +242,11 @@ f(X) = \sum_{i=1}^{8} c_i \times f_i(X)
 		\STATE $X_i \Leftarrow \textrm{GenerateInitialSolution}()$;  // 见 ~\ref{subsec:init}~节
 		\REPEAT
 			\STATE $\textrm{ResetWeight}(w)$;  // 见 ~\ref{subsec:weight}~节
-			\STATE $s \Leftarrow \textrm{TabuSearch}(s, w)$;  // 见算法~\ref{alg3}
+			\STATE $s \Leftarrow \textrm{TabuSearch}(s, w)$;  // 见~\ref{sec:tabusearch}~节算法~\ref{alg3}
 			\STATE $X_i \Leftarrow \textrm{min}\{ s, X_i \}$;
 			\STATE $s \Leftarrow \textrm{SelectRandomly}(s, X_i)$; 	// 按概率随机选择一个
 			\STATE $w \Leftarrow \textrm{AdjustWeightToBiasNurseWithGreaterPenalty}(s)$;  // 见 ~\ref{subsec:weight}~节
 			\STATE $s \Leftarrow \textrm{TabuSearch}(s, w)$;  // 见算法~\ref{alg3}
-		\UNTIL{满足停止条件}
-	\end{algorithmic}
-\end{algorithm}
-
-\begin{algorithm}
-	\footnotesize
-	\caption{多邻域禁忌搜索算法伪代码}
-	\label{alg3}
-	\begin{algorithmic}
-		\REQUIRE $\textrm{初始解}~s^0, \textrm{各护士的惩罚权重}~w$;
-		\ENSURE $\textrm{求得的当前权重下本阶段的最优排班计划}~s$;
-		\STATE $s \Leftarrow s^0$
-		\STATE $\textrm{InitializeNeighborhoodSelectionPossibility}(p)$;  // 见 ~\ref{subsec:select}~节
-		\STATE $\textrm{InitializeTabuList}(t)$;  // 见 ~\ref{subsec:tabu}~节
-		\REPEAT
-			\STATE $n \Leftarrow \textrm{SelectNeighborhood}(p)$;  // 见 ~\ref{subsec:select}~节
-			\STATE $m \Leftarrow \textrm{FindBestNeighborhoodMove}(s, n, t)$; 
-			\STATE $\textrm{UpdateTabuList}(s, t)$;  // 见 ~\ref{subsec:tabu}~节
-			\STATE $s \Leftarrow \textrm{ApplyNeighborhoodMove}(s, m)$;
-			\STATE $\textrm{UpdateNeighborhoodSelectionPossibility}(p, n, m)$;  // 见 ~\ref{subsec:select}~节
 		\UNTIL{满足停止条件}
 	\end{algorithmic}
 \end{algorithm}
@@ -317,8 +297,29 @@ f(X) = \sum_{i=1}^{8} c_i \times f_i(X)
 因此, 交换排班作为前三种邻域动作组合而成的复合邻域结构, 具有极其重要的意义.
 
 \subsection{多邻域禁忌搜索}
+\label{sec:tabusearch}
 
 多邻域禁忌搜索是带权禁忌搜索算法的核心模块. 如算法~\ref{alg3}~所示, 该过程首先将选中各种邻域的概率初始化为相同值, 然后将禁忌表初始化为允许所有邻域动作执行的状态. 接下来循环执行邻域搜索过程. 在循环体中, 首先按概率在~$M_1$~到~$M_4$~中选择一个邻域~$n$~, 然后对~$n$~中的所有动作进行评估, 计算其对目标函数值的改变量. 选出最优的邻域动作~$m$~之后，更新相关的禁忌表项, 然后执行该邻域动作. 最后根据该邻域动作的优度更新下一次迭代中各邻域被选中的概率. 接下来将介绍上述过程的具体实现.
+
+\begin{algorithm}
+	\footnotesize
+	\caption{多邻域禁忌搜索算法伪代码}
+	\label{alg3}
+	\begin{algorithmic}
+		\REQUIRE $\textrm{初始解}~s^0, \textrm{各护士的惩罚权重}~w$;
+		\ENSURE $\textrm{求得的当前权重下本阶段的最优排班计划}~s$;
+		\STATE $s \Leftarrow s^0$
+		\STATE $\textrm{InitializeNeighborhoodSelectionPossibility}(p)$;  // 见 ~\ref{subsec:select}~节
+		\STATE $\textrm{InitializeTabuList}(t)$;  // 见 ~\ref{subsec:tabu}~节
+		\REPEAT
+		\STATE $n \Leftarrow \textrm{SelectNeighborhood}(p)$;  // 见 ~\ref{subsec:select}~节
+		\STATE $m \Leftarrow \textrm{FindBestNeighborhoodMove}(s, n, t)$; 
+		\STATE $\textrm{UpdateTabuList}(s, t)$;  // 见 ~\ref{subsec:tabu}~节
+		\STATE $s \Leftarrow \textrm{ApplyNeighborhoodMove}(s, m)$;
+		\STATE $\textrm{UpdateNeighborhoodSelectionPossibility}(p, n, m)$;  // 见 ~\ref{subsec:select}~节
+		\UNTIL{满足停止条件}
+	\end{algorithmic}
+\end{algorithm}
 
 \subsubsection{邻域选择策略}
 \label{subsec:select}
