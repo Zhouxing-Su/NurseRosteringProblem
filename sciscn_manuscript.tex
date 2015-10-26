@@ -233,7 +233,8 @@ f(X) = \sum_{i=1}^{8} c_i \times f_i(X)
 	\end{algorithmic}
 \end{algorithm}
 
-求解过程的核心是带权禁忌搜索算法, 其伪代码如算法~\ref{alg2}~所示. 其中~$w_n$~为对护士~$n$~计算软约束违反情况时惩罚的权重系数. 算法首先产生一个合法的初始解作为当前解, 然后交替使用相同的权重和根据惩罚分布情况进行调整后的权重对当前解进行改进, 改进的过程使用了一种多邻域禁忌搜索. 接下来将详细介绍用于单个阶段求解的算法实现细节.
+求解过程的核心是带权禁忌搜索算法, 其伪代码如算法~\ref{alg2}~所示. 其中~$w_n$~为对护士~$n$~计算软约束违反情况时惩罚的权重系数. 算法首先产生一个合法的初始解作为当前解, 然后交替使用相同的权重和根据惩罚分布情况进行调整后的权重对当前解进行改进, 改进的过程使用了一种多邻域禁忌搜索. 到达给定的运行时间后算法终止并输出找到的最优排班. 
+接下来将详细介绍用于单个阶段求解的算法实现细节.
 
 \begin{algorithm}
 	\footnotesize
@@ -302,7 +303,7 @@ f(X) = \sum_{i=1}^{8} c_i \times f_i(X)
 \subsection{多邻域禁忌搜索}
 \label{sec:tabusearch}
 
-多邻域禁忌搜索以禁忌搜索为框架, 在搜索的每一步迭代中, 通过概率选择~$4$~种结构不同的邻域中的一种进行搜索. 如算法~\ref{alg3}~所示, 该过程首先令选中各种邻域的概率相等, 然后将禁忌表初始化为允许所有邻域动作执行的状态. 接下来循环执行邻域搜索过程. 在循环体中, 首先按概率在~$M_1$~到~$M_4$~中选择一个邻域~$\mathcal{N}$~, 然后对~$\mathcal{N}$~中的所有动作进行评估, 计算其对目标函数值的改变量. 选出最优的邻域动作~$m$~之后，更新相关的禁忌表项, 并执行该邻域动作. 最后根据该邻域动作的优度更新下一次迭代中各邻域被选中的概率. 接下来将介绍上述过程的具体实现.
+多邻域禁忌搜索以禁忌搜索为框架, 在搜索的每一步迭代中, 通过概率选择~$4$~种结构不同的邻域中的一种进行搜索. 如算法~\ref{alg3}~所示, 该过程首先令选中各种邻域的概率相等, 然后将禁忌表初始化为允许所有邻域动作执行的状态. 接下来循环执行邻域搜索过程, 直到连续一定迭代步数无法改进本次局部搜索找到的最优解即停止. 在循环体中, 首先按概率在~$M_1$~到~$M_4$~中选择一个邻域~$\mathcal{N}$~, 然后对~$\mathcal{N}$~中的所有动作进行评估, 计算其对目标函数值的改变量. 选出最优的邻域动作~$m$~之后，更新相关的禁忌表项, 并执行该邻域动作. 最后根据该邻域动作的优度更新下一次迭代中各邻域被选中的概率. 接下来将介绍上述过程的具体实现.
 
 \begin{algorithm}
 	\footnotesize
@@ -312,14 +313,14 @@ f(X) = \sum_{i=1}^{8} c_i \times f_i(X)
 		\REQUIRE $\textrm{初始解}~s^0, \textrm{各护士的惩罚权重}~w$;
 		\ENSURE $\textrm{求得的当前权重下本阶段的最优排班计划}~s$;
 		\STATE $s \Leftarrow s^0$
-		\STATE $\textrm{InitializeNeighborhoodSelectionPossibility}(p)$;
-		\STATE $\textrm{InitializeTabuList}(t)$;  // 见 ~\ref{subsec:tabu}~节
+		\STATE $\textrm{InitializeNeighborhoodSelectionPossibility}(p_1, p_2, p_3, p_4)$; // $p_1$~到~$p_4$~分别表示选中~$M_1$~到~$M_4$~的概率
+		\STATE $\textrm{InitializeTabuList}()$;  // 见 ~\ref{subsec:tabu}~节
 		\REPEAT
-		\STATE $\mathcal{N} \Leftarrow \textrm{SelectNeighborhood}(p)$;  // 见 ~\ref{subsec:select}~节
-		\STATE $m \Leftarrow \textrm{FindBestNeighborhoodMove}(s, \mathcal{N}, t)$;
-		\STATE $\textrm{UpdateTabuList}(s, t)$;  // 见 ~\ref{subsec:tabu}~节
+		\STATE $\mathcal{N} \Leftarrow \textrm{SelectNeighborhood}(p_1, p_2, p_3, p_4)$;  // 见 ~\ref{subsec:select}~节
+		\STATE $m \Leftarrow \textrm{FindBestNeighborhoodMove}(s, \mathcal{N})$;
+		\STATE $\textrm{UpdateTabuList}(m)$;  // 见 ~\ref{subsec:tabu}~节
 		\STATE $s \Leftarrow \textrm{ApplyNeighborhoodMove}(s, m)$;
-		\STATE $\textrm{UpdateNeighborhoodSelectionPossibility}(p, \mathcal{N}, m)$;  // 见 ~\ref{subsec:select}~节
+		\STATE $\textrm{UpdateNeighborhoodSelectionPossibility}(p_1, p_2, p_3, p_4, \mathcal{N}, m)$;  // 见 ~\ref{subsec:select}~节
 		\UNTIL{满足停止条件}
 	\end{algorithmic}
 \end{algorithm}
@@ -329,19 +330,19 @@ f(X) = \sum_{i=1}^{8} c_i \times f_i(X)
 
 由于本算法设计了~4~种结构不同的邻域, 局部搜索每一步选择邻域动作时都对所有邻域进行探索开销过大, 因此每次只选择一个邻域进行评估. 于是, 邻域的选择策略的设计对算法性能的提升起到了至关重要的作用.
 
-本算法采用了轮盘赌的策略, 每种邻域~$M_i$~都有一定的概率~$p_i$~被选中, 所有邻域被选中的概率和满足~$\sum_{i=1}^4 p_i = 1$~. 在禁忌搜索的每一次迭代中, 都会在所有邻域中挑选一个邻域进行搜索, 寻找具有最大改进的邻域动作.
+本算法采用了轮盘赌的策略, 每种邻域~$M_i$~有一定的概率~$p_i$~被选中, 所有邻域被选中的概率和满足~$\sum_{i=1}^4 p_i = 1$~. 在局部搜索的每一次迭代中, 都会在所有邻域中挑选一个邻域进行搜索, 寻找具有最大改进的邻域动作.
 
-概率~$p_i$~由相应权重~$\omega_i$~来控制, ~$p_i = \omega_i / \sum_{i=1}^4 \omega_i$~. 在搜索过程中, 算法将根据邻域~$M_i$~的表现动态调整其权重~$\omega_i$~. 每一次搜索某一邻域寻找最优动作时, 会出现该最优动作改进了本轮搜索的最优解、改进了当前解、没有改进当前解以及不存在合法动作这~$4$~种情况之一. 这~$4$~种情况反映了该邻域对当前搜索过程的适应性, 表明了对解向量产生改进的程度. 很显然, 应该让更合适的邻域以更大的概率被选择, 因此本算法设置了~$4$~个基准值~$\Omega_1$~到~$\Omega_4$~, 分别与~$4$~种适应程度相对应, 每执行一个邻域动作都将根据其效果向对应的基准值趋近. 具体的调整策略为
+概率~$p_i$~由相应权重~$\omega_i$~来控制, ~$p_i = \omega_i / \sum_{i=1}^4 \omega_i$~. 在搜索过程中, 算法将根据邻域~$M_i$~的表现动态调整其权重~$\omega_i$~. 每一次搜索某一邻域寻找最优动作~$m$~时, 会出现~$m$~改进了本次搜索的最优解、改进了当前解、没有改进当前解以及不存在合法动作这~$4$~种情况之一. 这~$4$~种情况反映了该邻域对当前搜索过程的适应性, 表明了对解向量产生改进的程度. 很显然, 应该让更合适的邻域在接下的迭代中以更大的概率被选择, 因此本算法设置了~$4$~个基准值~$\Omega_1$~到~$\Omega_4$~, 分别与上述~$4$~种情况相对应, 每执行一个邻域动作都将根据其效果调整权重向对应的基准值趋近. 具体的调整策略为
 \begin{equation}
 \omega_i =
 \begin{cases}
-\omega_i + (\Omega_1 - \omega_i) / \lambda_1 & , m_i \textrm{改进了本轮搜索的最优解} \\
-\omega_i + (\Omega_2 - \omega_i) / \lambda_2 & , m_i \textrm{改进了当前解} \\
-\omega_i + (\Omega_3 - \omega_i) / \lambda_3 & , m_i \textrm{没有改进当前解但存在合法动作} \\
-\omega_i + (\Omega_4 - \omega_i) / \lambda_4 & , m_i \textrm{不存在合法动作} \\
+\omega_i + (\Omega_1 - \omega_i) / \lambda_1,&~m~\textrm{改进了本轮搜索的最优解} \\
+\omega_i + (\Omega_2 - \omega_i) / \lambda_2,&~m~\textrm{改进了当前解} \\
+\omega_i + (\Omega_3 - \omega_i) / \lambda_3,&~m~\textrm{没有改进当前解但存在合法动作} \\
+\omega_i + (\Omega_4 - \omega_i) / \lambda_4,&~m~\textrm{不存在合法动作} \\
 \end{cases}
 \end{equation}
-其中~$\lambda \in [1, +\infty )$~控制~$\omega$~向基准值趋近的速度. 在其定义域内, ~$\lambda$~越小收敛速度越快.
+其中~$\Omega_1 > \Omega_2 > \Omega_3 > \Omega_4 > 0$, $\lambda \in [1, +\infty )$~控制~$\omega$~向基准值趋近的速度. 在其定义域内, ~$\lambda$~越小收敛速度越快.
 
 \subsubsection{禁忌策略}
 \label{subsec:tabu}
