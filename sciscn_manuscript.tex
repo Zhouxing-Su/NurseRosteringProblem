@@ -93,12 +93,12 @@
 
 %%% 中文摘要
 \abstract{
-	本文提出了一种用于求解第二届国际护士排班竞赛中提出的多阶段护士排班问题的带权禁忌搜索算法. 该算法使用了~$3$~种互斥的简单邻域结构与~$1$~种复合邻域结构, 并根据其适应性动态调整搜索各邻域的概率, 同时通过调整各护士的惩罚权重来实现搜索过程中集中性与疏散性的平衡. 为了应对各个独立的阶段缺乏全局信息的问题, 提出了一种对全局约束的近似评估策略. 算法还针对自适应的邻域选择策略, 以减少多种邻域的整体计算开销为目标设计了邻域评估的缓存策略, 进一步提升了算法的执行效率. 算法在竞赛使用的~$60$~个算例上的计算结果表明, 本算法生成合法解的频率为~$100\%$~, 证明了算法的可用性, 同时在绝大多数算例上求得的最优值与所有参赛者求得的最优值的差距低于~$15\%$~, 证明了算法的有效性. 此外, 本文对算法中的关键要素进行了对比分析, 证明了这些组成部分的方案选择和参数设置的合理性.
+	本文研究了多阶段护士排班问题, 该问题由第二届国际护士排班竞赛提出, 在医疗优化领域具有重要的意义. 针对多阶段护士排班问题, 本文提出了一种带权禁忌搜索算法. 该算法使用了~$3$~种互斥的简单邻域结构与~$1$~种复合邻域结构, 并根据其适应性动态调整搜索各邻域的概率. 同时通过调整各护士的惩罚权重来实现搜索过程中集中性与疏散性的平衡. 为了应对各个独立的阶段缺乏全局信息的问题, 提出了一种对全局约束的近似评估策略. 算法还针对自适应的邻域选择策略, 以减少多种邻域的整体计算开销为目标设计了邻域评估的缓存策略, 进一步提升了算法的执行效率. 算法在竞赛使用的~$60$~个算例上的计算结果表明了算法的可用性和有效性. 此外, 本文对算法中的关键要素进行了对比分析, 证明了这些组成部分的方案选择和参数设置的合理性.
 }
 
 %%% 英文摘要
 \enabstract{
-	This paper proposes a weighted tabu search algorithm for solving multistage nurse rostering problem given by the Second International Nurse Rostering Competition. The algorithm employs $3$ simple neighborhood structure which are exclusive to each other and $1$ compound one. The possibilities of selecting each neighborhood to search are adjusted by their adaptiveness dynamically, as well as the weight of penalty on each nurse, which leads to the balance between intensification and diversification during the search procedure. To tackle the problem of lacking global information within each independent stages, we proposed an approximate evaluation strategy for spanning constraints. The algorithm employs cache for neighborhood move with the purpose of reducing overall cost of evaluation on every neighborhood aimming at the adaptive neighborhood selection strategy, which improves the efficiency of the algorithm even more. The benchmark result on $60$ instances of the algorithm from the competition indicates that, the frequency of generating feasible solution is $100\%$ which means high availability. Also, from the view of optima found, the gap between the best result of all participants and ours on almost all instances is less than $15\%$, which shows good solving quality. Furthermore, we compares and analyzes some key factors in the algorithm and proves their rationality.
+	This paper studies multi-stage nurse rostering problem which is proposed in the Second International Nurse Rostering Competition. It is very important in healthcare optimization. We propose a weighted tabu search algorithm for solving multi-stage nurse rostering problem. The algorithm employs $3$ simple neighborhood structures which are exclusive to each other and $1$ compound one. The possibilities of selecting each neighborhood to search are tuned by their adaptiveness dynamically. Meanwhile, the balance between intensification and diversification during the search procedure is achieved by adjusting weight of penalty on each nurse. To tackle the problem of lacking global information within each independent stage, we propose an approximate evaluation strategy for spanning constraints. The algorithm employs cache for neighborhood move evaluation with the purpose of reducing overall cost of computation for the adaptive neighborhood selection strategy, which improves the efficiency of the algorithm further. The benchmark result of our algorithm on $60$ instances from the competition shows high availability and good solving quality. Furthermore, we compare and analyze some key factors in the algorithm and prove their rationality.
 }
 
 
@@ -154,8 +154,8 @@ Burke~等在~\cite{burke1999hybrid}~中提出了针对护士排班问题的混合禁忌搜索, 之后又
 ~$N$~为护士的集合;
 ~$H$~为班次的集合;
 ~$K$~为技能的集合;
-~$X^H_i$~为一个~$ |D_i| \times |N|$~的矩阵, 用于表示各护士在阶段~$i$~中各天被安排至哪个班次, 其中, 休息（~ShiftOff~）可以看作一个特殊的班次;
-~$X^K_i$~为一个~$ |D_i| \times |N|$~的矩阵, 用于表示各护士在阶段~$i$~中各天使用哪个技能上安排的班次;
+~$X^H_i$~为一个~$|N| \times |D_i|$~的矩阵, 用于表示各护士在阶段~$i$~中各天被安排至哪个班次, 其中, 休息（~ShiftOff~）可以看作一个特殊的班次;
+~$X^K_i$~为一个~$|N| \times |D_i|$~的矩阵, 用于表示各护士在阶段~$i$~中各天使用哪个技能上安排的班次;
 ~$X^H_i$~和~$X^K_i$~共同构成了阶段~$i$~的解向量~$X_i$~, 整个排班周期的解向量为~$X$~, ~$X = [X_1, X_2, ..., X_t]$~.
 
 该问题一共有~4~个必须满足的硬约束：
@@ -233,7 +233,15 @@ f(X) = \sum_{i=1}^{8} c_i \times f_i(X)
 	\end{algorithmic}
 \end{algorithm}
 
-求解过程的核心是带权禁忌搜索算法, 其伪代码如算法~\ref{alg2}~所示. 其中~$w_n$~为对护士~$n$~计算软约束违反情况时惩罚的权重系数. 算法首先产生一个合法的初始解作为当前解, 然后交替使用相同的权重和根据惩罚分布情况进行调整后的权重对当前解进行改进, 改进的过程使用了一种多邻域禁忌搜索. 到达给定的运行时间后算法终止并输出找到的最优排班.
+对单阶段进行排班使用了带权禁忌搜索算法, 其伪代码如算法~\ref{alg2}~所示. 
+%其中~$w_n$~为对护士~$n$~计算软约束违反情况时惩罚的权重系数（见 ~\ref{subsec:weight}~节）. 
+算法首先产生一个合法的初始解作为当前解, 然后交替使用集中性和疏散性的多邻域禁忌搜索, 每轮先使用集中性搜索对当前解进行改进, 更新全局最优解~$X_i$~之后, 再使用疏散性搜索进行扰动. 到达给定的运行时间后算法终止并输出找到的最优排班. 由于只是针对一个阶段进行排班, 需要定义单个阶段解~$X_i$~的目标函数~$f^S$~
+\begin{equation}
+f^S(X_i) = \sum_{j=1}^{6} c_j \times f^S_j(X_i) + \sum_{j=7}^{8} c_j \times g^S_j(X_i)
+\label{eq6}
+\end{equation}
+其中~$f^S_j(X_i)$~为软约束~$\mathbf{S_j}$~在阶段~$i$~的惩罚之和, 其计算方式和针对全周期解向量~$X$~的计算方式~$f_j$~相同. ~$g^S_7$~和~$g^S_8$~是针对~$\mathbf{S_7}$~和~$\mathbf{S_8}$~的近似评估函数.
+
 接下来将详细介绍用于单个阶段求解的算法实现细节.
 
 \begin{algorithm}
@@ -244,11 +252,12 @@ f(X) = \sum_{i=1}^{8} c_i \times f_i(X)
 		\REQUIRE $\textrm{算例数据}~Scenario, History, Weekdata$;
 		\ENSURE $\textrm{求得的本阶段的最优排班计划}~X_i$;
 		\STATE $X_i \Leftarrow \textrm{GenerateInitialSolution}()$;  // 见 ~\ref{subsec:init}~节
+		\STATE $s \Leftarrow X_i$;  //~$s$~表示当前解
 		\REPEAT
 			\STATE $\textrm{ResetWeight}(w)$;  // 见 ~\ref{subsec:weight}~节
 			\STATE $s \Leftarrow \textrm{TabuSearch}(s, w)$;  // 见~\ref{sec:tabusearch}~节算法~\ref{alg3}
-			\STATE $X_i \Leftarrow \textrm{min}\{ s, X_i \}$;
-			\STATE $s \Leftarrow \textrm{SelectRandomly}(s, X_i)$; 	// 按概率随机选择一个
+			\STATE $\textrm{UpdateOptima}( s, X_i )$;
+			\STATE $s \Leftarrow \textrm{SelectRandomly}(s, X_i)$; 	// 等概率随机选择一个
 			\STATE $w \Leftarrow \textrm{AdjustWeightToBiasNurseWithGreaterPenalty}(s)$;  // 见 ~\ref{subsec:weight}~节
 			\STATE $s \Leftarrow \textrm{TabuSearch}(s, w)$;  // 见~\ref{sec:tabusearch}~节算法~\ref{alg3}
 		\UNTIL{满足停止条件}
@@ -265,34 +274,34 @@ f(X) = \sum_{i=1}^{8} c_i \times f_i(X)
 \subsection{邻域结构}
 \label{subsec:neighbor}
 
-对于一个给定的解向量~$X$~, 可以通过对其施加一个动作得到一个新的解向量~$X'$, 这个新的解向量称为~$X$~的邻域解, 使~$X$~变为某个邻域解~$X'$~的变换称为邻域动作~$m$~,
-令作用于~$X$~的邻域动作的集合为~$M(X)$~;
+对于一个给定的阶段~$i$~解向量~$X_i$~, 可以通过对其施加一个动作得到一个新的解向量~$X'_i$, 这个新的解向量称为~$X_i$~的邻域解, 使~$X_i$~变为某个邻域解~$X'_i$~的变换称为邻域动作~$m$~,
+令作用于~$X_i$~的邻域动作的集合为~$M(X_i)$~;
 ~C~为布尔表达式到整数的转换函数, 如果所给布尔表达式为真取~$1$~, 否则取~$0$~.
 则对于护士排班问题可以定义如下邻域结构.
 
 \begin{itemize}
 	\item \textbf{增加排班. } 安排原本在第~$d$~天休息的护士~$n$~在第~$d$~天班次~$h$~技能~$k$~上班. 该邻域动作的集合为
 	\begin{equation}
-	M_1(X) = \{ m_1(d, n, h, k) | \forall d \in D, \forall n \in N, \forall h \in H, \forall k \in K, x^H_{d,n} = \textrm{ShiftOff} \wedge h \ne \textrm{ShiftOff} \}
+	M_1(X_i) = \{ m_1(n, d, h, k) | \forall n \in N, \forall d \in D_i, \forall h \in H, \forall k \in K, x^H_{i,n,d} = \textrm{ShiftOff} \wedge h \ne \textrm{ShiftOff} \}
 	\label{eq2}
 	\end{equation}
 	
 	\item \textbf{减少排班. } 安排原本在第~$d$~天上班的护士~$n$~在第~$d$~天休息. 该邻域动作的集合为
 	\begin{equation}
-	M_2(X) = \{ m_2(d, n) | \forall d \in D, \forall n \in N, x^H_{d,n} \ne \textrm{ShiftOff} \}
+	M_2(X_i) = \{ m_2(n, d) | \forall n \in N, \forall d \in D_i, x^H_{i,n,d} \ne \textrm{ShiftOff} \}
 	\label{eq3}
 	\end{equation}
 	
-	\item \textbf{变更排班. } 安排原本在第~$d$~天班次~$x^H_{d,n}$~技能~$x^K_{d,n}$~上班的护士~$n$~在第~$d$~天班次~$h$~技能~$k$~上班. 该邻域动作的集合为	
+	\item \textbf{变更排班. } 安排原本在第~$d$~天班次~$x^H_{i,n,d}$~技能~$x^K_{i,n,d}$~上班的护士~$n$~在第~$d$~天班次~$h$~技能~$k$~上班. 该邻域动作的集合为	
 	\begin{align}
-		M_3(X) = \{ m_3(d, n, h, k) | & \forall d \in D, \forall n \in N, \forall h \in H, \forall k \in K, x^H_{d,n} \ne \textrm{ShiftOff} \wedge h \ne \textrm{ShiftOff} \nonumber \\
-		 & \wedge ( x^H_{d,n} \ne h \vee x^K_{d,n} \ne k ) \}
+		M_3(X_i) = \{ m_3(n, d, h, k) | & \forall n \in N, \forall d \in D_i, \forall h \in H, \forall k \in K, x^H_{i,n,d} \ne \textrm{ShiftOff} \wedge h \ne \textrm{ShiftOff} \nonumber \\
+		 & \wedge ( x^H_{i,n,d} \ne h \vee x^K_{i,n,d} \ne k ) \}
 		\label{eq4}
 	\end{align}
 	
 	\item \textbf{交换排班. } 即块交换. 交换两个护士~$n_1$~和~$n_2$~在第~$d_1$~到~$d_2$~天的排班. 该邻域动作的集合为
 	\begin{equation}
-	M_4(X) = \{ m_4(d_1, d_2, n_1, n_2) | \forall d_1, d_2 \in D, \forall n_1, n_2 \in N, d_1 \le d_2 \wedge ( \sum_{d=d_1}^{d_2} \textrm{C}( x^H_{d,n_1} \ne x^H_{d,n_2} ) ) > 0 \}
+	M_4(X_i) = \{ m_4( n_1, n_2, d_1, d_2) | \forall n_1, n_2 \in N, \forall d_1, d_2 \in D_i, d_1 \le d_2 \wedge ( \sum_{d=d_1}^{d_2} \textrm{C}( x^H_{i,n_1,d} \ne x^H_{i,n_2,d} ) ) > 0 \}
 	\label{eq5}
 	\end{equation}
 \end{itemize}
@@ -379,37 +388,39 @@ f(X) = \sum_{i=1}^{8} c_i \times f_i(X)
 \subsection{惩罚权重调整策略}
 \label{subsec:weight}
 
-禁忌搜索是一个集中性较强的算法, 为了增加算法的疏散性, 本算法引入了每个护士的惩罚权重. 由于问题中的连续工作和连续休息等软约束的存在, 打破当前的排班模式的代价往往很大, 很有可能在对解向量产生结构性改变之前就因为惩罚的急剧增长而落回原来的排班布局, 或者一直在相似的排班之间做小幅改进. 针对这种情况, 本算法通过降低惩罚较少的护士的权重, 削弱对次优排班模式进行大幅调整的惩罚, 防止搜索陷入局部最优而无法探索更广阔的解空间.
+为了增加算法的疏散性, 本算法为护士设置了惩罚权重~$w$~. 除~$\mathbf{S_1}$~以外的所有软约束都是针对单个护士的排班考虑的, 各护士对这些软约束的违反程度的计算是相互独立的, 即可以将其进一步细分, 将软约束~$S_j$~在所有护士上的惩罚之和表示为~$f^S_j(X_i) = \sum_{n \in N} w_n \times f^S_j(X_{i,n})$~. 在原始问题中, 所有护士的权重~$w_n$~相等（即~$w_n=1, n \in N$~）, 而本算法将动态调整该权重. 当集中性搜索无法继续改进最优解时, 本算法通过增加惩罚较多的护士的权重, 引导搜索优先改进这些护士的排班, 即通过改变目标函数来探索其他有改进潜力的解空间.
 
 \begin{algorithm}
 	\footnotesize
 	\caption{惩罚权重调整过程}
 	\label{alg4}
 	\begin{algorithmic}
-		\REQUIRE $\textrm{护士集合}~N, \textrm{某个护士当前惩罚的计算函数}~f$;
+		\REQUIRE $\textrm{护士集合}~N, \textrm{某个护士当前惩罚的计算函数}~f^S$;
 		\ENSURE $\textrm{护士的惩罚权重}~w$;
-		\STATE $n \Leftarrow \textrm{SortNurseByPenalty}(N, f)$;  // $n$ is the sequence of nurses sorted by their penalties in an ascending order
+		\STATE $L \Leftarrow \textrm{SortNurseByPenalty}(N, f^S)$;  // $L$ is a list of nurses sorted by their penalties in an ascending order
 		\STATE $i \Leftarrow 1$;
 		\WHILE{$i < |N| \times r_1$}
-		\STATE $w_{n_i} \Leftarrow W_1$;
+		\STATE $n \Leftarrow L_i$;
+		\STATE $w_n \Leftarrow W_1$;
 		\STATE $i \Leftarrow i + 1$;
 		\ENDWHILE
 		\WHILE{$i < |N|$}
-		\STATE $w_{n_i} \Leftarrow W_3$;
+		\STATE $n \Leftarrow L_i$;
+		\STATE $w_n \Leftarrow W_3$;
 		\STATE $i \Leftarrow i + 1$;
 		\ENDWHILE
 		\STATE $i \Leftarrow 1$;
 		\WHILE{$i < |N| \times r_2$}
-		\STATE $j \Leftarrow \textrm{SelectNurseRandomly}(N)$;
-		\IF{$w_j = W_3$}
-		\STATE $w_j \Leftarrow W_2$;
+		\STATE $n \Leftarrow \textrm{SelectNurseRandomly}(N)$;
+		\IF{$w_n = W_3$}
+		\STATE $w_n \Leftarrow W_2$;
 		\STATE $i \Leftarrow i + 1$;
 		\ENDIF
 		\ENDWHILE
 	\end{algorithmic}
 \end{algorithm}
 
-护士惩罚权重的具体调整过程为, 在全部护士中, 选择惩罚少的~$r_1 \times |N|$~个护士, 将其权重设为~$W_1$~, 然后再在剩余护士中, 随机选择~$r_2 \times |N|$~个护士, 将其权重设为~$W_2$~, 再将剩下的护士的权重设为~$W_3$~. 其中有~$0 < W_1 < W_2 < W_3, r_1, r_2 \in [0, 1], r_1 + r_2 < 1$~. 该调整过程的伪代码如算法~\ref{alg4}~所示. 由于~$\mathbf{S_1}$~是针对时间槽的约束, 无法针对单个护士计算其在该约束上的惩罚, 故统计护士的惩罚情况时未考虑该软约束.
+护士惩罚权重的具体调整过程为, 在全部护士中, 选择惩罚最多的~$r_1 \times |N|$~个护士, 将其权重设为~$W_1$~, 然后再在剩余护士中, 随机选择~$r_2 \times |N|$~个护士, 将其权重设为~$W_2$~, 再将剩下的护士的权重设为~$W_3$~. 其中有~$W_1 > W_2 > W_3 \ge 0, r_1, r_2 \in [0, 1], r_1 + r_2 < 1$~. 为了增强扰动效果, 算法在具体实现时参数的取值为~$W_1=W_2=1, W_3=0$~, 即只考虑排班格局较差的护士以及为增加多样性随机挑选的护士. 该调整过程的伪代码如算法~\ref{alg4}~所示.
 
 
 \subsection{全局约束的近似评估}
@@ -423,7 +434,7 @@ A^U_{n,i} = \frac{A^U_n - \sum_{j=1}^{i-1} A_{n,j}}{t - i + 1}, \quad i = 1, 2, 
 \end{equation}
 其中分子为剩余排班数上限, 由总排班数上限减去第~$i$~阶段之前的累计排班数求得, 其取值可能为负数, 即已经超过全周期的上限; 分母为包括阶段~$i$~在内的剩余阶段数.
 
-相比于绝对均匀分配各阶段的排班数, 即~$A^U_{n,i} = A^U_n / t$~, 该方法更具灵活性, 即如果前期需求不多, 则中后期会放松该约束, 剩余排班数上限较多的护士可以更多地排班; 如果前期需求过多, 则中后期会收紧该约束, 保证最终排班数不会超出上限太多.
+相比于均匀分配各阶段的排班数, 即~$A^U_{n,i} = A^U_n / t$~, 该方法更具灵活性, 即如果前期需求不多, 则中后期会放松该约束, 剩余排班数上限较多的护士可以更多地排班; 如果前期需求过多, 则中后期会收紧该约束, 保证最终排班数不会超出上限太多.
 对于~$\mathbf{S_8}$~所规定的上限, 采用了与~$\mathbf{S_7}$~中的上限相同的近似评估方式.
 
 其次, 本算法对~$\mathbf{S_7}$~中总排班数下限的处理为在整个排班周期的前期若干阶段忽略该约束. 由于合同规定的总排班数下限是针对整个排班周期的, 而在开始的几个阶段中累积需求并不多, 所以该约束很容易被违反. 另外, 因为连续性约束~$\mathbf{S_2}$~至~$\mathbf{S_4}$~的存在, 各护士的排班可能出现不均衡的状态, 即在最初的几个阶段里, 某些护士排班比较满, 另外一些护士休息比较多. 介于上述两种情况, 在排班周期的前期阶段就考虑~$\mathbf{S_7}$~的下限会鼓励算法增加总排班量, 这样易导致后期护士的总排班数大幅超出合同规定的上限. 因此, 本算法将根据~$A^L_n / A^U_n$~确定从第几个阶段开始以均匀分配剩余排班数下限的方式考虑. 具体来说, 对于总共有~$t$~个阶段的排班周期, 将按如下规则计算护士~$n$~在第~$i$~个阶段的排班数下限~$A^L_{n,i}$~
@@ -447,11 +458,24 @@ f'(X_i) = \sum_{n=1}^{|N|} \frac{A_{n,i}}{2 \times A^U_n - \sum_{j=1}^{i-1} A_{n
 
 \subsection{算例与运行环境}
 
-第二届国际护士排班竞赛的算例包括初赛的~$14$~个数据集和决赛的~$6$~个数据集. 所有数据集均由~$1$~个场景信息文件、~$3$~个初始历史信息文件和~$10$~个阶段需求信息文件组成. 对于每个数据集, 数据规模主要与护士数相关, 而数据集中的护士数主要分布于~$30$~到~$120$~之间. 具体运行时从中选取~$1$~个场景信息文件、~$1$~个初始历史信息文件和~$4$~个或~$8$~个阶段需求信息文件构成一个算例, 这些文件按算法~\ref{alg1}~所示的流程依次输入求解程序. 求解护士排班问题得到的目标函数值越小说明解向量的质量越好. 本次竞赛使用的算例\footnote{数据集和算例可在 http://mobiz.vives.be/inrc2/?page\_id=20 下载. }与排名\footnote{决赛排名可在 http://mobiz.vives.be/inrc2/?page\_id=241 查看. }已公布于竞赛官方网站.
+第二届国际护士排班竞赛的算例包括初赛的~$14$~个数据集和决赛的~$6$~个数据集. 所有数据集均由~$1$~个场景信息文件、~$3$~个初始历史信息文件和~$10$~个阶段需求信息文件组成. 对于每个数据集, 数据规模主要与护士数相关, 而数据集中的护士数主要分布于~$30$~到~$120$~之间. 具体运行时从中选取~$1$~个场景信息文件、~$1$~个初始历史信息文件和~$4$~个或~$8$~个阶段需求信息文件的排列构成一个算例, 因此一个数据集可以生成大量算例. 算例的名称中包括了护士数、周数、初始历史文件编号和阶段需求文件编号序列, 例如, n035w4\_2\_8-8-7-5 表示有~35~个护士, 排班周期为~4~周, 初始历史文件编号为~2~, ~4~周的需求分别由编号为~8、8、7、5~的需求文件提供. 这些文件按算法~\ref{alg1}~所示的流程依次输入求解程序. 求解护士排班问题得到的目标函数值越小说明解向量的质量越好. 本次竞赛使用的算例\footnote{数据集和算例可在 http://mobiz.vives.be/inrc2/?page\_id=20 下载. }与排名\footnote{决赛排名可在 http://mobiz.vives.be/inrc2/?page\_id=241 查看. }已公布于竞赛官方网站.
+
+\begin{table}[!t]
+	\footnotesize
+	\cnentablecaption{小规模算例计算结果}{Computational result on small scale instances}
+	\label{tabpara}
+	\tabcolsep 10pt %space between two columns. 用于调整列间距
+	\begin{tabular*}{\textwidth}{c|ccc|cc}
+		\toprule
+		Instance & Known best & Our best & Winner's best & Our Average & Winner's Average \\\hline
+		n035w4\_2\_8-8-7-5         & 1255 & 1335 & 1255 & 1370.5 & 1367.5 \\
+		\bottomrule
+	\end{tabular*}
+\end{table}
 
 本算法使用~C++~编写, 由~Visual C++ 2013~编译. 程序的运行环境为~Windows Server 2012~操作系统, ~Intel Xeon E5-2609 2.5GHz CPU~, ~32GB~内存. 运行时间由竞赛官方网站提供的基准测试程序\footnote{基准测试程序可在 http://mobiz.vives.be/inrc2/?page\_id=245 下载}求得, 其给定的运行时间与护士数量成正比.
+算法中的重要参数如表格\ref{tabpara}所示.
 
-由于相同的数据集使用不同的文件序列可以构成大量算例, 而随意挑选的序列不便于进行对比, 本节将仅对决赛使用的算例进行测试. 为了防止启发式算法的求解过程的随机性使结果出现较大偏差, 竞赛组织者将每个算例独立重复运行了~$10$~次, 而本文讨论与分析中使用了每个算例独立重复运行~$32$~次的统计结果.
 
 \subsection{第二届国际护士排班竞赛结果对比}
 
@@ -551,17 +575,17 @@ f'(X_i) = \sum_{n=1}^{|N|} \frac{A_{n,i}}{2 \times A^U_n - \sum_{j=1}^{i-1} A_{n
 	\end{tabular*}
 \end{table}
 
-本算法在决赛中取得了第四名的成绩. 相比于其他进入决赛的队伍, 前两名在大多数算例上保持了一定的优势, 但是都存在无法于给定时间内求得合法解的情况, 其中第一名的算法在组委会提供的环境下进行的~$600$~次运行中, 有~$34$~次产生了非法解, 而本算法均能产生合法解, 故本算法在稳定性上与前两名相比有一定的优势.
+决赛中一共使用了三种规模的数据集共~60~个算例, 对每个算例独立运行~10~次. 本算法在决赛中取得了第四名的成绩. 相比于其他进入决赛的队伍, 前两名在大多数算例上保持了一定的优势, 但是都存在无法于给定时间内求得合法解的情况, 其中第一名的算法在组委会提供的环境下进行的~$600$~次运行中, 有~$34$~次产生了非法解, 而本算法均能产生合法解, 表明本算法在稳定性上与前两名相比有一定的优势.
 %由于本次竞赛的排名方案并未对产生非法解的情况施加严格的惩罚机制, 前两名凭借在大多数算例上积累的巨大优势保持了其领先地位.
 
-决赛中一共使用了三种规模的数据集, 小规模、中等规模和大规模算例的计算结果分别如表~\ref{tab1}~、表~\ref{tab2}~和表~\ref{tab3}~所示, 表格的内容为目标函数值. 对于求出非法解的情况, 竞赛组委会将其目标函数值设为一个大于所有参赛者所求目标函数值的数值, 在本次竞赛中为~$99999$~. 从结果对比可以看出, 本算法的最优解质量离第一名均有一定差距, 但是本算法对不同算例的适应性更好, 而第一名的算法在算例~n035w8\_0\_6-2-9-8-7-7-9-8~上~$10$~次运行均没有求出合法解, 同时在多个算例上产生了非法解, 导致其在这些算例上的平均求解质量不如本算法.
+决赛中小规模、中等规模和大规模算例的计算结果分别如表~\ref{tab1}~、表~\ref{tab2}~和表~\ref{tab3}~所示, 表格的内容为目标函数值. 对于求出非法解的情况, 竞赛组委会将其目标函数值设为一个大于所有参赛者所求目标函数值的数值, 在本次竞赛中为~$99999$~. 从结果对比可以看出, 本算法的最优解质量离第一名有一定差距, 存在改进空间, 但是对不同算例均能提供合法解. 而第一名的算法在算例~n035w8\_0\_6-2-9-8-7-7-9-8~上~$10$~次运行均没有求出合法解, 同时在多个算例上产生了非法解, 导致其在这些算例上的平均求解质量不如本算法.
 
 
 \section{分析与讨论}
 
-第~\ref{sec:implement}~节中描述了算法的关键模块和策略, 本节将对本算法使用的策略与其他可能的策略进行对比分析, 以阐明选择这些方案的原因.
+第~\ref{sec:implement}~节中描述了算法的关键模块和策略, 本节将对本算法使用的策略与其他可能的策略进行对比分析, 以阐明选择这些方案的原因. 本节中使用的算例均从决赛算例中挑选, 对于每个算例, 独立重复运行了~$32$~次.
 
-\subsection{邻域结构效果对比分析}
+\subsection{邻域结构对比分析}
 
 \begin{figure}[!t]
 	\centering
@@ -938,9 +962,11 @@ f'(X_i) = \sum_{n=1}^{|N|} \frac{A_{n,i}}{2 \times A^U_n - \sum_{j=1}^{i-1} A_{n
 	\label{fig1}
 \end{figure}
 
-虽然~$M_4$~理论上可以多个由~$M_1$~至~$M_3$~组合而成, 但是其在本算法中仍起到了至关重要的作用. 图~\ref{fig1}~分别从迭代次数和运行时间两个角度展示了有无~$M_4$~时算法的收敛速度, 所用数据来自于随机挑选的一个小规模算例（n035w4\_2\_8-8-7-5）一个中等规模算例（n070w4\_0\_3-6-5-1）和一个大规模算例（n110w4\_0\_1-4-2-8）的~$32$~次独立运行中对应时间刻度位置取样所得的平均值. 三种规模的算例在图例中从小到大分别用~S~、~M~和~L~表示, 而是否使用~$M_4$~邻域用~$+$~和~$-$~表示. 其横坐标为时间刻度, 纵坐标表示截止当前时间点算法所求得的第~$1$~阶段的最优目标函数值. 由于每次运行分为多个阶段, 所以无法对整个排班周期的目标函数值的收敛情况进行分析. 因此图~\ref{fig1}~中的目标函数值均为第一阶段的近似目标函数值（见~\ref{subsec:global}~节）. 另外, 因为算法初期收敛速度非常快, 而后期目标函数值变化幅度较小, 导致等间隔取样的结果不便于观察比较. 故图中横坐标为对时间刻度取对数的结果, 即~$x= \log_at$~, 其中~$a=1.08$~, ~$t$~为取样的时间点.
+虽然块交换动作~$M_4$~理论上可以由多个~$M_1$~至~$M_3$~组合而成, 但是其在本算法中仍起到了至关重要的作用. 图~\ref{fig1}~分别从迭代次数和运行时间两个角度展示了有无~$M_4$~时算法在单个阶段中的收敛情况, 所用数据来自于随机挑选的一个小规模算例（n035w4\_2\_8-8-7-5）一个中等规模算例（n070w4\_0\_3-6-5-1）和一个大规模算例（n110w4\_0\_1-4-2-8）的~$32$~次独立运行中对应时间刻度位置取样所得的平均值. 三种规模的算例在图例中从小到大分别用~S~、~M~和~L~表示, 而是否使用~$M_4$~邻域用~$+$~和~$-$~表示. 其横坐标为时间刻度, 纵坐标表示截止当前时间点算法所求得的单个阶段的最优目标函数值. 
+%这是由于每次运行分为多个阶段, 整个排班周期的目标函数值还与全局约束~$\mathbf{S_7}$~与~$\mathbf{S_8}$~密切相关, 因此只选择单个阶段进行观察. 另外, 
+因为算法初期收敛速度非常快, 而后期目标函数值变化幅度较小, 导致等间隔取样的结果不便于观察比较. 故图中横坐标为对时间刻度取对数的结果, 即~$x= \log_at$~, 其中~$a=1.08$~, ~$t$~为取样的时间点.
 
-从图~\ref{fig1}~中可以看出, 以迭代次数为取样间隔时, 块交换对收敛速度的加速效果尤为明显. 但是由于其时间复杂度较高, 故以秒为取样间隔时加速效果没有那么显著, 但在搜索初期的快速改进阶段和后期的深度搜索阶段仍有较大优势, 且收敛的极限优于没有块交换的情况. 由此可见, 块交换邻域无论从短期的收敛速度来考虑, 还是从长期的目标函数值下限来考虑, 都发挥了重要的积极作用.
+从图~\ref{fig1}~中可以看出, 以迭代次数为取样间隔时, 块交换对收敛速度的加速效果尤为明显. 但是由于其时间开销较高, 故以秒为时间单位时加速效果没有那么显著, 即在时间相同的情况下, 增加了块交换之后搜索执行的步数更少. 但在搜索初期的快速改进阶段和后期的深度搜索阶段仍有较大优势, 且收敛的极限优于没有块交换的情况. 由此可见, 块交换邻域无论从短期的收敛速度来考虑, 还是从长期的目标函数值下限来考虑, 都发挥了重要的作用.
 
 \subsection{疏散性搜索策略对比分析}
 
@@ -975,9 +1001,9 @@ f'(X_i) = \sum_{n=1}^{|N|} \frac{A_{n,i}}{2 \times A^U_n - \sum_{j=1}^{i-1} A_{n
 	\end{tabular*}
 \end{table}
 
-观察目标函数值的组成可以发现, 不同护士的惩罚有一定的差异. 然而由于众多约束相互制约, 可能一旦找到了一个相对合理的排班就很难再进行结构性的调整, 因此~\ref{subsec:weight}~节所述权重调整策略很有可能可以打破既定的排班格局, 为算法提供一个有导向而非盲目的疏散性搜索过程. 为了验证这个猜想, 对随机游走（Random Walk）、使用了保留解向量的部分元素然后对其贪心构造和修复直至重新产生合法解的扰动策略的禁忌搜索（Partial rebuild）和使用了权重调整策略的禁忌搜索（Adjust Weight）三种扰动方式进行了对比测试. 测试对决赛使用的三种规模的算例和两种排班周期的长度各随机选择了~$3$~个算例分别进行了~$32$~次独立的重复计算, 并统计了多次计算得到的目标函数值中的最优值和平均值.
+观察目标函数值的组成可以发现, 不同护士的惩罚有一定的差异. 然而由于众多约束相互制约, 局部搜索后期一旦落入局部最优就很难再进行结构性的调整, 而~\ref{subsec:weight}~节所述权重调整策略（Adjust weight）可以打破既定的排班格局, 为算法提供一个有导向而非盲目的疏散性搜索过程. 为了验证其有效性, 设计了另外两种扰动策略进行对比. 其一是随机游走（Random walk）, 即执行一定步数的合法邻域动作, 每个动作从~4~种邻域中等概率选择的一个邻域中随机挑选而得. 其二是部分重建（Partial rebuild）, 即随机保留解向量的部分元素, 然后对不满足人数下限的时间槽随机添加护士直至重新产生合法解. 对随机游走、部分重建和权重调整三种扰动方式进行了对比测试. 测试从决赛使用的算例中随机挑选了~$18$~个算例分别进行了~$32$~次独立的重复计算, 并统计了多次计算得到的目标函数值中的最优值和平均值.
 
-疏散性搜索与集中性搜索不同, 其作用在于提升算法的稳定性而不是提升算法搜索能力的上限. 从表~\ref{tab4}~可以看出, 比较~$32$~次计算求得的最优值, 不同疏散性搜索策略没有显著差异. 而对比平均值却可以发现使用了权重调整策略之后有比较明显的提升, 在~$75\%$~的算例上平均求解质量超过了另外两种扰动策略, 离算法所能求到的下限更加接近. 这说明本算法使用的权重调整策略是一种有效的疏散性搜索策略.
+从表~\ref{tab4}~可以看出, 比较~$32$~次计算求得的最优值, 不同疏散性搜索策略没有显著差异. 而对比平均值却可以发现使用了权重调整策略之后有比较明显的提升, 在~$75\%$~的算例上平均求解质量超过了另外两种扰动策略, 离算法所能求到的下限更加接近. 这说明本算法使用的权重调整策略是一种有效的疏散性搜索策略, 其有导向的扰动增加了算法的稳定性.
 
 \subsection{全局约束近似评估策略对比分析}
 
@@ -1000,15 +1026,15 @@ f'(X_i) = \sum_{n=1}^{|N|} \frac{A_{n,i}}{2 \times A^U_n - \sum_{j=1}^{i-1} A_{n
 	\end{tabular*}
 \end{table}
 
-为了分析全局约束的近似评估策略对算法的影响, 设计对照试验比较了忽略全局约束（Ignore）、采用均分各阶段排班数的策略（Even allocation）和~\ref{subsec:global}~节所述的均匀分配剩余排班数的策略（EA on  remainder）的求解质量. 试验针对了竞赛第一名出现了无法产生合法解的情况或者出现了不理想的计算结果的较难求解的算例分别进行了~$32$~次独立的测试.
+为了分析全局约束的近似评估策略对算法的影响, 设计对照实验比较了忽略全局约束（Ignore）、采用均分各阶段排班数的策略（Even allocation）和~\ref{subsec:global}~节所述的均匀分配剩余排班数的策略（EA on  remainder）的求解质量. 实验随机挑选了~6~个算例分别进行了~$32$~次独立的测试.
 
-从表~\ref{tab5}~可以看出, 完全忽略全局约束效果较差, 无论是从求得的最优解来看还是从多次运行的平均值来看都不如进行了适当考虑的方案. 在使用均匀分配各阶段的总排班数上限之后, 计算结果产生了明显的改进. 可以观察到均匀分配所求得目标函数的平均值已经高于忽略相关约束所能求得的最优值. 更进一步, 均匀分配剩余排班数上限, 使先前阶段的排班的紧凑程度能影响到后续阶段的总排班数合理性评估之后, 计算结果相比于机械地均匀分配又有~$3\%$~左右的改进. 由此可见本算法使用的近似评估策略对跨阶段约束的有效性.
+从表~\ref{tab5}~可以看出, 完全忽略全局约束效果较差, 无论是从求得的最优解来看还是从多次运行的平均值来看都不如另外两种方案. 而采用均匀分配剩余排班数, 使先前阶段排班的紧凑程度能影响到后续阶段的排班之后, 计算结果相比于均匀分配各阶段排班数有~$3\%$~左右的改进. 由此可见本算法使用的全局约束的近似评估策略的有效性.
 
 
 \section{总结}
 
-本文提出了一种用于求解多阶段护士排班问题的启发式算法. 在对第二届国际护士排班竞赛所涉及的问题进行了简要的介绍之后, 本文详细描述了带权禁忌搜索算法. 算法以禁忌搜索为核心, 通过调整护士的惩罚权重来实现搜索过程中集中性与疏散性的平衡. 算法使用了增加班次、减少班次、变更班次和交换班次~$4$~种邻域结构, 并使用了一种根据其适应性动态调整各邻域被选中的概率的策略. 为了解决全局约束无法在单个阶段计算的问题, 算法使用了一种近似评估方案来衡量各阶段的排班对全局约束产生的贡献.
-此外, 本文通过对比试验展示了不同邻域结构对收敛速度产生的影响, 得出了权重调整策略对提升求解质量具有重要意义的结论, 证明了全局约束的近似评估策略的合理性.
+本文提出了一种用于求解多阶段护士排班问题的启发式算法. 在对第二届国际护士排班竞赛所提出的问题进行了简要的介绍之后, 本文详细描述了带权禁忌搜索算法. 算法以禁忌搜索为核心, 通过调整护士的惩罚权重来实现搜索过程中集中性与疏散性的平衡. 算法设计了增加排班、减少排班、变更排班和交换排班~$4$~种邻域结构, 并使用了一种根据其适应性动态调整各邻域被选中的概率的策略. 为了解决全局约束无法在单个阶段计算的问题, 算法使用了一种近似评估方案来衡量各阶段的排班对全局约束产生的影响.
+此外, 本文通过对比实验展示了不同邻域结构对收敛速度产生的影响, 得出了权重调整策略对提升求解质量具有重要意义的结论, 证明了全局约束的近似评估策略的合理性.
 
 第二届护士排班竞赛的计算结果充分证明了算法的有效性. 在决赛的~$60$~个算例上, 算法在保证结果合法性的同时, 求解质量也接近目前已知的最优解, 最终在第二届国际护士排班竞赛中获得了全球第~$4$~名的成绩.
 但是, 由于算法使用的邻域变化模式比较简单, 对于约束众多的问题, 容易陷入局部最优, 或者难以跨过非法解以探索更广阔的解空间. 因此可以考虑增加更大的邻域, 对解空间进行更充分的探索. 与此同时, 对全局约束的近似评估策略也可以有更细致的考量, 让算法对多阶段问题的求解更接近掌握了整个排班周期的完整信息的理想状态.
