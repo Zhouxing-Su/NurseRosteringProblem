@@ -11,6 +11,7 @@
 \usepackage{etex}
 \usepackage{pgfplots}
 \usepackage{multirow}
+\usepackage{threeparttable}
 
 \renewcommand{\algorithmicrequire}{\textbf{Input:}}
 \renewcommand{\algorithmicensure}{\textbf{Output:}}
@@ -312,7 +313,7 @@ C~为布尔表达式到整数的转换函数, 如果所给布尔表达式为真取~$1$, 否则取~$0$.
 \subsection{多邻域禁忌搜索}
 \label{sec:tabusearch}
 
-多邻域禁忌搜索以禁忌搜索为框架, 在搜索的每一步迭代中, 通过概率选择~$4$~种结构不同的邻域中的一种进行搜索. 如算法~\ref{alg3}~所示, 该过程首先令选中各种邻域的概率相等, 然后将禁忌表初始化为允许所有邻域动作执行的状态. 接下来循环执行邻域搜索过程, 直到连续一定迭代步数无法改进本次局部搜索找到的最优解即停止. 在循环体中, 首先按概率在~$M_1$~到~$M_4$~中选择一个邻域~$\mathcal{M}$, 然后对~$\mathcal{M}$~中的所有动作进行评估, 计算其对目标函数值的改变量. 选出最优的邻域动作~$m$~之后，更新相关的禁忌表项, 执行该邻域动作, 并更新本次搜索的最优解. 最后根据该邻域动作的优度更新下一次迭代中各邻域被选中的概率. 接下来将介绍上述过程的具体实现.
+多邻域禁忌搜索以禁忌搜索为框架, 在搜索的每一步迭代中, 通过概率选择~$4$~种结构不同的邻域中的一种进行搜索. 如算法~\ref{alg3}~所示, 该过程首先令选中各种邻域的概率相等, 然后将禁忌表初始化为允许所有邻域动作执行的状态. 接下来循环执行邻域搜索过程, 直到连续一定迭代步数~$th$~无法改进本次局部搜索找到的最优解即停止. 在循环体中, 首先按概率在~$M_1$~到~$M_4$~中选择一个邻域~$\mathcal{M}$, 然后对~$\mathcal{M}$~中的所有动作进行评估, 计算其对目标函数值的改变量. 选出最优的邻域动作~$m$~之后，更新相关的禁忌表项, 执行该邻域动作, 并更新本次搜索的最优解. 最后根据该邻域动作的优度更新下一次迭代中各邻域被选中的概率. 接下来将介绍上述过程的具体实现.
 
 \begin{algorithm}
 	\footnotesize
@@ -346,10 +347,10 @@ C~为布尔表达式到整数的转换函数, 如果所给布尔表达式为真取~$1$, 否则取~$0$.
 \begin{equation}
 \omega_i =
 \begin{cases}
-\omega_i + \lambda_1 (\Omega_1 - \omega_i) ,&~m~\textrm{改进了本次搜索的最优解} \\
-\omega_i + \lambda_2 (\Omega_2 - \omega_i) ,&~m~\textrm{改进了当前解} \\
-\omega_i + \lambda_3 (\Omega_3 - \omega_i) ,&~m~\textrm{没有改进当前解但是合法动作} \\
-\omega_i + \lambda_4 (\Omega_4 - \omega_i) ,&~\textrm{不存在合法动作} \\
+\omega_i + \lambda (\Omega_1 - \omega_i) ,&~m~\textrm{改进了本次搜索的最优解} \\
+\omega_i + \lambda (\Omega_2 - \omega_i) ,&~m~\textrm{改进了当前解} \\
+\omega_i + \lambda (\Omega_3 - \omega_i) ,&~m~\textrm{没有改进当前解但是合法动作} \\
+\omega_i + \lambda (\Omega_4 - \omega_i) ,&~\textrm{不存在合法动作} \\
 \end{cases}
 \end{equation}
 其中~$\Omega_1 > \Omega_2 > \Omega_3 > \Omega_4 > 0$, $\lambda \in (0, 1]$~控制~$\omega_i$~向基准值趋近的速度. 在其定义域内, $\lambda$~越大收敛速度越快.
@@ -465,23 +466,27 @@ f'(X_i) = \sum_{n=1}^{|N|} \frac{A_{n,i}}{2 \times A^U_n - \sum_{j=1}^{i-1} A_{n
 	\cnentablecaption{重要参数设置}{Settings of important parameters}
 	\label{tabpara}
 	\tabcolsep 14pt %space between two columns. 用于调整列间距
-	\begin{tabular*}{\textwidth}{ccccc}
-		\toprule
-		Parameter & Section & Description & Value in this paper & Recomending range \\\hline
-		$\Omega_1$  & \ref{subsec:select} & 邻域选择权重基准值 & 4096 & $[1.5\Omega_2, 4\Omega_2]$ \\
-		$\Omega_2$  & \ref{subsec:select} & 邻域选择权重基准值 & 2048 & $[1.5\Omega_3, 4\Omega_3]$ \\
-		$\Omega_3$  & \ref{subsec:select} & 邻域选择权重基准值 & 1024 & $[1.5\Omega_4, 4\Omega_4]$ \\
-		$\Omega_4$  & \ref{subsec:select} & 邻域选择权重基准值 & 256 &  $[0, 4096]$\\
-		$\lambda_1$  & \ref{subsec:select} & 邻域选择权重调整系数 & 0.125 &  $[0.0625, 0.5]$\\
-		$\lambda_2$  & \ref{subsec:select} & 邻域选择权重调整系数 & 0.125 &  $[0.0625, 0.5]$\\
-		$\lambda_3$  & \ref{subsec:select} & 邻域选择权重调整系数 & 0.125 &  $[0.0625, 0.5]$\\
-		$\lambda_4$  & \ref{subsec:select} & 邻域选择权重调整系数 & 0.125 &  $[0.0625, 0.5]$\\
-		$l_1$  & \ref{subsec:tabu} & 禁忌步长 & $1.5|D_i|$ & $[|D_i|, 2|D_i|]$ \\
-		$l_2$  & \ref{subsec:tabu} & 禁忌步长 & $1.5|D_i|$ & $[|D_i|, 2|D_i|]$ \\
-		$r_1$  & \ref{subsec:weight} & 护士选择比例 & 0.2 & $[0.1, 0.4]$ \\
-		$r_2$  & \ref{subsec:weight} & 护士选择比例 & 0.05 & $[0.01, 0.1]$\\
-		\bottomrule
-	\end{tabular*}
+	\begin{threeparttable}
+		\begin{tabular*}{\textwidth}{ccccc}
+			\toprule
+			Parameter & Section & Description & Value in this paper & Recomending range \\\hline
+			$th$ & \ref{sec:tabusearch} & 禁忌搜索最大未改进步数 & $scale$\tnote{*} & $[0.8scale, 2scale]$\\
+			$\Omega_1$  & \ref{subsec:select} & 邻域选择权重基准值 & 4096 & $[1.5\Omega_2, 4\Omega_2]$ \\
+			$\Omega_2$  & \ref{subsec:select} & 邻域选择权重基准值 & 2048 & $[1.5\Omega_3, 4\Omega_3]$ \\
+			$\Omega_3$  & \ref{subsec:select} & 邻域选择权重基准值 & 1024 & $[1.5\Omega_4, 4\Omega_4]$ \\
+			$\Omega_4$  & \ref{subsec:select} & 邻域选择权重基准值 & 256 &  $[0, 4096]$\\
+			$\lambda$  & \ref{subsec:select} & 邻域选择权重调整系数 & 0.125 &  $[0.0625, 0.25]$\\
+			$l_1$  & \ref{subsec:tabu} & 禁忌步长 & $1.5|D_i|$ & $[|D_i|, 2|D_i|]$ \\
+			$l_2$  & \ref{subsec:tabu} & 禁忌步长 & $1.5|D_i|$ & $[|D_i|, 2|D_i|]$ \\
+			$r_1$  & \ref{subsec:weight} & 护士选择比例 & 0.2 & $[0.1, 0.4]$ \\
+			$r_2$  & \ref{subsec:weight} & 护士选择比例 & 0.05 & $[0.01, 0.1]$\\
+			\bottomrule
+		\end{tabular*}
+		\begin{tablenotes}
+			\small
+			\item[*] $scale$ stands for problem scale, and $scale = |N| \times |D_i| \times \sqrt{|H| \times |K|}$.
+		\end{tablenotes}
+	\end{threeparttable}
 \end{table}
 
 本算法使用~C++~编写, 由~Visual C++ 2013~编译. 程序的运行环境为~Windows Server 2012~操作系统, Intel Xeon E5-2609 2.5GHz CPU, 32GB~内存. 运行时间由竞赛官方网站提供的基准测试程序\footnote{基准测试程序可在~http://mobiz.vives.be/inrc2/?page\_id=245~下载.}求得, 其给定的运行时间与护士数量成正比.
