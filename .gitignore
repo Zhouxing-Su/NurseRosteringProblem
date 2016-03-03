@@ -5,3 +5,7 @@
 /sciscn_manuscript.pdf
 /sciscn_manuscript.synctex.gz
 /sciscn_manuscript.aux
+/*.pdf
+/*.dvi
+/*.bak
+/*.synctex
