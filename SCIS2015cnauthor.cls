@@ -4,7 +4,7 @@
 \def\@issn{1674-733X}
 
 \NeedsTeXFormat{LaTeX2e}[1995/12/01]
-\ProvidesClass{SCIS2015cn}[\sci@filedate, \sci@fileversion]
+\ProvidesClass{SCIS2015cnauthor}[\sci@filedate, \sci@fileversion]
 
 \let\CCTCJKfonts=1
 \LoadClass[twoside,CJK]{cctart}
