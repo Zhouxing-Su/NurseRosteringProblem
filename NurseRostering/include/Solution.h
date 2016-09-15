@@ -87,7 +87,7 @@ public:
         {
         }
 
-        friend bool operator<(const Move &l, const Move &r)
+        friend bool operator<( const Move &l, const Move &r )
         {
             return (l.delta > r.delta);
         }
@@ -278,7 +278,7 @@ private:
         std::vector<int> validNurseNum_CurDay;
 
     private:    // forbidden operators
-        AvailableNurses& operator=(const AvailableNurses &) { return *this; }
+        AvailableNurses& operator=( const AvailableNurses & ) { return *this; }
     };
 
     // consecutive information for a nurse
@@ -330,7 +330,7 @@ private:
         {
             memcpy( this, &c, sizeof( Consecutive ) );
         }
-        Consecutive& operator=(const Consecutive &c)
+        Consecutive& operator=( const Consecutive &c )
         {
             memcpy( this, &c, sizeof( Consecutive ) );
             return *this;
@@ -737,7 +737,7 @@ private:
     Output optima;  // set optima to *this before every search
 
 private:    // forbidden operators
-    Solution& operator=(const Solution &) { return *this; }
+    Solution& operator=( const Solution & ) { return *this; }
 };
 
 

@@ -79,7 +79,7 @@ public:
     {
     public:
         Config() : initAlgorithm( InitAlgorithm::Greedy ),
-            solveAlgorithm( SolveAlgorithm::TabuSearch_Rand ),
+            solveAlgorithm( SolveAlgorithm::BiasTabuSearch ),
             modeSeq( Solution::ModeSeq::ACBR ),
             maxNoImproveCoefficient( 1 )
         {
