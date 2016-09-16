@@ -62,7 +62,7 @@ void benchmarkRun()
 
     int runCount = 512;
     int threadBeginInterval = 3;
-    int threadNum = 1;
+    int threadNum = 8;
     vector<thread> vt;
     for (int i = 0; i < threadNum; ++i) {
         id.str( string() );

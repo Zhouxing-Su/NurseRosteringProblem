@@ -28,7 +28,7 @@
 
 // comment to turn off distance of solutions and objective
 #ifndef INRC2_TRAJECTORY_REPORT
-#define INRC2_TRAJECTORY_REPORT
+//#define INRC2_TRAJECTORY_REPORT
 #endif // INRC2_TRAJECTORY_REPORT
 
 

@@ -50,11 +50,14 @@ enum InstIndex
 {
     n005w4, n012w8, n021w4,
     n030w4, n030w8,
+    n035w4, n035w8,
     n040w4, n040w8,
     n050w4, n050w8,
     n060w4, n060w8,
+    n070w4, n070w8,
     n080w4, n080w8,
     n100w4, n100w8,
+    n110w4, n110w8,
     n120w4, n120w8
 };
 

@@ -33,11 +33,14 @@ const std::string instanceDir( "../Instance/" );
 const std::vector<std::string> instance = {
     "n005w4", "n012w8", "n021w4", // 0 1 2
     "n030w4", "n030w8", // 3 4
+    "n035w4", "n035w8"
     "n040w4", "n040w8", // 5 6
     "n050w4", "n050w8", // 7 8
     "n060w4", "n060w8", // 9 10
+    "n070w4", "n070w8",
     "n080w4", "n080w8", // 11 12
     "n100w4", "n100w8", // 13 14
+    "n110w4", "n110w8",
     "n120w4", "n120w8"  // 15 16
 };
 const std::map<std::string, int> instIndexMap = {
@@ -46,16 +49,22 @@ const std::map<std::string, int> instIndexMap = {
     { instance[InstIndex::n021w4], InstIndex::n021w4 },
     { instance[InstIndex::n030w4], InstIndex::n030w4 },
     { instance[InstIndex::n030w8], InstIndex::n030w8 },
+    { instance[InstIndex::n035w4], InstIndex::n035w4 },
+    { instance[InstIndex::n035w8], InstIndex::n035w8 },
     { instance[InstIndex::n040w4], InstIndex::n040w4 },
     { instance[InstIndex::n040w8], InstIndex::n040w8 },
     { instance[InstIndex::n050w4], InstIndex::n050w4 },
     { instance[InstIndex::n050w8], InstIndex::n050w8 },
     { instance[InstIndex::n060w4], InstIndex::n060w4 },
     { instance[InstIndex::n060w8], InstIndex::n060w8 },
+    { instance[InstIndex::n070w4], InstIndex::n070w4 },
+    { instance[InstIndex::n070w8], InstIndex::n070w8 },
     { instance[InstIndex::n080w4], InstIndex::n080w4 },
     { instance[InstIndex::n080w8], InstIndex::n080w8 },
     { instance[InstIndex::n100w4], InstIndex::n100w4 },
     { instance[InstIndex::n100w8], InstIndex::n100w8 },
+    { instance[InstIndex::n110w4], InstIndex::n110w4 },
+    { instance[InstIndex::n110w8], InstIndex::n110w8 },
     { instance[InstIndex::n120w4], InstIndex::n120w4 },
     { instance[InstIndex::n120w8], InstIndex::n120w8 }
 };
