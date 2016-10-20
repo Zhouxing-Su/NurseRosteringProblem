@@ -33,7 +33,7 @@ const std::string instanceDir( "../Instance/" );
 const std::vector<std::string> instance = {
     "n005w4", "n012w8", "n021w4", // 0 1 2
     "n030w4", "n030w8", // 3 4
-    "n035w4", "n035w8"
+    "n035w4", "n035w8",
     "n040w4", "n040w8", // 5 6
     "n050w4", "n050w8", // 7 8
     "n060w4", "n060w8", // 9 10
