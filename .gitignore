@@ -199,3 +199,4 @@ Validator-results.txt
 *.vsps
 RawLog
 OldSeq
+*.VC.db

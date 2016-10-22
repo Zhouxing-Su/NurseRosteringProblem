@@ -89,7 +89,6 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <UACUIAccess>true</UACUIAccess>
     </Link>
     <PostBuildEvent>
       <Command>copy $(TargetPath) $(SolutionDir)\BatchRun</Command>
