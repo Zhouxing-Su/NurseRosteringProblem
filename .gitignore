@@ -204,3 +204,4 @@ OldSeq
 /Deploy/Instance
 /Deploy/simulator_src
 /Deploy/analyzer_src
+*.VC.db
